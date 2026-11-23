@@ -35,8 +35,7 @@ const waits = (notice: Notice) => notice.action !== undefined || notice.said !==
 
 // A notice that comes up front starts its time, and one pushed back stops it, to start again when it comes up; one kept
 // open stays kept.
-function lineUp(all: Notice[]): Notice[] {
-  const now = Date.now();
+function lineUp(all: Notice[], now: number): Notice[] {
   const placed = (notice: Notice, index: number) => {
     if (index < KEPT) return notice.ends === null ? { ...notice, ends: now + notice.life } : notice;
     return notice.ends === null || notice.ends === Infinity ? notice : { ...notice, ends: null };
@@ -47,6 +46,23 @@ function lineUp(all: Notice[]): Notice[] {
 function lifeOf(tone: Notice['tone'], text: string, action: boolean): number {
   const base = tone === 'warn' ? 7000 : action ? 6000 : 4000;
   return Math.min(base + text.length * 40, tone === 'warn' ? 14000 : 10000);
+}
+
+// The notices' own time, which stops while they are held or out of sight. An end is set in it, so nothing is moved when
+// it starts again, and a notice that comes up while it is stopped has run none of its life.
+function shownTime() {
+  let lost = 0;
+  let since: number | null = null;
+  return {
+    now: () => (since ?? Date.now()) - lost,
+    stop: () => {
+      since = Date.now();
+      return () => {
+        lost += Date.now() - since!;
+        since = null;
+      };
+    },
+  };
 }
 
 const ToastContext = createContext<Toasts | null>(null);
@@ -61,6 +77,7 @@ export function ToastProvider({ standing, onReport, children }: { standing: Stan
   const [held, setHeld] = useState(false);
   const [hidden, setHidden] = useState(() => document.hidden);
   const [floor, setFloor] = useState<HTMLElement | null>(null);
+  const [time] = useState(shownTime);
   const toasts = useMemo<Toasts>(() => {
     let next = 0;
     const add = (message: string, tone: Notice['tone'], { detail, action, report, stays, from }: Extra & { from?: From } = {}, undo = false) => {
@@ -68,7 +85,7 @@ export function ToastProvider({ standing, onReport, children }: { standing: Stan
       // Not a speaker's words: a plugin or bot may quote the chat in them.
       if (tone === 'warn' && !from) noteProblem(detail ? `${message} ${detail}` : message);
       const life = stays ? 0 : lifeOf(tone, `${message}${detail ?? ''}`, action !== undefined);
-      const close = () => setNotices((all) => lineUp(all.filter((notice) => notice.key !== key)));
+      const close = () => setNotices((all) => lineUp(all.filter((notice) => notice.key !== key), time.now()));
       const keep = () => setNotices((all) => all.map((notice) => (notice.key === key ? { ...notice, ends: Infinity } : notice)));
       const pressed = action && { ...action, onClick: () => (close(), action.onClick()), ...(undo && { keys: SHORTCUTS.undoToast.keys }) };
       // Apart from action, since one of those waits its turn and is never merged, and a repeating failure must still merge.
@@ -78,8 +95,8 @@ export function ToastProvider({ standing, onReport, children }: { standing: Stan
       const repeats = (notice: Notice) => !action && !notice.action && notice.message === message && notice.detail === detail && notice.tone === tone && notice.said?.from.name === from?.name;
       setNotices((all) => {
         const same = all.find(repeats);
-        const again = (notice: Notice) => ({ ...notice, times: notice.times + 1, ends: notice.ends === null ? null : Math.max(notice.ends, Date.now() + life) });
-        return lineUp(same ? all.map((notice) => (notice === same ? again(notice) : notice)) : [{ key, message, detail, tone, action: pressed, offer, said: from && { from, keep }, close, undo, times: 1, life, ends: stays ? Infinity : null }, ...all]);
+        const again = (notice: Notice) => ({ ...notice, times: notice.times + 1, ends: notice.ends === null ? null : Math.max(notice.ends, time.now() + life) });
+        return lineUp(same ? all.map((notice) => (notice === same ? again(notice) : notice)) : [{ key, message, detail, tone, action: pressed, offer, said: from && { from, keep }, close, undo, times: 1, life, ends: stays ? Infinity : null }, ...all], time.now());
       });
       return close;
     };
@@ -104,23 +121,16 @@ export function ToastProvider({ standing, onReport, children }: { standing: Stan
   }, []);
 
   const stopped = held || hidden;
-  useEffect(() => {
-    if (!stopped) return;
-    const since = Date.now();
-    return () => {
-      const gap = Date.now() - since;
-      setNotices((all) => all.map((notice) => (notice.ends === null ? notice : { ...notice, ends: notice.ends + gap })));
-    };
-  }, [stopped]);
+  useEffect(() => (stopped ? time.stop() : undefined), [stopped, time]);
 
   useEffect(() => {
     if (stopped) return;
     const soonest = Math.min(...notices.map(({ ends }) => ends ?? Infinity));
     // Only notices kept open or waiting are left, and those have no end yet.
     if (soonest === Infinity) return;
-    const timer = setTimeout(() => setNotices((all) => lineUp(all.filter(({ ends }) => ends === null || ends > Date.now()))), Math.max(0, soonest - Date.now()));
+    const timer = setTimeout(() => setNotices((all) => lineUp(all.filter(({ ends }) => ends === null || ends > time.now()), time.now())), Math.max(0, soonest - time.now()));
     return () => clearTimeout(timer);
-  }, [stopped, notices]);
+  }, [stopped, notices, time]);
 
   const shown = notices.slice(0, KEPT);
   // The newest 되돌리기 on screen; typing keeps the field's own undo.

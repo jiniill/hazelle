@@ -154,6 +154,30 @@ it('stops the notices\' time while the page is out of sight', async () => {
   }
 });
 
+it('gives a notice that came up out of sight its own time, not the time the page was away', async () => {
+  vi.useFakeTimers();
+  const { toasts, start, end } = provider();
+  let hidden = true;
+  let seen = () => {};
+  Object.defineProperty(document, 'hidden', { get: () => hidden });
+  Object.assign(document, { addEventListener: (type: string, listener: () => void) => type === 'visibilitychange' && (seen = listener) });
+  try {
+    await start();
+    await act(() => vi.advanceTimersByTime(600_000));
+    await act(() => void toasts().show('저장했어요'));
+    await act(() => {
+      hidden = false;
+      seen();
+    });
+    expect(shown).toHaveLength(1);
+    await act(() => vi.advanceTimersByTime(10_000));
+    expect(shown).toHaveLength(0);
+  } finally {
+    await end();
+    vi.useRealTimers();
+  }
+});
+
 it('says a 되돌리기 whose restore failed, with the one prefix', async () => {
   const { toasts, start, end } = provider();
   try {
