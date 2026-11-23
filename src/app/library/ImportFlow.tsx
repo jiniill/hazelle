@@ -73,6 +73,7 @@ function pageOf(route: Route): ImportPage | null {
     case 'plugins':
     case 'plugin':
     case 'plugin-page':
+    case 'plugin-test':
       return { kind: 'always' };
     default:
       return null;

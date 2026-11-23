@@ -3,7 +3,7 @@ import { identity, readTool, toolSource } from '../../engine/import/tool';
 import { toolId } from '../../model/tool';
 import { setModuleDeleted } from '../library/modules';
 import { testServer } from '../testing';
-import { addDraftAsk, applyDraft, applyPreview, blankDraft, createDraft, deleteDraft, DRAFT_BYTES, draftOfTool, draftsOf, draftState, importFile, installedDiffers, restoreDraft, saveDraft, undoFileImport } from './drafts';
+import { addDraftAsk, applyDraft, applyPreview, blankDraft, createDraft, deleteDraft, DRAFT_BYTES, draftOfTool, draftsOf, draftState, importFile, installedDiffers, installedFile, restoreDraft, saveDraft, undoFileImport } from './drafts';
 import { importTool } from './store';
 
 const server = testServer();
@@ -87,7 +87,7 @@ it('applies through the importer, raising an unchanged version once per change, 
   expect(await applyDraft(store, files, id)).toEqual({ ok: false, error: 'gone' });
 });
 
-it('opens the installed file once as identity and body, reuses its edited draft and refuses Risu or oversized plugins', async () => {
+it('opens the installed file once as identity and body, reuses its edited draft and refuses Risu or oversized plugins, whose file is still read for a test with no draft', async () => {
   const { store, files } = await server.account();
   const read = readTool(new TextEncoder().encode(text));
   if (!read.ok) throw new Error('fixture');
@@ -105,8 +105,11 @@ it('opens the installed file once as identity and body, reuses its edited draft 
   await deleteDraft(store, opened.data);
   await store.update('tool', toolId(module), (tool) => ({ ...tool, size: DRAFT_BYTES + 1 }));
   expect(await draftOfTool(store, files, module)).toEqual({ ok: false, error: 'draft-too-large' });
+  expect(await installedFile(store, files, module)).toEqual({ ok: true, data: file });
+  expect(draftsOf(store)).toEqual([]);
   await store.update('tool', toolId(module), (tool) => ({ ...tool, manifest: { ...tool.manifest, risu: { verdict: 'all', missing: [], hosts: [] } } }));
   expect(await draftOfTool(store, files, module)).toEqual({ ok: false, error: 'risu-plugin' });
+  expect(await installedFile(store, files, module)).toEqual({ ok: false, error: 'risu-plugin' });
 });
 
 it('carries a draft without edits along with an imported file, keeps one with edits, tells 적용 what it would replace, and asks every consent again of the file', async () => {

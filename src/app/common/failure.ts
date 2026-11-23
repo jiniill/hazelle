@@ -86,7 +86,7 @@ const MESSAGES: Record<Exclude<ServerError, OnFallback>, string> & { [code in On
   'storage-full': `저장 공간이 가득 찼어요. ${PURGE_FREES}`,
   'tool-file-refused': '플러그인 파일을 저장하지 못했어요. 파일 용량 한도나 차단 여부를 확인해 주세요.',
   'draft-too-large': '플러그인 코드가 512KB를 넘어서 여기서 편집할 수 없어요.',
-  'risu-plugin': 'Risu 플러그인은 여기서 편집할 수 없어요.',
+  'risu-plugin': 'Risu 플러그인은 코드 편집과 테스트를 할 수 없어요.',
   'picture-unreadable': UNREADABLE_IMAGE,
   'picture-refused': '이미지 용량이 너무 크거나, 차단된 파일이거나, 파일 한도를 넘었어요.',
   'file-blocked': '운영자가 차단한 파일이라 올리거나 열 수 없어요.',

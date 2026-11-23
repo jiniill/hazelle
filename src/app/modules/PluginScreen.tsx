@@ -1,8 +1,9 @@
-import { Code2 } from 'lucide-react';
+import { Code2, TestTube } from 'lucide-react';
 import { useState } from 'react';
 import { draftOfTool } from '../../runtime/tools/drafts';
 import type { Stored } from '../../model/kinds';
 import { ACTS } from '../common/acts';
+import { TRIAL } from '../common/words';
 import { useFiles, useStore, useTool } from '../session';
 import { navigate } from '../shell/router';
 import { useToast } from '../toast';
@@ -26,7 +27,12 @@ export function PluginScreen({ stored, back }: { stored: Stored<'module'>; back:
   }
   const { name, top, describing } = useModuleEditor(stored, 'plugins', back, () => tool && (
     <>
-      {!tool.value.manifest.risu && <MenuItem icon={Code2} label="코드 편집" onClick={() => void edit()} />}
+      {!tool.value.manifest.risu && (
+        <>
+          <MenuItem icon={Code2} label="코드 편집" onClick={() => void edit()} />
+          <MenuItem icon={TestTube} label={TRIAL.name} onClick={() => navigate({ kind: 'plugin-test', id: stored.id })} />
+        </>
+      )}
       <MenuItem icon={ACTS.export.icon} label={ACTS.export.label} onClick={() => setExporting(true)} />
     </>
   ));

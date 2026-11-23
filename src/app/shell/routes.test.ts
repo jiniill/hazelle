@@ -59,6 +59,7 @@ const EXAMPLES = {
   plugins: [{ kind: 'plugins' }],
   plugin: [{ kind: 'plugin', id: CHAT }],
   'plugin-page': [{ kind: 'plugin-page', id: CHAT }],
+  'plugin-test': [{ kind: 'plugin-test', id: CHAT }],
   'plugin-new': [{ kind: 'plugin-new', place: null }, { kind: 'plugin-new', place: 'badge' }],
   'plugin-draft': [{ kind: 'plugin-draft', id: CHAT }],
   models: [{ kind: 'models' }],

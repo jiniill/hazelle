@@ -16,7 +16,7 @@ import { SAMPLE, SAMPLE_LANGUAGE, SAMPLE_NOTE } from './sample';
 import { chatVariable, writerName, type ChatVariables, type Defaults, type Variables } from './variables';
 import { COUNTING, TRIAL } from '../words';
 
-const LABEL = '테스트';
+const LABEL = TRIAL.name;
 // The lane name the sample runs on, which no chat id takes.
 const SAMPLE_CHAT = 'sample';
 const WAIT_MS = 400;

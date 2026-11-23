@@ -37,6 +37,7 @@ const ModelsScreen = lazy(() => import('../models/ModelsScreen').then(({ ModelsS
 const ModuleScreen = lazy(() => import('../modules/ModuleScreen').then(({ ModuleScreen }) => ({ default: ModuleScreen })));
 const ModulesScreen = lazy(() => import('../modules/ModulesScreen').then(({ ModulesScreen }) => ({ default: ModulesScreen })));
 const PluginScreen = lazy(() => import('../modules/PluginScreen').then(({ PluginScreen }) => ({ default: PluginScreen })));
+const PluginTestScreen = lazy(() => import('../modules/PluginTestScreen').then(({ PluginTestScreen }) => ({ default: PluginTestScreen })));
 const NewPluginScreen = lazy(() => import('../modules/NewPluginScreen').then(({ NewPluginScreen }) => ({ default: NewPluginScreen })));
 const StudioScreen = lazy(() => import('../modules/StudioScreen').then(({ StudioScreen }) => ({ default: StudioScreen })));
 const PluginsScreen = lazy(() => import('../modules/PluginsScreen').then(({ PluginsScreen }) => ({ default: PluginsScreen })));
@@ -129,6 +130,8 @@ export function Page({ route, onPaired }: { route: Route; onPaired: (paired: boo
         return <ItemPage at={{ kind: 'module', id: at.id }} back={back(at)}>{(stored) => <PluginScreen key={stored.id} stored={stored} back={back(at)} />}</ItemPage>;
       case 'plugin-page':
         return <ItemPage at={{ kind: 'module', id: at.id }} back={backTo({ kind: 'plugins' }, wide)}>{(stored) => <ToolPageScreen key={stored.id} stored={stored} back={back(at)} />}</ItemPage>;
+      case 'plugin-test':
+        return <ItemPage at={{ kind: 'module', id: at.id }} back={backTo({ kind: 'plugins' }, wide)}>{(stored) => <PluginTestScreen key={stored.id} stored={stored} back={back(at)} />}</ItemPage>;
       case 'plugin-new':
         return <NewPluginScreen place={at.place} back={back(at)} />;
       case 'plugin-draft':

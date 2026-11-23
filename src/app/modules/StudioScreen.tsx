@@ -20,7 +20,7 @@ import { ModelMenu } from '../common/ModelMenu';
 import { FileExport } from '../common/FileExport';
 import { cost } from '../common/receipt';
 import { useAutosave } from '../common/useAutosave';
-import { SAVE_FAILED, STOP, TOOL, toolVersion, GENERATING } from '../common/words';
+import { SAVE_FAILED, STOP, TOOL, toolVersion, GENERATING, TRIAL } from '../common/words';
 import { useChats, useConnections, useSession, useStore } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
@@ -58,16 +58,18 @@ export function StudioScreen({ stored, back }: { stored: Stored<'tooldraft'>; ba
   const asides: CodeAside[] = [
     { label: 'AI', body: () => <AiPane id={id} draft={draft} flush={autosave.flush} fix={fix} setup={setup} /> },
     {
-      label: '테스트',
+      label: TRIAL.name,
       body: (reveal, show) => (
         <TestPane
           draft={draft}
           setup={setup}
           onSetup={setSetup}
-          reveal={reveal}
-          onFix={(ask) => {
-            setFix({ ask, at: Date.now() });
-            show('AI');
+          editor={{
+            reveal,
+            onFix: (ask) => {
+              setFix({ ask, at: Date.now() });
+              show('AI');
+            },
           }}
         />
       ),

@@ -48,6 +48,8 @@ export type Route =
   | { kind: 'plugins' }
   | { kind: 'plugin'; id: string }
   | { kind: 'plugin-page'; id: string }
+  // The installed file run on a chat, saving nothing.
+  | { kind: 'plugin-test'; id: string }
   // place: the studio card it was opened from, which fills the ask.
   | { kind: 'plugin-new'; place: string | null }
   // A plugin being written in the studio (a tooldraft row), not yet one or not yet applied.
@@ -181,6 +183,7 @@ export function parseRoute(at: string): Route {
     if (id === 'drafts') return sub !== undefined && ID.test(sub) ? { kind: 'plugin-draft', id: sub } : HOME;
     if (!ID.test(id)) return HOME;
     if (sub === 'page') return { kind: 'plugin-page', id };
+    if (sub === 'test') return { kind: 'plugin-test', id };
     return sub === undefined ? { kind: 'plugin', id } : HOME;
   }
   if (top === 'models') {
@@ -293,6 +296,8 @@ export function href(route: Route): string {
       return `/plugins/${route.id}`;
     case 'plugin-page':
       return `/plugins/${route.id}/page`;
+    case 'plugin-test':
+      return `/plugins/${route.id}/test`;
     case 'plugin-new':
       return route.place === null ? '/plugins/new' : `/plugins/new?place=${encodeURIComponent(route.place)}`;
     case 'plugin-draft':
@@ -394,6 +399,7 @@ export function settingsPage(route: Route): SettingsPage | 'list' | null {
     case 'plugins':
     case 'plugin':
     case 'plugin-page':
+    case 'plugin-test':
     case 'plugin-new':
     case 'plugin-draft':
       return 'plugins';
@@ -542,6 +548,7 @@ export function up(route: Below, chatShelf?: string | null): Route {
     case 'plugin-draft':
       return { kind: 'plugins' };
     case 'plugin-page':
+    case 'plugin-test':
       return { kind: 'plugin', id: route.id };
     case 'profile':
     case 'model':
