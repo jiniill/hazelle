@@ -1,4 +1,4 @@
-import { FILE_KINDS, KINDS, parentKinds, type AppendOnly, type Kind, type Singleton, type Stored, type Values } from '../../model/kinds';
+import { FILE_KINDS, parentKinds, type AppendOnly, type Kind, type Stored, type Values } from '../../model/kinds';
 import type { SealedWrite } from '../../contracts/objects';
 import type { ApiResult } from '../api';
 import { namedFile } from '../files/files';
@@ -56,12 +56,14 @@ export class ObjectWrites {
     } };
   }
 
-  upsert<K extends Singleton>(kind: K, change: (current: Values[K] | undefined) => Values[K]): WriteStep {
-    const id = KINDS[kind].id;
+  // Over the live object, or where none is: never written, or deleted, which is written at the rev its deletion took.
+  upsert<K extends Exclude<Kind, AppendOnly>>(kind: K, id: string, parent: string | null, change: (current: Values[K] | undefined) => Values[K] | null): WriteStep {
     return { id, resolve: (at) => {
       const held = at(id);
       if (held && held.value === undefined) return { ok: false, error: 'unreadable' };
-      return { ok: true, data: { pending: { kind, id, parent: null, value: change(held?.value as Values[K] | undefined), baseRev: held?.rev ?? null }, held: null } };
+      const value = change(held?.value as Values[K] | undefined);
+      if (value === null) return { ok: false, error: 'gone' };
+      return { ok: true, data: { pending: { kind, id, parent, value, baseRev: held?.rev ?? this.objects.deletedRevision(id) ?? null }, held: null } };
     } };
   }
 

@@ -95,15 +95,8 @@ export async function indexRecords(session: Reader, chat: string, signal: AbortS
   return final.ok ? { ok: true } : { ok: false, failure: final };
 }
 
-export async function saveVectors(store: ObjectStore, owner: string, value: Vectors) {
-  const id = vectorsId(owner);
-  // By id, not vectorsOf: a broken stored value is overwritten by a fresh index rather than conflicting forever.
-  if (!store.get('vectors', id)) {
-    const created = await store.create('vectors', value, { id, parent: owner });
-    if (created.ok || created.error !== 'conflict' || !store.get('vectors', id)) return created;
-  }
-  return store.update('vectors', id, () => value);
-}
+// What is stored is not read: a broken value is overwritten by a fresh index.
+export const saveVectors = (store: ObjectStore, owner: string, value: Vectors) => store.upsertAt('vectors', vectorsId(owner), owner, () => value);
 
 // What the latest message asks about: the latest user message, and under QUERY_LEAST characters the end of the reply
 // before it too, since "응" or "그래서?" alone names nothing (unruled, 2026-10-09).

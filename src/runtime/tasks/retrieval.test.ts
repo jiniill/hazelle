@@ -89,7 +89,7 @@ it('reports a failed final vector save separately from embedding failure', () =>
   const chat = await indexable(session, 1);
   vi.spyOn(embeddingCalls, 'embedTexts').mockResolvedValue({ answer: { ok: true, model: 'm', vectors: [[1, 0]] }, receipt: null });
   const failure = { ok: false, error: 'storage-full' } as const;
-  vi.spyOn(session.store, 'create').mockResolvedValue(failure);
+  vi.spyOn(session.store, 'upsertAt').mockResolvedValue(failure);
   expect(await indexRecords(session, chat, new AbortController().signal, () => {})).toEqual({ ok: false, failure });
 }));
 
@@ -101,7 +101,7 @@ it('stops indexing when its partial checkpoint cannot be saved', () => server.wi
     return { answer: { ok: true, model: 'm', vectors: texts.map(() => [1, 0]) }, receipt: null };
   });
   const failure = { ok: false, error: 'conflict' } as const;
-  const write = vi.spyOn(session.store, 'create').mockResolvedValue(failure);
+  const write = vi.spyOn(session.store, 'upsertAt').mockResolvedValue(failure);
   expect(await indexRecords(session, chat, new AbortController().signal, () => {})).toEqual({ ok: false, failure });
   expect(embed).toHaveBeenCalledOnce();
   expect(write).toHaveBeenCalledOnce();
@@ -114,7 +114,7 @@ it('reports a failed partial save when a later embedding batch fails', () => ser
     .mockResolvedValueOnce({ answer: { ok: true, model: 'm', vectors: Array.from({ length: embeddingCalls.EMBED_TEXTS }, () => [1, 0]) }, receipt: null })
     .mockResolvedValueOnce({ answer: { ok: false, reason: 'failed' }, receipt: null });
   const failure = { ok: false, error: 'storage-full' } as const;
-  vi.spyOn(session.store, 'create').mockResolvedValue(failure);
+  vi.spyOn(session.store, 'upsertAt').mockResolvedValue(failure);
   expect(await indexRecords(session, chat, new AbortController().signal, () => {})).toEqual({ ok: false, failure });
 }));
 

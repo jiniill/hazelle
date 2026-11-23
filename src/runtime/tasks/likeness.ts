@@ -46,15 +46,9 @@ type Held = { name: string; type: string; avatar: boolean; bytes: Uint8Array<Arr
 // files: pictures still to read; held: one already in the owner's value, a persona's thumb.
 type Material = { name: string; user: boolean; texts: { label: string; text: string }[]; lore: { name: string; keys: string[]; content: string }[]; files: Picture[]; held: Held[] };
 
-// value: the pack's first likeness; change: what is written over one there, or over another device's met in a conflict.
-async function writeLikeness(store: ObjectStore, owner: string, value: Likeness, change: (current: Likeness) => Likeness): Promise<ApiResult<Stored<'likeness'>>> {
-  const id = likenessId(owner);
-  if (!store.get('likeness', id)) {
-    const created = await store.create('likeness', value, { id, parent: owner });
-    if (created.ok || created.error !== 'conflict' || !store.get('likeness', id)) return created;
-  }
-  return store.update('likeness', id, change);
-}
+// value: the pack's likeness where it has none; change: what is written over one there, or over another device's met in a conflict.
+const writeLikeness = (store: ObjectStore, owner: string, value: Likeness, change: (current: Likeness) => Likeness) =>
+  store.upsertAt('likeness', likenessId(owner), owner, (current) => (current ? change(current) : value));
 
 // A portrait by its place and the name it had when shown, so an edit never lands on another one moved there ('gone').
 type PortraitAt = { index: number; name: string };

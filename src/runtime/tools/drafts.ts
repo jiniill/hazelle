@@ -55,10 +55,7 @@ export async function deleteDraft(store: ObjectStore, id: string): Promise<ApiRe
 }
 
 // 초안 삭제's 되돌리기: the draft as it was, under its own id.
-export async function restoreDraft(store: ObjectStore, id: string, draft: ToolDraft): Promise<ApiResult<null>> {
-  const saved = await store.create('tooldraft', draft, { id, parent: null });
-  return saved.ok ? { ok: true, data: null } : saved;
-}
+export const restoreDraft = (store: ObjectStore, id: string, draft: ToolDraft) => store.batch([{ type: 'restore', kind: 'tooldraft', id, parent: null, value: draft }]);
 
 export async function draftOfTool(store: ObjectStore, files: Files, module: string): Promise<ApiResult<string>> {
   const tool = live(store.get('module', module)) && store.get('tool', toolId(module));

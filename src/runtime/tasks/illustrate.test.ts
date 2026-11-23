@@ -387,5 +387,6 @@ describe('Illustrator with profiles', { timeout: 15_000 }, () => {
       expect(session.store.get('likeness', likenessId(owner))).toBeNull();
       await draw();
       expect(profileCalls()).toHaveLength(2);
+      expect(session.store.get('likeness', likenessId(owner))!.value.portraits[0]).toMatchObject({ name: 'Ari' });
     }));
 });

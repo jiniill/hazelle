@@ -1,7 +1,7 @@
 import { autoDiagnose } from '../diagnostics/auto-diagnosis';
 import { autoChat } from '../diagnostics/diagnostic-state';
 import { entryName } from '../../connectors/types';
-import { chatMemory, memoryOwner, memorySetup, sourcesOf, storedMemory, memoryWriter, type Tools } from './memory-read';
+import { chatMemory, memoryOwner, memorySetup, sourcesOf, memoryWriter, type Tools } from './memory-read';
 import { chatSent, type ChatSent } from './memory-view';
 import { MemorySchedule, type MemoryCheck } from './memory-schedule';
 import { chapterCap, chapterTarget, coveredBy, fingerprint, isChapter, memoryBudget, nextChapters, nextMerge, nextSpan, owned, parseChapter, parseRecords, placesOf, rawParts, standingChapters, staleness, threadLabel, type Drafted, type Refusal, type Scene } from '../../engine/memory';
@@ -38,19 +38,9 @@ export const setDefaultMemory = (store: ObjectStore, change: Partial<MemorySetti
 
 type Write<T = Stored<'memory'>> = Promise<ApiResult<T>>;
 
-// null means 'gone', with no write. A concurrent create on another device becomes an update.
-async function changeMemory(store: ObjectStore, chat: string, change: (memory: Memory) => Memory | null): Write {
-  return store.withChat(chat, async () => {
-    const id = memoryId(chat);
-    if (!storedMemory(store, chat)) {
-      const value = change(emptyMemory());
-      if (value === null) return { ok: false, error: 'gone' };
-      const created = await store.create('memory', value, { id, parent: chat });
-      if (created.ok || created.error !== 'conflict' || !storedMemory(store, chat)) return created;
-    }
-    return store.update('memory', id, change);
-  });
-}
+// null means 'gone', with no write.
+const changeMemory = (store: ObjectStore, chat: string, change: (memory: Memory) => Memory | null): Write =>
+  store.withChat(chat, () => store.upsertAt('memory', memoryId(chat), chat, (current = emptyMemory()) => change(current)));
 
 // The writers below that take a record's id take a chapter's too.
 type ItemChange = <T extends MemoryRecord | Chapter>(item: T) => T;

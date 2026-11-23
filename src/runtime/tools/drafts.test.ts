@@ -3,7 +3,7 @@ import { identity, readTool, toolSource } from '../../engine/import/tool';
 import { toolId } from '../../model/tool';
 import { setModuleDeleted } from '../library/modules';
 import { testServer } from '../testing';
-import { addDraftAsk, applyDraft, applyPreview, blankDraft, createDraft, deleteDraft, DRAFT_BYTES, draftOfTool, draftsOf, draftState, importFile, installedDiffers, saveDraft, undoFileImport } from './drafts';
+import { addDraftAsk, applyDraft, applyPreview, blankDraft, createDraft, deleteDraft, DRAFT_BYTES, draftOfTool, draftsOf, draftState, importFile, installedDiffers, restoreDraft, saveDraft, undoFileImport } from './drafts';
 import { importTool } from './store';
 
 const server = testServer();
@@ -51,6 +51,8 @@ it('keeps the latest 30 asks, optionally replaces the body and sorts by edit tim
   now.mockRestore();
   expect((await deleteDraft(store, second)).ok).toBe(true);
   expect(store.get('tooldraft', second)).toBeNull();
+  expect(await restoreDraft(store, second, { ...file, module: null, applied: null, asks: [], at: 100 })).toEqual({ ok: true, data: null });
+  expect(store.get('tooldraft', second)!.value.at).toBe(100);
 });
 
 it('applies through the importer, raising an unchanged version once per change, and records the exact applied file', async () => {

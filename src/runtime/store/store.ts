@@ -698,7 +698,13 @@ export class ObjectStore {
 
   // A singleton lives at the id its kind names, and current is undefined until it is first written.
   upsert<K extends Singleton>(kind: K, change: (current: Values[K] | undefined) => Values[K]): Promise<ApiResult<Stored<K>>> {
-    return this.writeOne<K>(this.writes.upsert(kind, change), null);
+    return this.writeOne<K>(this.writes.upsert(kind, KINDS[kind].id, null, change), null);
+  }
+
+  // The one object its owner keeps at an id made from the owner's (memoryId, likenessId), first written or deleted
+  // by any device: current is undefined where none is, and a null change fails as 'gone'.
+  upsertAt<K extends Exclude<Kind, AppendOnly | Singleton>>(kind: K, id: string, parent: string, change: (current: Values[K] | undefined) => Values[K] | null): Promise<ApiResult<Stored<K>>> {
+    return this.writeOne<K>(this.writes.upsert(kind, id, parent, change), SCOPED.has(kind) ? parent : null);
   }
 
   // Writes a snapshot back (되돌리기, and a backup's objects): over the live object, or in place of a deleted

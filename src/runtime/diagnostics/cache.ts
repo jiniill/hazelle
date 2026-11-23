@@ -57,14 +57,7 @@ export const chatPrint = (store: Pick<ObjectStore, 'children'>, chat: string): S
 // Replaced by each reply call that kept a cache (cacheKept, prefixKept), the one lastCache names.
 export function writePrint(store: ObjectStore, chat: string, call: string, { connection, account, model, reasoning, messages }: Omit<CachePrint, 'call'>) {
   const value: CachePrint = { call, connection, account, model, ...(reasoning !== undefined && { reasoning }), messages };
-  return store.withChat(chat, async () => {
-    const id = cachePrintId(chat);
-    if (!chatPrint(store, chat)) {
-      const created = await store.create('cacheprint', value, { id, parent: chat });
-      if (created.ok || created.error !== 'conflict' || !chatPrint(store, chat)) return created;
-    }
-    return store.update('cacheprint', id, () => value);
-  });
+  return store.withChat(chat, () => store.upsertAt('cacheprint', cachePrintId(chat), chat, () => value));
 }
 
 // The last call to forecast against: the stored print, when it is of the call whose receipt keeps the cache's time.

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { blankCard } from '../../engine/import/card';
 import { likenessId, PORTRAITS_MOST, type Portrait } from '../../model/likeness';
 import { addCharacter } from '../library/characters';
-import { importPortraits } from './likeness';
+import { importPortraits, removeLikeness } from './likeness';
 import { testServer } from '../testing';
 
 const server = testServer();
@@ -15,6 +15,15 @@ describe('importPortraits', () => {
     const owner = added.ok ? added.data : '';
     expect(await importPortraits(store, owner, [made('루나')])).toEqual({ ok: true, data: { before: null, replaced: 0 } });
     expect(store.get('likeness', likenessId(owner))?.value).toMatchObject({ portraits: [made('루나')], receipt: null });
+  });
+
+  it('writes over profiles all removed', async () => {
+    const { store } = await server.account();
+    const added = await addCharacter(store, { card: blankCard('루나'), folder: null, loreFolders: [] }, { avatar: null, assets: [], lore: [], likeness: { portraits: [made('루나')], at: 1, receipt: null } }, () => {});
+    const owner = added.ok ? added.data : '';
+    expect((await removeLikeness(store, owner)).ok).toBe(true);
+    expect(await importPortraits(store, owner, [made('카엘')])).toEqual({ ok: true, data: { before: null, replaced: 0 } });
+    expect(store.get('likeness', likenessId(owner))?.value.portraits).toEqual([made('카엘')]);
   });
 
   it('refuses past the most portraits a pack holds and writes nothing', async () => {
