@@ -3,8 +3,9 @@ import type { ModelRef } from '../../connectors/assignment';
 import { sumCosts } from '../../connectors/pricing';
 import { sharedModel } from '../../runtime/models/assignment';
 import { splitTool } from '../../engine/import/tool';
+import { live } from '../../model/library';
 import { chatNow } from '../../runtime/chat/chat-context';
-import { forecastSend } from '../../runtime/chat/turn-context';
+import { blocked, forecastSend } from '../../runtime/chat/turn-context';
 import { sentOf, toolRequest } from '../../runtime/scripts/request';
 import type { ChatScope } from '../../engine/render';
 import type { ToolTrial } from '../../runtime/scripts/preview';
@@ -46,13 +47,20 @@ async function runTest(session: Session, draft: DraftFile, chat: string, moments
   try {
     const scope = await chatNow(session, chat, signal);
     if (!scope) return [{ failed: TRIAL.noChat, line: null, code: false }];
-    // The request the chat would send next, as it stands before the run.
-    const sending = moments.some(({ moment }) => TEST_REQUEST.has(moment)) ? await forecastSend(session, chat, { kind: 'answer' }, signal, 'view') : null;
-    if (sending && 'kind' in sending) return [{ failed: describeTurnFailure(sending), line: null, code: false }];
-    const request = sending && toolRequest(sentOf(sending.prompt));
+    // The request the chat would send next, as it stands before the run, built while the chat is held open.
+    let request: Hazelle.RequestMessage[] | null = null;
+    if (moments.some(({ moment }) => TEST_REQUEST.has(moment))) {
+      const held = await session.store.withChats([chat], async () => ({ ok: true as const, data: await forecastSend(session, chat, { kind: 'answer' }, signal, 'view') }), { signal, summarize: false });
+      const sending = held.ok ? held.data : null;
+      const stored = live(session.store.get('chat', chat));
+      const refused = sending ? ('kind' in sending ? sending : null) : stored && blocked(session, stored.value);
+      if (refused) return [{ failed: describeTurnFailure(refused), line: null, code: false }];
+      if (!sending || 'kind' in sending) return [{ failed: '이 채팅의 다음 요청을 만들지 못했어요.', line: null, code: false }];
+      request = toolRequest(sentOf(sending.prompt));
+    }
     const events = moments.map(({ moment, text }) => (at: ChatScope) => testEvent(moment, at, text, read.trial.tool.manifest, request));
     const tried = await session.scriptPreview.tool(chat, scope, read.trial, messages, events, setup.calling ? { model: setup.model } : null, signal);
-    const missing = ({ moment }: TestMoment) => (moment.startsWith('tool:') ? '인자가 JSON 객체가 아니에요.' : TEST_REQUEST.has(moment) ? '이 채팅의 다음 요청을 만들지 못했어요.' : '이 채팅에는 테스트할 메시지가 없어요.');
+    const missing = ({ moment }: TestMoment) => (moment.startsWith('tool:') ? '인자가 JSON 객체가 아니에요.' : '이 채팅에는 테스트할 메시지가 없어요.');
     return tried.map((each, at) => (each === 'unheard' ? null : each === 'no-event' ? { failed: missing(moments[at]!), line: null, code: false } : 'error' in each ? failed(each.error, each.log) : each));
   } catch (error) {
     return [failed(error)];
