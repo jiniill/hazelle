@@ -8,7 +8,6 @@
 }
 
 .step {
-  composes: eased from '../foundation/hover.module.css';
   width: 100%;
   display: flex;
   flex-wrap: wrap;
@@ -22,13 +21,18 @@
   color: var(--color-text);
   font-size: var(--text-xs);
   text-align: start;
+}
+
+/* A step that is pressed for its source. */
+.pick {
+  composes: eased from '../foundation/hover.module.css';
   cursor: pointer;
   transition:
     border-color var(--motion-respond),
     background-color var(--motion-respond);
 }
 
-.step:is(:hover, :active) {
+.pick:is(:hover, :active) {
   border-color: var(--color-border);
   background: var(--color-surface-hover);
 }

@@ -53,7 +53,7 @@ export const MODULE_MODELS = '모델 호출';
 export const MODULE_MODEL_HELP = `${MODEL_ROLES.aux} 호출에만 써요.`;
 export const OUTGOING = '보낼 메시지';
 // A script's or a plugin's 테스트, run on a chat without saving.
-export const TRIAL = { name: '테스트', when: '실행 시점', run: '테스트 실행', running: '실행하는 중…', noChat: '채팅을 열지 못했어요.', failed: '결과를 만들지 못했어요.', stale: '코드가 바뀌었어요. 다시 실행하면 지금 코드로 테스트해요.', unchanged: '변경되는 내용이 없어요.' };
+export const TRIAL = { name: '테스트', chat: '채팅', when: '실행 시점', whenHelp: '플러그인은 대화의 정해진 시점마다 실행돼요. 고른 시점의 코드를 이 채팅에서 한 번 실행하고, 무엇을 했는지 보여줘요.', run: '테스트 실행', running: '실행하는 중…', noChat: '채팅을 열지 못했어요.', failed: '결과를 만들지 못했어요.', stale: '코드가 바뀌었어요. 다시 실행하면 지금 코드로 테스트해요.', unchanged: '변경되는 내용이 없어요.' };
 // Who a script's question or switch speaks for; a module that holds a tool is a plugin. Each noun takes 이.
 const ASKER = { character: '봇', module: '모듈', plugin: TOOL };
 export type Asker = keyof typeof ASKER;

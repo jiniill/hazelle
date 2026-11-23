@@ -30,7 +30,8 @@ import type { ScriptPages } from '../scripts/pages';
 import type { ScriptJournal } from '../scripts/journal';
 import type { Session } from '../session';
 import type { MenuItem, ToolHosts } from './facade';
-import { isFrameTool, type Context, type Entry, type EntryTrial, type Frame } from './frame-state';
+import { errorMessage } from '../../error-message';
+import { isFrameTool, type Context, type Entry, type EntryTrial, type Frame, type TrialCall } from './frame-state';
 import { decodeState, encodeState } from './state';
 import { readToolAsset, saveToolAsset, setToolSettings, toolAssetId, toolChatData, toolChatKeys, toolKeys, ToolStorage } from './store';
 
@@ -109,6 +110,21 @@ function isOutcome(value: unknown, event: ToolEvent['kind'] | undefined): value 
     && Array.isArray(value.badges) && value.badges.every((badge) => isRecord(badge) && Number.isInteger(badge.index) && (badge.text === null || typeof badge.text === 'string'))
     && Array.isArray(value.lore) && value.lore.every(isLore)
     && Array.isArray(value.variables) && value.variables.every((pair) => Array.isArray(pair) && pair.length === 2 && typeof pair[0] === 'string' && !pair[0].startsWith(TOOL_VARIABLES) && (pair[1] === undefined || typeof pair[1] === 'string'));
+}
+const TRIAL_CALLS = 100;
+const TRIAL_CALL_CHARS = 200;
+// A value as a test run's record of its calls keeps it: bytes by their length.
+function shown(value: unknown): string {
+  let text: string;
+  try { text = JSON.stringify(value, (_key, each: unknown) => (each instanceof Uint8Array ? `<${each.length} bytes>` : each)) ?? ''; } catch { text = String(value); }
+  return text.length > TRIAL_CALL_CHARS ? `${text.slice(0, TRIAL_CALL_CHARS)}…` : text;
+}
+// null: past TRIAL_CALLS, counted only.
+function recorded({ calls }: EntryTrial, method: string, args: unknown[]): TrialCall | null {
+  if (calls.made.length >= TRIAL_CALLS) { calls.omitted++; return null; }
+  const call: TrialCall = { method, args: args.map(shown).join(', '), gave: null, failed: false };
+  calls.made.push(call);
+  return call;
 }
 // A test run's calls that would write outside its outcome: storage and settings change its own copy, the rest are
 // refused, each listed. null: the call runs as in any run, which reads what the run's own module holds: nothing.
@@ -208,7 +224,22 @@ export class ToolApi {
     return frame.page ? frame.page.chat : frame.entry.background === frame && isFrameTool(frame.entry.tool) ? frame.entry.chat : null;
   }
 
+  // A test run's calls are recorded as they are made, each with its answer once it has one.
   async call(frame: Frame, method: string, args: unknown[], event: unknown, cancel: AbortSignal): Promise<unknown> {
+    const { trial } = frame.entry;
+    if (!trial) return this.answer(frame, method, args, event, cancel);
+    const made = recorded(trial, method, args);
+    try {
+      const value = await this.answer(frame, method, args, event, cancel);
+      if (made) made.gave = shown(value);
+      return value;
+    } catch (error) {
+      if (made) Object.assign(made, { gave: errorMessage(error), failed: true });
+      throw error;
+    }
+  }
+
+  private async answer(frame: Frame, method: string, args: unknown[], event: unknown, cancel: AbortSignal): Promise<unknown> {
     const entry = frame.entry;
     if (!entry.trial && !live(this.session.store.get('module', entry.module))) throw new ToolStopped();
     const [first, second] = args;
