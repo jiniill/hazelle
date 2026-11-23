@@ -8,16 +8,17 @@ import type { ChatScope } from '../../engine/render';
 import type { ToolTrial } from '../../runtime/scripts/preview';
 import type { Session } from '../../runtime/session';
 import { bodyLine, draftTrial, type DraftFile } from '../../runtime/tools/drafts';
-import { ToolFailure, type TrialWrite } from '../../runtime/tools/frame-state';
+import { ToolFailure, type TrialCalls, type TrialWrite } from '../../runtime/tools/frame-state';
 import { trialReport, type PluginRunner, type TestMessage, type TestMoment, type TestRun, type TestStep } from '../../runtime/tools/plugin-writer';
 import { errorMessage } from '../../error-message';
 import { describeImportFailure } from '../common/importFailure';
 import { ModelMenu } from '../common/ModelMenu';
-import { cost } from '../common/receipt';
+import { cost, seconds } from '../common/receipt';
 import { trialFacts } from '../common/code/Trial';
 import { MODULE_MODELS, TRIAL, OUTGOING } from '../common/words';
+import { useShown } from '../common/useLoaded';
 import { useChats, useSession } from '../session';
-import { Button, Callout, ChoiceGroup, CodeBlock, Empty, Facts, Row, SettingRow, Stack, Switch, Text, TextField } from '../ui';
+import { Button, Callout, ChoiceGroup, CodeBlock, Empty, Facts, Row, Section, SettingRow, Stack, StepList, Switch, Text, TextField } from '../ui';
 import { fixAsk, lineRange, SEE_IN_CODE, testEvent, testPicks, type TestPick } from './studio';
 
 const REFUSED: Record<Extract<TrialWrite, { kind: 'refused' }>['call'], string> = { 'assets.save': '파일 저장', 'chat.picture': '이미지 넣기', 'chat.send': '메시지 보내기', 'chat.card.edit': '캐릭터 카드 수정' };
@@ -27,16 +28,17 @@ const REFUSED: Record<Extract<TrialWrite, { kind: 'refused' }>['call'], string> 
 export type TestSetup = { chat: string | null; calling: boolean; model: ModelRef | null };
 
 // code: the failure is the file's own, thrown or failed to load, so the AI can be asked to fix it. line: the body's.
-type Tested = ToolTrial | null | { failed: string; line: number | null; code: boolean };
+// log: what it asked of the app before it failed, absent when it never ran.
+type Tested = ToolTrial | null | { failed: string; line: number | null; code: boolean; log?: TrialCalls };
 
 // The draft run on a chat for its moments in order, as ScriptPreview.tool runs them, after the made-up messages: nothing is
 // saved. One result per moment run, ending at the first failure.
 async function runTest(session: Session, draft: DraftFile, chat: string, moments: TestMoment[], messages: TestMessage[], setup: TestSetup, signal: AbortSignal): Promise<Tested[]> {
   const read = draftTrial(session.store, draft);
   if (!read.ok) return [{ failed: describeImportFailure(read.failure), line: null, code: true }];
-  const failed = (error: unknown): Tested => {
+  const failed = (error: unknown, log?: TrialCalls): Tested => {
     const code = error instanceof ToolFailure;
-    return { failed: errorMessage(error), line: code && error.line !== null ? bodyLine(draft, error.line) : null, code };
+    return { failed: errorMessage(error), line: code && error.line !== null ? bodyLine(draft, error.line) : null, code, log };
   };
   try {
     const scope = await chatNow(session, chat, signal);
@@ -44,7 +46,7 @@ async function runTest(session: Session, draft: DraftFile, chat: string, moments
     const events = moments.map(({ moment, text }) => (at: ChatScope) => testEvent(moment, at, text, read.trial.tool.manifest));
     const tried = await session.scriptPreview.tool(chat, scope, read.trial, messages, events, setup.calling ? { model: setup.model } : null, signal);
     const missing = (at: number) => (moments[at]!.moment.startsWith('tool:') ? '인자가 JSON 객체가 아니에요.' : '이 채팅에는 테스트할 메시지가 없어요.');
-    return tried.map((each, at) => (each === 'unheard' ? null : each === 'no-event' ? { failed: missing(at), line: null, code: false } : 'error' in each ? failed(each.error) : each));
+    return tried.map((each, at) => (each === 'unheard' ? null : each === 'no-event' ? { failed: missing(at), line: null, code: false } : 'error' in each ? failed(each.error, each.log) : each));
   } catch (error) {
     return [failed(error)];
   }
@@ -129,8 +131,8 @@ export function TestPane({ draft, setup, onSetup, editor }: { draft: DraftFile; 
 
   return (
     <Stack gap="related">
-      <ChoiceGroup label="채팅" layout="menu" options={chats.map(({ id, title }) => ({ value: id, label: title }))} value={chosen.id} onChange={(chat) => onSetup({ ...setup, chat })} />
-      <ChoiceGroup label={TRIAL.when} layout="menu" options={picks.map(({ value, label, sub }) => ({ value, label, description: sub }))} value={picked.value} onChange={setPick} />
+      <SettingRow label={TRIAL.chat} control={<ChoiceGroup label={TRIAL.chat} layout="menu" options={chats.map(({ id, title }) => ({ value: id, label: title }))} value={chosen.id} onChange={(chat) => onSetup({ ...setup, chat })} />} />
+      <SettingRow label={TRIAL.when} help={TRIAL.whenHelp} control={<ChoiceGroup label={TRIAL.when} layout="menu" options={picks.map(({ value, label, sub }) => ({ value, label, description: sub }))} value={picked.value} onChange={setPick} />} />
       {picked.text && <TextField label={picked.value === 'sending' ? OUTGOING : picked.sub === 'tool' ? '인자(JSON)' : '입력창 내용'} value={text} onChange={setText} />}
       {read.trial.tool.manifest.uses.includes('model') && (
         <>
@@ -158,7 +160,7 @@ type ResultProps = { ran: Ran; stale: boolean; fix?: { onLine: (line: number) =>
 function TestResult({ ran: { pick, result }, stale, fix }: ResultProps) {
   if (result === null) return <Text variant="note">{`이 코드에는 '${pick.sub.split(' ')[0]!}' 핸들러가 없어요.`}</Text>;
   if ('failed' in result) {
-    const { failed, line, code } = result;
+    const { failed, line, code, log } = result;
     return (
       <Stack gap="related">
         <Callout tone="warn">{failed}</Callout>
@@ -168,10 +170,11 @@ function TestResult({ ran: { pick, result }, stale, fix }: ResultProps) {
             {code && <Button variant="primary" size="sm" onClick={() => fix.onFix(failed, line)}>AI로 수정</Button>}
           </Row>
         )}
+        {log && <CallLog log={log} />}
       </Stack>
     );
   }
-  const { outcome, writes, called } = result;
+  const { outcome, writes, called, log, took } = result;
   const answer = answerText(outcome.value);
   const listed = (label: string, items: string[]) => (items.length ? [{ label, value: items.join(' · ') }] : []);
   const count = (label: string, length: number) => (length ? [{ label, value: `${length}개` }] : []);
@@ -189,6 +192,7 @@ function TestResult({ ran: { pick, result }, stale, fix }: ResultProps) {
   return (
     <Stack gap="related">
       {stale && <Text variant="note">{TRIAL.stale}</Text>}
+      <Callout tone="success">{`오류 없이 끝났어요 · ${seconds(took)}`}</Callout>
       {answer.map(({ label, text }) => (
         <Fragment key={label}>
           <Text variant="note">{label}</Text>
@@ -197,7 +201,27 @@ function TestResult({ ran: { pick, result }, stale, fix }: ResultProps) {
       ))}
       {facts.length > 0 && <Facts items={facts} />}
       {answer.length === 0 && facts.length === 0 && <Text variant="note">{TRIAL.unchanged}</Text>}
+      <CallLog log={log} />
     </Stack>
+  );
+}
+
+const CALL_ROWS = 20;
+
+// What the run asked of the app, in order, each with its answer. What a handler only stages (a message edit, a badge,
+// chat state) is no call: the run's outcome holds it.
+function CallLog({ log: { made, omitted } }: { log: TrialCalls }) {
+  const shown = useShown(made, CALL_ROWS);
+  if (!made.length) return null;
+  return (
+    <Section title="호출 기록" level={3} note={`${made.length + omitted}번`} help="플러그인이 실행 중에 앱에 요청한 것과 받은 답이에요. 메시지 수정이나 배지처럼 끝날 때 한꺼번에 반영되는 것은 여기 없어요.">
+      <StepList
+        label="호출 기록"
+        steps={shown.rows.map(({ method, args, gave, failed }) => ({ source: `${method}(${args})`, result: gave ?? '', depth: 0, ...(gave === null && { note: '답을 받기 전에 실행이 끝났어요.' }), ...(failed && { tone: 'warn' as const }) }))}
+      />
+      {shown.more}
+      {!shown.more && omitted > 0 && <Text variant="note">{`이 뒤의 ${omitted}번은 기록하지 않았어요.`}</Text>}
+    </Section>
   );
 }
 

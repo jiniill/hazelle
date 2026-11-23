@@ -18,7 +18,7 @@ import { ToolApi, header, type ToolServices } from './api';
 import type { LaidLayer, MenuItem, ToolFrames, ToolMenu, ToolLayer, ToolPage, ToolSlot, Tools } from './facade';
 import { toolFrame, type OpenFrame } from './frame';
 import type { DraftTrial } from './drafts';
-import { isFrameTool, ToolFailure, type Entry, type EntryCode, type EntryTrial, type Frame, type TrialWrite } from './frame-state';
+import { isFrameTool, noCalls, ToolFailure, type Entry, type EntryCode, type EntryTrial, type Frame, type TrialCalls, type TrialWrite } from './frame-state';
 import { toolsOf } from './store';
 
 const EVENTS = new Set<EventName>(['reply', 'replying', 'sending', 'requesting', 'calling', 'showing', 'prompt', 'change', 'branch', 'menu', 'action', 'input', 'tool', 'settings', 'open', 'message']);
@@ -55,6 +55,8 @@ const eventFields = (event: ToolEvent): Partial<Extract<Down, { kind: 'event' }>
 };
 
 export type TrialRun = (scope: ChatScope, event: ToolEvent, host: ToolReach) => Promise<{ outcome: ScriptOutcome; writes: TrialWrite[] } | null>;
+// The calls the run made of the app since they were last read, a failed event's and the load's among them.
+export type TrialMade = () => TrialCalls;
 
 // What a failed call tells its tool: a stop carries no words of its own.
 const told = (error: unknown) => (error instanceof ToolStopped ? 'stopped' : errorMessage(error));
@@ -163,8 +165,8 @@ export class ToolHost implements Tools, Binding<ToolUnit, ToolEvent, ToolReach> 
   // data of a plugin is touched, and its outcomes are only returned. use runs its events on one frame, so its globals and
   // storage carry from one to the next. null: the draft does not listen to that event. The chat stays open for the run,
   // as its reads of the chat's log need.
-  async trial<T>(chat: string, draft: DraftTrial, signal: AbortSignal, use: (run: TrialRun) => Promise<T>): Promise<T> {
-    const trial: EntryTrial = { code: draft.code, chat, storage: new Map(), writes: [] };
+  async trial<T>(chat: string, draft: DraftTrial, signal: AbortSignal, use: (run: TrialRun, made: TrialMade) => Promise<T>): Promise<T> {
+    const trial: EntryTrial = { code: draft.code, chat, storage: new Map(), writes: [], calls: noCalls() };
     const entry = blankEntry(`trial:${crypto.randomUUID()}`, draft.tool, { file: null, trial }, new Map());
     this.trials.set(entry.module, entry);
     const lease = this.session.store.retainChat(chat, { summarize: false });
@@ -176,6 +178,11 @@ export class ToolHost implements Tools, Binding<ToolUnit, ToolEvent, ToolReach> 
         if (!frame.listens.has(event.kind)) return null;
         const outcome = await this.dispatch(frame, chat, scope, event, host, signal);
         return { outcome, writes: trial.writes.splice(0) };
+      }, () => {
+        const { made, omitted } = trial.calls;
+        trial.calls = noCalls();
+        // Copies: a call still unanswered is written to when its answer comes.
+        return { made: made.map((call) => ({ ...call })), omitted };
       });
     } finally {
       this.end(entry, new ToolStopped());

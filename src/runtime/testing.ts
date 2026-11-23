@@ -1,5 +1,6 @@
 import type { ToolEvent, ToolReach } from '../engine/script-api';
 import { serverBackend } from './store/backend';
+import { noCalls } from './tools/frame-state';
 import type { createTools } from './tools/host';
 import type { Binding } from './scripts/binding';
 import { toolId, type ToolUnit } from '../model/tool';
@@ -192,7 +193,7 @@ export function testServer() {
       stubPage('hidden');
       const { accountId, vaultKey } = await harness.account();
       const opened = await openSession(accountId, vaultKey, 'jin', new AbortController().signal, undefined, undefined, { tools: typeof tools === 'function' ? tools : tools && (({ store }) => ({
-        ...tools, warm: async () => {}, menus: () => [], menusOf: () => [], draft: () => () => {}, page: () => () => {}, attach: () => () => {}, layer: () => ({ taken: () => {}, close: () => {} }), subscribe: () => () => {}, frames: () => new Map(), hosts: () => new Map(), trial: (_chat, _draft, _signal, use) => use(async () => null),
+        ...tools, warm: async () => {}, menus: () => [], menusOf: () => [], draft: () => () => {}, page: () => () => {}, attach: () => () => {}, layer: () => ({ taken: () => {}, close: () => {} }), subscribe: () => () => {}, frames: () => new Map(), hosts: () => new Map(), trial: (_chat, _draft, _signal, use) => use(async () => null, noCalls),
         items: (module) => store.get('tool', toolId(module))?.value.manifest.menu ?? [], actions: (module) => store.get('tool', toolId(module))?.value.manifest.actions ?? [], hears: () => true,
       })), lua: async () => {
         const machine = await lua;

@@ -15,7 +15,7 @@ import { triggersOf } from './selection';
 import { startStages, type StartStage } from './start';
 import type { ScriptTurns } from './turns';
 import type { DraftTrial } from '../tools/drafts';
-import type { TrialWrite } from '../tools/frame-state';
+import type { TrialCalls, TrialWrite } from '../tools/frame-state';
 import type { ToolRunner } from '../tools/host';
 import type { ObjectStore } from '../store/store';
 import { providerFit } from '../models/token-calibration';
@@ -77,11 +77,11 @@ export type Rehearsal = Heard & {
 // One trigger run alone for one event (ScriptPreview.trial), as 시험해 보기 shows it.
 export type Trial = Heard & { outcome: ScriptOutcome };
 // A studio draft run alone for one event (ScriptPreview.tool), as its 테스트 shows it. called: each model call made, by
-// its cost.
-export type ToolTrial = Trial & { writes: TrialWrite[]; called: (Cost | null)[] };
+// its cost. log: what it asked of the app, in order. took: its milliseconds.
+export type ToolTrial = Trial & { writes: TrialWrite[]; called: (Cost | null)[]; log: TrialCalls; took: number };
 // One moment of ScriptPreview.tool: its trial, a draft that does not listen ('unheard'), a chat with no message the moment
-// needs ('no-event'), or what it threw.
-export type ToolTried = ToolTrial | 'unheard' | 'no-event' | { error: unknown };
+// needs ('no-event'), or what it threw, after the calls it made.
+export type ToolTried = ToolTrial | 'unheard' | 'no-event' | { error: unknown; log: TrialCalls };
 
 export const NOT_REHEARSED = 'Error: not called while rehearsing';
 const unheard = (): Heard => ({ said: [], asked: [], calls: { model: 0, embed: 0, background: 0, fetch: 0 }, loreRanAway: false });
@@ -166,7 +166,7 @@ export class ScriptPreview {
   // 모델 부르기 calls (null: the 보조 모델), or null while off, which refuses the calls as any rehearsal does. The run ends
   // at the first missing event or error.
   async tool(chat: string, scope: ChatScope, draft: DraftTrial, added: { role: 'user' | 'assistant'; text: string }[], events: ((scope: ChatScope) => ToolEvent | null)[], calling: { model: ModelRef | null } | null, signal: AbortSignal): Promise<ToolTried[]> {
-    return this.tools.trial(chat, draft, signal, async (run) => {
+    return this.tools.trial(chat, draft, signal, async (run, made) => {
       const tried: ToolTried[] = [];
       let at = applied(chat, scope, { ...noOutcome(), added: added.map(({ role, text }) => ({ role: role === 'user' ? 'user' : 'char', text, before: null })) });
       for (const eventOf of events) {
@@ -176,14 +176,15 @@ export class ScriptPreview {
         const called: (Cost | null)[] = [];
         const quiet = this.quiet(chat, at, heard, signal);
         const host: ToolReach = calling ? { ...quiet, model: async (_role, messages) => { const { result, cost } = await this.reach.tried(calling.model, messages, signal); called.push(cost); return result; } } : quiet;
+        const began = Date.now();
         try {
           const ran = await run(at, event, host);
           if (!ran) { tried.push('unheard'); continue; }
-          tried.push({ ...heard, ...ran, called });
+          tried.push({ ...heard, ...ran, called, log: made(), took: Date.now() - began });
           const next = applied(chat, at, ran.outcome);
           at = ran.outcome.writes.length > 0 ? { ...next, pending: [...(next.pending ?? []), ...ran.outcome.writes] } : next;
         } catch (error) {
-          return [...tried, { error }];
+          return [...tried, { error, log: made() }];
         }
       }
       return tried;
