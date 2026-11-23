@@ -3,7 +3,7 @@ import type { ToolManifest } from '../../tool-api/manifest';
 import type { EventName } from '../../tool-api/protocol';
 
 export type ToolMenu = { module: string; manifest: ToolManifest };
-export type ToolPage = { window: Window; chat: string | null; theme: 'dark' | 'light'; close: () => void };
+export type ToolPage = { window: Window; chat: string | null; theme: 'dark' | 'light'; colors: Hazelle.Colors; close: () => void };
 export type MenuItem = { id: string; label: string };
 // Where a frame tool's document is shown (a tool page or a chat's tool panel): place puts the frame over it, null
 // takes it away; close ends the page around it.

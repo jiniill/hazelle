@@ -13,7 +13,7 @@ import type { ToggleLine } from '../../model/prompt';
 import { fetchApi } from '../api';
 import { PLAIN_LUA, type Trigger } from '../../engine/import/types';
 import { Lua } from '../../engine/lua/run';
-import type { ModelResult, ToolEvent } from '../../engine/script-api';
+import type { ModelResult, ToolEvent, ToolReach } from '../../engine/script-api';
 import { bareModel } from '../../connectors/chat-completions';
 import { addModel, removeModel } from '../models/connections';
 import { setModels, setModuleModel } from '../library/pack';
@@ -468,6 +468,15 @@ describe("the display with the bot's Lua", () => {
 // The forecast's tool slots; a chat whose memory no tool holds reads no scope for them.
 const cachedTools = (session: Session, chat: string) => session.scriptTurns.cachedPrompt(chat, { scope: { messages: [] } as unknown as TurnContext['scope'], memory: null }).tools;
 
+// A screen of the chat as it stands, whose display pass hands the chat's tools a showing. Answers its leaving.
+function shownOn(session: Session, chat: string, messages: ReturnType<typeof fold>) {
+  const opening = { chat: session.store.get('chat', chat)!.value, messages };
+  const screen = session.read.screen(chat, session.talk, session.illustrator, opening, session.display);
+  const leave = screen.subscribe(() => {});
+  screen.setInputs(opening, { width: 1200, height: 800 });
+  return leave;
+}
+
 async function notesTool(session: Session) {
   const parsed = readTool(new TextEncoder().encode('//@api 1\n//@name notes\n//@author jin\n//@display-name 메모\n//@uses model\n//@menu now 지금 정리\n//@action redo 다시 정리\n//@composer 메모\n//@input tidy 다듬기'));
   if (!parsed.ok) throw new Error('fixture');
@@ -744,13 +753,12 @@ describe('tool events through Scripts', () => {
     }, binding);
   });
 
-  it('gives the memory slot to the first tool allowed to claim it, keeps its card past a run, maps its through, and keeps its memory past a missed deadline', async () => {
+  it('gives the memory slot to the first tool allowed to claim it, keeps its card past a run, and maps its through', async () => {
     const heard: { module: string; memory: boolean }[] = [];
-    let mode: 'before-last' | 'last' | 'late' = 'before-last';
+    let mode: 'before-last' | 'last' = 'before-last';
     const run = vi.fn<Binding<ToolUnit>['run']>(async (_chat, unit, scope, event) => {
       if (event.kind !== 'prompt') return noOutcome();
       heard.push({ module: unit.module, memory: event.turn.memory });
-      if (mode === 'late' && event.turn.memory) return new Promise(() => {});
       const through = scope.messages.at(mode === 'last' ? -1 : -2)!.message;
       return { ...noOutcome(), value: { memory: { text: `remembered ${unit.tool.manifest.name}`, through }, tool: `recall ${unit.tool.manifest.name}` } };
     });
@@ -783,7 +791,7 @@ describe('tool events through Scripts', () => {
       if (!turn || 'kind' in turn) throw new Error('fixture');
       expect(turn.memory).toEqual({ kind: 'tool', name: 'first', text: '', through: -1 });
       const prompted = async () => {
-        const result = await session.scriptTurns.prompting(chat, turn, async () => gather(), new AbortController().signal);
+        const result = await session.scriptTurns.prompting(chat, turn, async () => gather(), new AbortController().signal, () => {});
         if ('kind' in result) throw new Error(result.kind);
         return result;
       };
@@ -801,15 +809,6 @@ describe('tool events through Scripts', () => {
 
       mode = 'before-last';
       await prompted();
-      mode = 'late';
-      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
-      try {
-        const missed = prompted();
-        await vi.advanceTimersByTimeAsync(5001);
-        const result = await missed;
-        expect(result.turn.memory).toEqual({ kind: 'tool', name: 'first', text: 'remembered first', through: 1 });
-        expect(result.tools.map(({ text }) => text)).toEqual(['recall second']);
-      } finally { vi.useRealTimers(); }
       expect(session.scriptTurns.cachedPrompt(chat, turn).memory).toMatchObject({ text: 'remembered first', through: 1 });
     }, { run, close: () => {} });
   });
@@ -817,9 +816,9 @@ describe('tool events through Scripts', () => {
   it('answers an unasked consent with no card under a tool deadline, asks from a menu press, and tells a missing 임베딩 모델 once', async () => {
     const answers: unknown[] = [];
     const binding: Binding<ToolUnit> = { run: async (_chat, unit, _scope, event, host) => {
-      if (event.kind === 'prompt' || event.kind === 'menu') {
+      if (event.kind === 'showing' || event.kind === 'menu') {
         answers.push(await host.embed(['query'], 'query', { kind: 'module', id: unit.module }));
-        if (event.kind === 'prompt') answers.push(await host.model('aux', [{ role: 'user', content: 'x' }], { kind: 'module', id: unit.module }));
+        if (event.kind === 'showing') answers.push(await host.model('aux', [{ role: 'user', content: 'x' }], { kind: 'module', id: unit.module }));
       }
       return noOutcome();
     }, close: () => {} };
@@ -827,10 +826,9 @@ describe('tool events through Scripts', () => {
       const f = await toolChat(session);
       await appendUserMessage(session.store, f.chat, { id: crypto.randomUUID(), text: 'hello' });
       await session.store.projections.evaluate(f.chat);
-      const turn = gatherTurn(session, f.chat, { kind: 'answer' });
-      if (!turn || 'kind' in turn) throw new Error('fixture');
-      await session.scriptTurns.prompting(f.chat, turn, async () => turn, new AbortController().signal);
-      expect(answers).toEqual([{ ok: false, reason: 'not-allowed' }, expect.objectContaining({ success: false, reason: 'not-allowed' })]);
+      const leave = shownOn(session, f.chat, f.messages());
+      await expect.poll(() => answers).toEqual([{ ok: false, reason: 'not-allowed' }, expect.objectContaining({ success: false, reason: 'not-allowed' })]);
+      leave();
       expect(session.scriptInteractions.snapshot().questions).toEqual([]);
       const pressed = session.scriptCommands.menu(f.chat, f.module, 'now');
       await expect.poll(() => session.scriptInteractions.snapshot().questions).toMatchObject([{ question: { kind: 'plugin', grants: ['model'] } }]);
@@ -887,7 +885,7 @@ describe('tool events through Scripts', () => {
         const gather = () => gatherTurn(session, chat, { kind: 'answer' });
         const turn = gather();
         if (!turn || 'kind' in turn) throw new Error('fixture');
-        await session.scriptTurns.prompting(chat, turn, async () => gather(), new AbortController().signal);
+        await session.scriptTurns.prompting(chat, turn, async () => gather(), new AbortController().signal, () => {});
         expect(cachedTools(session, chat)).toHaveLength(1);
       };
       try {
@@ -926,13 +924,13 @@ describe('tool events through Scripts', () => {
       vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
       try {
         const reply: Written = { id: crypto.randomUUID(), message: null, replaces: null, at: Date.now(), text: 'again', receipt: { state: 'done' } as Written['receipt'] };
-        const running: string[] = [];
+        const running: (string | null)[] = [];
         const ending = session.scriptTurns.ending(f.chat, reply, new AbortController().signal, (name) => running.push(name));
         await vi.waitFor(() => expect(late).toHaveLength(1));
         await vi.advanceTimersByTimeAsync(60_000);
         late[0]!('again, slowly');
         expect((await ending).text).toBe('again, slowly');
-        expect(running).toHaveLength(1);
+        expect(running).toEqual(['메모', null]);
         const stop = new AbortController();
         const stopped = session.scriptTurns.ending(f.chat, reply, stop.signal, () => {});
         await vi.waitFor(() => expect(late).toHaveLength(2));
@@ -996,7 +994,7 @@ describe('tool events through Scripts', () => {
       const turn = gatherTurn(session, f.chat, { kind: 'answer' });
       if (!turn || 'kind' in turn) throw new Error('fixture');
       const prompt = { messages: [{ role: 'user' as const, content: 'hello' }], parts: [{ from: { kind: 'script' as const }, tokens: 1, origin: 'message' }] };
-      const running: string[] = [];
+      const running: (string | null)[] = [];
       vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
       try {
         const requesting = session.scriptTurns.requesting(f.chat, turn, prompt, new AbortController().signal, (name) => running.push(name));
@@ -1004,7 +1002,7 @@ describe('tool events through Scripts', () => {
         await vi.advanceTimersByTimeAsync(5001);
         late[0]!([{ role: 'user', content: 'hello, noted' }]);
         expect((await requesting).messages).toEqual([{ role: 'user', content: 'hello, noted' }]);
-        expect(running).toEqual(['메모']);
+        expect(running).toEqual(['메모', null]);
         const stop = new AbortController();
         const stopped = session.scriptTurns.requesting(f.chat, turn, prompt, stop.signal, () => {});
         await vi.waitFor(() => expect(late).toHaveLength(2));
@@ -1063,32 +1061,52 @@ describe('tool events through Scripts', () => {
     }, { run, close: () => {} });
   });
 
-  it('skips a prompt after its deadline, drops late writes, and notes that tool only once', async () => {
-    const finish: ((outcome: ScriptOutcome) => void)[] = [];
-    const run = vi.fn<Binding<ToolUnit>['run']>(() => new Promise((resolve) => finish.push(resolve))).mockResolvedValueOnce({ ...noOutcome(), value: 'previous summary' });
+  it('waits for a tool answering the prompt past the tool deadline, naming it and what it says it is doing, until 멈추기 ends the wait and leaves its last answer the forecast\'s', async () => {
+    const late: ((value: string) => void)[] = [];
+    const run = vi.fn<Binding<ToolUnit, ToolEvent, ToolReach>['run']>(async (_chat, _unit, _scope, event, host) => {
+      if (event.kind !== 'prompt') return noOutcome();
+      host.progress('고르는 중');
+      return new Promise((resolve) => late.push((value) => resolve({ ...noOutcome(), value })));
+    });
     await server.withSession(async (session) => {
-      const fixture = await toolChat(session);
-      await appendUserMessage(session.store, fixture.chat, { id: crypto.randomUUID(), text: 'hello' });
-      await session.store.projections.evaluate(fixture.chat);
-      const gather = () => gatherTurn(session, fixture.chat, { kind: 'answer' });
-      const turn = gather();
+      const f = await toolChat(session);
+      await appendUserMessage(session.store, f.chat, { id: crypto.randomUUID(), text: 'hello' });
+      await session.store.projections.evaluate(f.chat);
+      const turn = gatherTurn(session, f.chat, { kind: 'answer' });
       if (!turn || 'kind' in turn) throw new Error('fixture');
-      await session.scriptTurns.prompting(fixture.chat, turn, async () => gather(), new AbortController().signal);
-      expect(cachedTools(session, fixture.chat)).toHaveLength(1);
+      const running: unknown[] = [];
       vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
       try {
-        for (let attempt = 0; attempt < 2; attempt++) {
-          const prompt = session.scriptTurns.prompting(fixture.chat, turn, async () => gather(), new AbortController().signal);
-          await vi.advanceTimersByTimeAsync(0);
-          expect(run).toHaveBeenCalledTimes(attempt + 2);
-          await vi.advanceTimersByTimeAsync(5001);
-          expect(await prompt).toMatchObject({ tools: [], turn: { reply: { before: [] } } });
-          expect(cachedTools(session, fixture.chat)).toEqual([]);
-          finish[attempt]!({ ...noOutcome(), value: 'too late', writes: [[fixture.variable, 'late']] });
-        }
-        expect(session.scriptInteractions.snapshot().notes.filter(({ kind }) => kind === 'late')).toMatchObject([{ from: { kind: 'module', id: fixture.module } }]);
-        expect(session.store.children('entry', fixture.chat).filter(({ value }) => value.type === 'vars')).toEqual([]);
-      } finally { vi.useRealTimers(); for (const resolve of finish) resolve(noOutcome()); }
+        const prompting = session.scriptTurns.prompting(f.chat, turn, async () => turn, new AbortController().signal, (...told) => running.push(told));
+        await vi.waitFor(() => expect(late).toHaveLength(1));
+        await vi.advanceTimersByTimeAsync(60_000);
+        late[0]!('slowly');
+        expect(await prompting).toMatchObject({ tools: [{ text: 'slowly' }] });
+        expect(running).toEqual([['메모'], ['메모', '고르는 중'], [null]]);
+        const stop = new AbortController();
+        const stopped = session.scriptTurns.prompting(f.chat, turn, async () => turn, stop.signal, () => {});
+        await vi.waitFor(() => expect(late).toHaveLength(2));
+        stop.abort();
+        expect(await stopped).toMatchObject({ tools: [] });
+        expect(cachedTools(session, f.chat)).toMatchObject([{ text: 'slowly' }]);
+        expect(session.scriptInteractions.snapshot().notes.filter(({ kind }) => kind === 'late')).toEqual([]);
+      } finally { vi.useRealTimers(); for (const resolve of late) resolve(''); }
+    }, { run, close: () => {} });
+  });
+
+  it('shows a message as it came once a tool misses the deadline of its showing, and notes that tool', async () => {
+    const run = vi.fn<Binding<ToolUnit>['run']>((_chat, _unit, _scope, event) => event.kind === 'showing' ? new Promise(() => {}) : Promise.resolve(noOutcome()));
+    await server.withSession(async (session) => {
+      const f = await toolChat(session);
+      await appendUserMessage(session.store, f.chat, { id: crypto.randomUUID(), text: 'hello' });
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      try {
+        const leave = shownOn(session, f.chat, f.messages());
+        await vi.waitFor(() => expect(run).toHaveBeenCalled());
+        await vi.advanceTimersByTimeAsync(5001);
+        await vi.waitFor(() => expect(session.scriptInteractions.snapshot().notes.filter(({ kind }) => kind === 'late')).toMatchObject([{ from: { kind: 'module', id: f.module } }]));
+        leave();
+      } finally { vi.useRealTimers(); }
     }, { run, close: () => {} });
   });
 
@@ -1110,14 +1128,14 @@ describe('tool events through Scripts', () => {
       const turn = gatherTurn(session, f.chat, { kind: 'answer' });
       if (!turn || 'kind' in turn) throw new Error('fixture');
       const stop = new AbortController();
-      const pending = session.scriptTurns.prompting(f.chat, turn, async () => turn, stop.signal);
+      const pending = session.scriptTurns.prompting(f.chat, turn, async () => turn, stop.signal, () => {});
       await expect.poll(() => session.scriptInteractions.snapshot().questions).toHaveLength(1);
       stop.abort();
       expect(await pending).toMatchObject({ tools: [], turn: { reply: { before: [] } } });
       expect(answer).toBeNull();
       expect(session.scriptInteractions.snapshot()).toEqual({ notes: [], questions: [] });
       finish({ ...noOutcome(), value: 'late', writes: [[f.variable, '"late"']], added: [{ role: 'char', text: 'late', before: null }] });
-      expect(await session.scriptTurns.prompting(f.chat, turn, async () => turn, new AbortController().signal)).toMatchObject({ tools: [{ text: 'next' }] });
+      expect(await session.scriptTurns.prompting(f.chat, turn, async () => turn, new AbortController().signal, () => {})).toMatchObject({ tools: [{ text: 'next' }] });
       expect(cachedTools(session, f.chat)).toMatchObject([{ text: 'next' }]);
       expect(f.messages()).toHaveLength(1);
       expect(session.store.children('entry', f.chat).filter(({ value }) => value.type === 'vars')).toEqual([]);

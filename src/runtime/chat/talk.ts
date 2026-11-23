@@ -1,4 +1,4 @@
-import type { Preparing } from './turn-steps';
+import { toolWait, type Preparing, type ToolWait } from './turn-steps';
 import type { Tokens } from '../models/token-calibration';
 import type { ContextRefusal } from '../../connectors/preparation';
 import type { InputMeasurement, TokenFit, CallCalibration } from '../../model/token-calibration';
@@ -126,7 +126,7 @@ const toolsNamed = ({ error }: Reply) => error?.kind === 'provider' && /tool|fun
 const answeredWithout = (answer: Reply) => answer.state !== 'failed';
 
 // preparing: shows a call the reply waits for running, until the prompt is ready.
-type Prepare<F> = (signal: AbortSignal, preparing: (step: Preparing) => void) => Promise<Ask | F>;
+type Prepare<F> = (signal: AbortSignal, preparing: (step: Preparing | null) => void) => Promise<Ask | F>;
 
 // abort: stops the turn's reading. cancel: 멈추기, which cancels a batch, still read until it ends (GenerateInput batching).
 type Held = { turn: Turn; abort: AbortController; cancel: AbortController; calling: string | null };
@@ -150,7 +150,7 @@ export class Talk {
     private readonly costs: Costs,
     private readonly tokens: Tokens,
     // ended: a reply as its stream ended, which the bot's Lua may rewrite before it is saved. saved: once it is.
-    private readonly ended: (chat: string, reply: Written, signal: AbortSignal, running: (name: string) => void) => Promise<Written>,
+    private readonly ended: (chat: string, reply: Written, signal: AbortSignal, running: ToolWait) => Promise<Written>,
     private readonly saved: (chat: string, reply: Written) => void,
     // The calls this page reads (runtime/models/streams).
     private readonly reading: Set<string>,
@@ -205,7 +205,7 @@ export class Talk {
 
   // The reply's last stage before it is saved, which 멈추기 ends; the turn shows which tool it waits on.
   private ending(held: Held, reply: Written): Promise<Written> {
-    return this.ended(held.turn.chat, reply, held.abort.signal, (running) => this.change(held, { ...held.turn, preparing: { step: 'tools', running, since: Date.now() } }));
+    return this.ended(held.turn.chat, reply, held.abort.signal, toolWait((step) => this.prepares(held, step)));
   }
 
   // A reply not saved keeps its call's marker, so a reload saves it too.
@@ -247,6 +247,10 @@ export class Talk {
     this.changes.notify();
   }
 
+  private prepares(held: Held, step: Preparing | null) {
+    this.change(held, step ? { ...held.turn, preparing: step } : without(held.turn, 'preparing'));
+  }
+
   private change(held: Held, turn: Turn) {
     held.turn = turn;
     this.changes.notify();
@@ -273,7 +277,7 @@ export class Talk {
     const { abort } = held;
     const failure = await lease.ready;
     if (failure) return { kind: 'unsent', failure };
-    const ready = await prepare(abort.signal, (step) => this.change(held, { ...held.turn, preparing: step }));
+    const ready = await prepare(abort.signal, (step) => this.prepares(held, step));
     if ('kind' in ready) return ready;
     const { route, settings } = ready;
     let prompt = ready.prompt;

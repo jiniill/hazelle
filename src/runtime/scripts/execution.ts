@@ -7,6 +7,7 @@ import type { ToolUnit } from '../../model/tool';
 import type { EventName } from '../../tool-api/protocol';
 import { packsOf, scopeOf } from '../chat/chat-context';
 import { replyMessage, type Written } from '../chat/chat-log';
+import type { ToolWait } from '../chat/turn-steps';
 import type { ScriptOutcome } from './lua/event';
 import type { ReadModels } from '../store/read-model';
 import { noOutcome, ToolLate, ToolStopped, until, type Binding, type LuaRunner } from './binding';
@@ -19,21 +20,22 @@ import type { ObjectStore } from '../store/store';
 import type { Tools } from '../tools/facade';
 import { toolsOf } from '../tools/store';
 
-type Units = { lua: ScriptUnit[]; event: Event } | { tool: ToolUnit; event: ToolEvent };
+// progress: who waits on the tool's run (ScriptReach.host).
+type Units = { lua: ScriptUnit[]; event: Event } | { tool: ToolUnit; event: ToolEvent; progress?: ToolReach['progress'] };
 
 const ownerOf = (units: Units): PackOwner | null => 'tool' in units ? { kind: 'module', id: units.tool.module } : null;
 // What an event hands a tool to rewrite, in the shape of its answer; an event that hands nothing is answered an addition.
 const handed = (event: ToolEvent) => 'text' in event ? event.text : event.kind === 'requesting' || event.kind === 'calling' ? event.messages : event.kind === 'showing' ? event.shown.map(({ text }) => text) : undefined;
 
-// A tool's answer where nothing can stop the wait (prompt, showing, calling); one that misses it is cut off and the
-// stage goes on. sending, requesting and replying have none (Chained.turn), as Risu's hooks have none.
+// A tool's answer where nothing can stop the wait (showing, calling); one that misses it is cut off and the stage goes
+// on. The stages of a turn (sending, prompt, requesting, replying) have none, as Risu's hooks have none.
 export const TOOL_DEADLINE_MS = 5000;
 
 // A step of the tools' chain (ScriptExecution.chained). scope: the chat as the step sees it, after the writes of the tools
 // before it. answer: what a tool answered makes of the value, an Error when it cannot. quiet: nothing it does is saved.
 // turn: a step the turn waits on as on its pre agents, with no deadline: ended by 멈추기, which passes the value on as
-// it came, told each tool's name as it starts, and free to ask for a card.
-type Chained<T> = { event(value: T): ToolEvent; scope(writes: Writes): ChatScope; answer(answered: unknown, value: T): T | Error; quiet?: true; turn?: { signal: AbortSignal; running(name: string): void } };
+// it came, told each tool's name as it starts and null once past them all, and free to ask for a card.
+type Chained<T> = { event(value: T): ToolEvent; scope(writes: Writes): ChatScope; answer(answered: unknown, value: T): T | Error; quiet?: true; turn?: { signal: AbortSignal; running: ToolWait } };
 
 export class ScriptExecution {
   constructor(
@@ -73,15 +75,17 @@ export class ScriptExecution {
   async chained<T>(chat: string, units: ToolUnit[], first: T, step: Chained<T>): Promise<{ value: T; writes: Writes }> {
     let value = first;
     let writes: Writes = [];
+    const { turn } = step;
     for (const unit of units) {
-      if (this.closing.aborted || step.turn?.signal.aborted) break;
+      if (this.closing.aborted || turn?.signal.aborted) break;
       const deadline = new AbortController();
-      const stop = AbortSignal.any([this.closing, step.turn?.signal ?? deadline.signal]);
-      const timer = step.turn ? undefined : setTimeout(() => deadline.abort(new ToolLate()), TOOL_DEADLINE_MS);
-      const ended = step.turn ? undefined : () => clearTimeout(timer);
-      step.turn?.running(unit.tool.manifest.displayName);
+      const stop = AbortSignal.any([this.closing, turn?.signal ?? deadline.signal]);
+      const timer = turn ? undefined : setTimeout(() => deadline.abort(new ToolLate()), TOOL_DEADLINE_MS);
+      const ended = turn ? undefined : () => clearTimeout(timer);
+      const name = unit.tool.manifest.displayName;
+      turn?.running(name);
       try {
-        const run = { tool: unit, event: step.event(value) };
+        const run = { tool: unit, event: step.event(value), progress: turn && ((text: string) => turn.running(name, text)) };
         const outcome = step.quiet ? await this.run(chat, run, step.scope(writes), stop, true).finally(ended) : (await this.dispatch(chat, run, step.scope(writes), null, stop, ended)).outcome;
         if (stop.aborted) continue;
         writes = [...writes, ...outcome.writes];
@@ -90,6 +94,7 @@ export class ScriptExecution {
         else value = next;
       } finally { clearTimeout(timer); }
     }
+    turn?.running(null);
     return { value, writes };
   }
 
@@ -148,7 +153,7 @@ export class ScriptExecution {
     if (this.closing.aborted || signal?.aborted) return nothing;
     const from = ownerOf(units);
     try {
-      const host = this.reach.host(chat, scope, signal, deadline);
+      const host = this.reach.host(chat, scope, signal, deadline, 'tool' in units ? units.progress : undefined);
       const running = 'lua' in units
         ? this.bindings.lua().then((runner) => runner.run(chat, units.lua, scope, event, { ...host, model: this.calling(chat, scope, host.model) }, 'event'))
         : this.bindings.tools.run(chat, units.tool, scope, units.event, host, signal);

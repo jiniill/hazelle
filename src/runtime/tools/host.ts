@@ -359,7 +359,7 @@ export class ToolHost implements Tools, Binding<ToolUnit, ToolEvent, ToolReach> 
       if (page?.chat && !context) throw new ToolStopped();
       frame.loadTimer = setTimeout(() => this.stalled(frame), STUCK_MS);
       frame.heart.start(STUCK_MS);
-      this.send(frame, { kind: 'load', api: 1, role: page ? 'page' : isFrameTool(entry.tool) ? 'frame' : 'background', code, manifest: entry.tool.manifest, settings: entry.tool.settings, chat: context ? header(page!.chat!, context.scope) : null, theme: page?.theme ?? 'dark' });
+      this.send(frame, { kind: 'load', api: 1, role: page ? 'page' : isFrameTool(entry.tool) ? 'frame' : 'background', code, manifest: entry.tool.manifest, settings: entry.tool.settings, chat: context ? header(page!.chat!, context.scope) : null, theme: page?.theme ?? 'dark', ...(page && { colors: page.colors }) });
     }).catch((error: unknown) => this.endFrame(frame, error instanceof Error ? error : new Error(String(error)), true));
     return frame;
   }

@@ -12,7 +12,7 @@ import { unsetValue } from '../../engine/cbs/tags';
 import { live } from '../../model/library';
 import { accountSettings } from '../account-settings';
 import { toolId } from '../../model/tool';
-import { TOOL_VARIABLES, toolVar, type Json } from '../../tool-api/manifest';
+import { TOOL_PROGRESS_CHARS, TOOL_VARIABLES, toolVar, type Json } from '../../tool-api/manifest';
 import type { ChatHeader, Down, Message, ToolOutcome } from '../../tool-api/protocol';
 import { RISU_DECLINED } from '../../tool-api/risu-methods';
 import { limitsOf, packsOf } from '../chat/chat-context';
@@ -405,6 +405,7 @@ export class ToolApi {
         if (method === 'lore' && (first === null || typeof first === 'number' && Number.isFinite(first) && first >= 0)) return context.host.lore(first);
         if (method === 'ask' && isQuestion(first)) return context.host.ask(first, owner, context.signal);
         if (method === 'say' && (first === 'normal' || first === 'error') && typeof second === 'string') return context.host.say(first, second, owner);
+        if (method === 'progress' && typeof first === 'string') return context.host.progress(first.trim().slice(0, TOOL_PROGRESS_CHARS));
       }
     }
     throw new Error('Invalid tool call');

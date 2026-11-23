@@ -5,7 +5,8 @@ import { setModuleDeleted } from '../library/modules';
 import { purgeNow } from '../library/removal';
 import { exportBackup, readBackup, restoreBackup } from '../testing/backup';
 import { testServer } from '../testing';
-import { deleteToolData, exportTool, importTool, readToolAsset, saveToolAsset, saveToolChat, setToolData, setToolSettings, toolBadges, toolChatData, toolChatKeys, toolData, toolDataId, toolKeys, TOOL_CHAT_BYTES, TOOL_DATA_BYTES, TOOL_KEY_CHARS, TOOL_ROW_BYTES, TOOL_VALUE_BYTES, ToolStorage, undoToolImport } from './store';
+import { TOOL_KEY_CHARS, TOOL_ROW_BYTES } from '../../tool-api/manifest';
+import { deleteToolData, exportTool, importTool, readToolAsset, saveToolAsset, saveToolChat, setToolData, setToolSettings, toolBadges, toolChatData, toolChatKeys, toolData, toolDataId, toolKeys, TOOL_CHAT_BYTES, TOOL_DATA_BYTES, TOOL_VALUE_BYTES, ToolStorage, undoToolImport } from './store';
 import { CLAIM_SETTLE_MS } from '../../contracts/files';
 import type { Files } from '../files/files';
 

@@ -1,4 +1,4 @@
-import type { ToolEvent } from '../engine/script-api';
+import type { ToolEvent, ToolReach } from '../engine/script-api';
 import { serverBackend } from './store/backend';
 import type { createTools } from './tools/host';
 import type { Binding } from './scripts/binding';
@@ -187,7 +187,7 @@ export function testServer() {
     wipe: () => app.reset(),
     // A session on an account of its own, closed when test ends. keepSynced listens on the window and
     // pulls only while the tab is visible, so a hidden one never pulls on its own.
-    async withSession(test: (session: Session) => Promise<void>, tools?: Binding<ToolUnit, ToolEvent> | typeof createTools) {
+    async withSession(test: (session: Session) => Promise<void>, tools?: Binding<ToolUnit, ToolEvent, ToolReach> | typeof createTools) {
       vi.stubGlobal('window', new EventTarget());
       stubPage('hidden');
       const { accountId, vaultKey } = await harness.account();

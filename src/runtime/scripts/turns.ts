@@ -10,10 +10,9 @@ import { packsOf, scopeOf } from '../chat/chat-context';
 import { appendScripted, appendUserMessage, type Written } from '../chat/chat-log';
 import { memoryOwner } from '../tasks/memory-read';
 import type { ReadModels } from '../store/read-model';
-import { noOutcome, ToolLate } from './binding';
+import { noOutcome } from './binding';
 import type { Anchor } from './effects';
 import type { ScriptExecution } from './execution';
-import { TOOL_DEADLINE_MS } from './execution';
 import type { ScriptInteractions } from './interactions';
 import { requestAnswer, requestEvent, sentBack, sentOf, toolRequest } from './request';
 import type { ScriptSchedule } from './schedule';
@@ -23,6 +22,7 @@ import type { ObjectStore } from '../store/store';
 import type { Tool, ToolArgs } from '../models/tool-loop';
 import { toolsOf } from '../tools/store';
 import type { Blocked, TurnContext } from '../chat/turn-context';
+import type { ToolWait } from '../chat/turn-steps';
 
 export type Halted = { kind: 'halted' };
 // turn: as it goes on. Its said is null once the user's message was saved here; a failure after that is kept
@@ -67,7 +67,7 @@ export class ScriptTurns {
     first: TurnContext,
     again: (answer: boolean) => Promise<TurnContext | Blocked | { kind: 'unsent'; failure: ApiFailure } | null>,
     signal: AbortSignal,
-    running: (name: string) => void,
+    running: ToolWait,
   ): Promise<Started> {
     const scripts = triggersOf(packsOf(this.session.store, first.chat));
     const units = first.said ? this.execution.listening(first.chat, 'sending') : [];
@@ -120,7 +120,7 @@ export class ScriptTurns {
 
   // editRequest: the bot's Lua, then each tool's requesting. Only the chat's own requests pass here; a script's or a
   // tool's model call, memory and translation do not. running: told each tool's name as it starts.
-  async requesting(chat: string, turn: TurnContext, prompt: Pick<Assembled, 'messages' | 'parts'>, signal: AbortSignal, running: (name: string) => void): Promise<{ messages: ChatMessage[]; writes: Writes }> {
+  async requesting(chat: string, turn: TurnContext, prompt: Pick<Assembled, 'messages' | 'parts'>, signal: AbortSignal, running: ToolWait): Promise<{ messages: ChatMessage[]; writes: Writes }> {
     const scripts = scriptsOf(packsOf(this.session.store, turn.chat));
     const units = this.execution.listening(turn.chat, 'requesting');
     if (scripts.length === 0 && units.length === 0) return { messages: prompt.messages, writes: [] };
@@ -144,7 +144,7 @@ export class ScriptTurns {
 
   // editOutput: the bot's Lua, then each tool's replying in pack order, each handing the next the text it left. The
   // reply is not saved until they end, so a page that reloads meanwhile runs them again on the reply it picks up.
-  async ending(chat: string, reply: Written, signal: AbortSignal, running: (name: string) => void): Promise<Written> {
+  async ending(chat: string, reply: Written, signal: AbortSignal, running: ToolWait): Promise<Written> {
     const stored = this.session.store.get('chat', chat);
     const scripts = stored ? scriptsOf(packsOf(this.session.store, stored.value)) : [];
     const units = stored ? this.execution.listening(stored.value, 'replying') : [];
@@ -196,11 +196,13 @@ export class ScriptTurns {
     return { tools, memory: memory ? this.memoryOf(chat, owner.unit, turn.scope, memory) : turn.memory };
   }
 
-  // Each tool's prompt event, in pack order, under a deadline: its slot text after the history, and for the one holding
-  // the memory slot, its memory in the slot's own place (design §6.10).
-  async prompting(chat: string, first: TurnContext, again: () => ReturnType<Parameters<ScriptTurns['starting']>[2]>, signal: AbortSignal): Promise<Started & { tools: PromptInput['tools'] }> {
+  // Each tool's prompt event, in pack order: its slot text after the history, and for the one holding the memory slot,
+  // its memory in the slot's own place (design §6.10). The turn waits on each as on a pre agent, with no deadline: 멈추기
+  // ends the turn here. running: told each tool's name as it starts.
+  async prompting(chat: string, first: TurnContext, again: () => ReturnType<Parameters<ScriptTurns['starting']>[2]>, signal: AbortSignal, running: ToolWait): Promise<Started & { tools: PromptInput['tools'] }> {
     const units = toolsOf(this.session.store, first.chat);
     if (units.length === 0) return { turn: first, tools: [] };
+    const heard = new Set(this.execution.listening(first.chat, 'prompt').map(({ module }) => module));
     const owner = memoryOwner(this.session.store, first.chat);
     const holder = owner?.kind === 'tool' ? owner.unit : null;
     return this.schedule.queued(chat, async () => {
@@ -213,38 +215,30 @@ export class ScriptTurns {
         const from = { kind: 'module', id: unit.module } as const;
         const holds = unit.module === holder?.module;
         if (!holds && holder && unit.tool.manifest.uses.includes('memory') && this.session.store.get('module', unit.module)?.value.takesMemory) this.interactions.tell(chat, 'memory-held', { kind: 'memory-held', by: holder.tool.manifest.displayName }, from);
-        const key = `${unit.module}:${unit.tool.file.id}`;
+        const stop = AbortSignal.any([signal, this.closing]);
+        const name = unit.tool.manifest.displayName;
+        if (heard.has(unit.module)) running(name);
+        const scope = { ...turn.scope, pending: [...(first.scope.pending ?? []), ...writes] };
+        const { outcome, changed } = await this.execution.dispatch(chat, { tool: unit, event: { kind: 'prompt', turn: { memory: holds } }, progress: (text) => running(name, text) }, scope, null, stop);
+        // A turn stopped here sends nothing: what the tool last answered stays the forecast's.
+        if (stop.aborted) break;
+        writes.push(...outcome.writes);
+        if (changed) {
+          const next = await again();
+          if (!next) return { kind: 'gone' as const, tools };
+          if ('kind' in next) return { ...next, tools };
+          turn = next;
+        }
+        const answer = outcome.value as Hazelle.PromptAnswer | undefined;
+        const text = (typeof answer === 'object' && answer !== null ? answer.tool : answer) ?? '';
+        const memory = holds && typeof answer === 'object' && answer?.memory ? answer.memory : null;
+        if (holds) remembered = memory;
+        // Found here, after the wait: a prune meanwhile drops a chat's map while it is empty.
         const last = this.lastPrompt.get(chat) ?? new Map<string, Answered>();
-        this.lastPrompt.set(chat, last);
-        const deadline = new AbortController();
-        const stop = AbortSignal.any([signal, this.closing, deadline.signal]);
-        const timer = setTimeout(() => deadline.abort(new ToolLate()), TOOL_DEADLINE_MS);
-        try {
-          const scope = { ...turn.scope, pending: [...(first.scope.pending ?? []), ...writes] };
-          const { outcome, changed } = await this.execution.dispatch(chat, { tool: unit, event: { kind: 'prompt', turn: { memory: holds } } }, scope, null, stop, () => clearTimeout(timer));
-          writes.push(...outcome.writes);
-          if (stop.aborted) {
-            // The memory it last gave still stands, as memory changes only at a boundary; recall is of the turn.
-            const kept = last.get(key)?.memory ?? null;
-            if (holds) remembered = kept;
-            if (kept) last.set(key, { tool: '', memory: kept });
-            else last.delete(key);
-            continue;
-          }
-          if (changed) {
-            const next = await again();
-            if (!next) return { kind: 'gone' as const, tools };
-            if ('kind' in next) return { ...next, tools };
-            turn = next;
-          }
-          const answer = outcome.value as Hazelle.PromptAnswer | undefined;
-          const text = (typeof answer === 'object' && answer !== null ? answer.tool : answer) ?? '';
-          const memory = holds && typeof answer === 'object' && answer?.memory ? answer.memory : null;
-          if (holds) remembered = memory;
-          last.set(key, { tool: text, memory });
-          if (text.trim()) tools.push({ module: unit.module, name: unit.tool.manifest.displayName, text });
-        } finally { clearTimeout(timer); }
+        this.lastPrompt.set(chat, last.set(`${unit.module}:${unit.tool.file.id}`, { tool: text, memory }));
+        if (text.trim()) tools.push({ module: unit.module, name, text });
       }
+      running(null);
       const memory = holder && remembered ? this.memoryOf(chat, holder, turn.scope, remembered, true) : turn.memory;
       return { tools, turn: { ...turn, memory, scope: { ...turn.scope, pending: [...(first.scope.pending ?? []), ...writes] }, reply: { ...turn.reply, before: [...(first.reply.before ?? []), ...writes] } } };
     });

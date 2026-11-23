@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { clipped, holdAfter, type Heard, type Hold } from './ToolFrame';
+import { clipped, colorsOf, holdAfter, type Heard, type Hold } from './ToolFrame';
 
 const HELD: Hold = { held: true, mouse: false };
 const pointer = (on: Exclude<Heard['on'], 'missed'>, mouse: boolean, where: 'takes' | 'shows' | 'neither'): Heard => ({ on, mouse, takes: where === 'takes', shows: where === 'shows' });
@@ -36,4 +36,8 @@ it('lays a layer\'s boxes no further than the chat\'s column, and none that lies
     takes: [[300, 0, 1000, 800]],
     shows: [[400, 700, 1000, 800], [500, 100, 600, 200]],
   });
+});
+
+it('tells a tool\'s page each colour from the token that holds it where the frame stands', () => {
+  expect(colorsOf({ getPropertyValue: (name) => ` as ${name}` })).toEqual({ page: 'as --color-bg', surface: 'as --color-surface', line: 'as --color-border', text: 'as --color-text', muted: 'as --color-text-muted', accent: 'as --color-accent', onAccent: 'as --color-on-accent' });
 });

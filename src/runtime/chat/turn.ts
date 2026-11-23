@@ -24,7 +24,7 @@ import { preread } from '../tasks/preread';
 import { withPictures } from '../files/attachments';
 import { attachmentLead } from '../../engine/assets';
 import { agentsOf, preAgents } from '../tasks/agents';
-import type { Preparing, Skip, StepFailure } from './turn-steps';
+import { toolWait, type Preparing, type Skip, type StepFailure } from './turn-steps';
 
 // kept prevents returning saved text to the composer: Lua bots save the user's message before onStart can fail.
 export type TurnFailure = (
@@ -189,13 +189,13 @@ async function gatheredTurn(session: Pick<Session, 'store' | 'read'>, chat: stri
   return evaluated && 'kind' in evaluated ? evaluated : gatherTurn(session, chat, target, ids);
 }
 
-async function prepare(session: Session, chat: string, gathered: TurnContext, signal: AbortSignal, again: (answer: boolean) => Promise<TurnContext | Blocked | Unevaluated | null>, preparing: (step: Preparing) => void, skip: Skip): Promise<Ask | Halted | TurnFailure> {
+async function prepare(session: Session, chat: string, gathered: TurnContext, signal: AbortSignal, again: (answer: boolean) => Promise<TurnContext | Blocked | Unevaluated | null>, preparing: (step: Preparing | null) => void, skip: Skip): Promise<Ask | Halted | TurnFailure> {
   const translated = gathered.said && chatTranslate(session.store, gathered.chat).input ? await sendTranslated(session, chat, gathered, signal) : gathered;
   if ('kind' in translated) return translated;
-  const toolRunning = (name: string) => preparing({ step: 'tools', running: name, since: Date.now() });
+  const toolRunning = toolWait(preparing);
   const started = await session.scriptTurns.starting(chat, translated, again, signal, toolRunning);
   if ('kind' in started) return started;
-  const prompted = await session.scriptTurns.prompting(chat, started.turn, () => again(translated.said !== null && started.turn.said === null), signal);
+  const prompted = await session.scriptTurns.prompting(chat, started.turn, () => again(translated.said !== null && started.turn.said === null), signal, toolRunning);
   if ('kind' in prompted) return prompted;
   if (signal.aborted) return { kind: 'halted' };
   const { turn, tools } = prompted;

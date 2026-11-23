@@ -29,7 +29,7 @@ Identity lines:
 Code lines:
 - `//@uses model | embed | memory | network`: one line for each ability the code calls. model: `chat.model` or `chat.send`. embed: `chat.embed`. memory: a prompt answer with memory. network: `chat.fetch`.
 - `//@setting {"key":"…","label":"…","type":"text"|"number"|"switch"|"choice","options":["…"],"default":…,"composer":true}`: one field on the plugin's page, as JSON on one line. options only for choice. default must fit the type. composer: true also shows the field from the chat input's button, which needs `//@composer`.
-- `//@composer <label>`: that button beside the chat input, at most 8 characters.
+- `//@composer <label>`: that button beside the chat input, at most 8 characters. With a page and no item or composer field, a press opens the page.
 - `//@input <id> <label>`: an item of that button, at most 3 of them, labels at most 16 characters, which needs `//@composer`. Pressing it sends the `input` event with the id and the text typed, and a text answered replaces the input's text. A button with one item and no composer field or page runs it on a press, with no menu. Use it to rewrite, translate or draft what the user is about to send.
 - `//@menu <id> <label>`: an item in the chat's ⋯ menu. Pressing it sends the `menu` event with the id.
 - `//@action <id> <label>`: an item in each message's ⋯, at most 3 of them, labels at most 16 characters. Pressing it sends the `action` event with the id.
@@ -65,6 +65,8 @@ The file runs in a sandboxed iframe with no access to the app's page. Register h
 - `hazelle.context` is `'background'` in a worker with no `document`. With `//@page`, the same file also runs on the plugin's page, with `hazelle.context === 'page'` and the page's own document. The two sides talk through `hazelle.post` and the `message` event. A page cannot load outside scripts; outside pictures, fonts and stylesheets load only once the user has allowed the network.
 - Each `//@uses` line is asked of the user: model and embed once, memory and network each on their own. A call without its line answers `not-declared`, and one the user refused answers `not-allowed`. An update that adds a use asks for it again.
 - Tool data writes are limited to 30 a minute per plugin; past that a write throws `too-many-writes`. The other limits and each event's deadline are in `hazelle.d.ts`.
+- Text for the model goes in through `prompt`: answer it and the app places it, with the request's cache kept whole. The turn waits for `prompt`, `sending`, `requesting` and `replying` with no deadline, showing the plugin's name; `chat.progress('…')` adds what it is doing now.
+- A page is told the app's colours under the user's theme: `hazelle.page.colors`, and the same as CSS custom properties on its root (`var(--hazelle-page)`, `--hazelle-surface`, `--hazelle-line`, `--hazelle-text`, `--hazelle-muted`, `--hazelle-accent`, `--hazelle-on-accent`).
 
 Example:
 

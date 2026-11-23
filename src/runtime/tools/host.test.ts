@@ -24,7 +24,8 @@ import { upsertChatLore } from '../library/lore';
 import { inProcessRisu, inProcessTools } from '../testing/tool-transport';
 import { ToolHost } from './host';
 import { UNLOAD_MS, type OpenFrame } from './frame';
-import { importTool, setToolData, setToolSettings, toolData, toolDataId, TOOL_ROW_BYTES } from './store';
+import { TOOL_PROGRESS_CHARS, TOOL_ROW_BYTES } from '../../tool-api/manifest';
+import { importTool, setToolData, setToolSettings, toolData, toolDataId } from './store';
 
 const server = testServer();
 function withTools(test: (session: Session, connect: (open: OpenFrame) => ToolHost) => Promise<void>) {
@@ -55,7 +56,8 @@ async function fixture(session: Session, uses?: string, greeting?: string) {
   const context = () => session.scriptPages.pageContext(chat, added.data.id)!;
   return { chat, module: added.data.id, tool, context };
 }
-const page = (chat: string | null = null) => ({ window: {} as Window, chat, theme: 'dark' as const, close: vi.fn() });
+const colors: Hazelle.Colors = { page: '#131216', surface: '#26232d', line: '#383441', text: '#f1ece4', muted: '#a8a1b4', accent: '#e6b35c', onAccent: '#1b1407' };
+const page = (chat: string | null = null) => ({ window: {} as Window, chat, theme: 'dark' as const, colors, close: vi.fn() });
 
 it('handshakes once, memoizes event reads, and sends only changed message tails', () => withTools(async (session, connect) => {
   const f = await fixture(session);
@@ -97,6 +99,18 @@ it('names each message by its own id and the version shown', () => withTools(asy
     const edited = shown(session.store.foldedChat(f.chat).messages[0]!).id;
     expect(edited).not.toBe(said.id);
     expect(read).toEqual([expect.objectContaining({ index: 0, id: said.id, version: edited, text: 'edited' })]);
+  } finally { host.close(); }
+}));
+
+it('tells whoever waits on its run what it says it is doing, trimmed and cut', () => withTools(async (session, connect) => {
+  const f = await fixture(session);
+  const transport = inProcessTools((api) => api.on('prompt', (chat) => { chat.progress(` ${'가'.repeat(60)}`); return null; }));
+  const host = connect(transport.open);
+  try {
+    const context = f.context();
+    const progress = vi.fn<ToolReach['progress']>();
+    await host.run(f.chat, f.tool(), context.scope, { kind: 'prompt', turn: { memory: false } }, { ...context.host, progress });
+    await vi.waitFor(() => expect(progress.mock.calls).toEqual([['가'.repeat(TOOL_PROGRESS_CHARS)]]));
   } finally { host.close(); }
 }));
 
@@ -303,6 +317,7 @@ it('asks once before a tool reaches the network, sends nothing when refused, and
   const close = host.page(f.module, page(f.chat));
   try {
     await vi.waitFor(() => expect(transport.frames[0]?.api?.page?.chat).toBeTruthy());
+    expect(transport.frames[0]!.api!.page!.colors).toEqual(colors);
     const chat = transport.frames[0]!.api!.page!.chat!;
     const init = { method: 'POST', headers: { authorization: 'Bearer secret' }, body: '{"q":1}' } as const;
     const refused = chat.fetch(url, init);

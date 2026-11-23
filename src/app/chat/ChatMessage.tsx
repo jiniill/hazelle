@@ -149,7 +149,7 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
     const { preparing } = message;
     const waiting = message.stopping ? DISCOUNT_STOPPING : message.batch ? DISCOUNT_WAITING : message.retrying ? RETRYING : preparing && preparing.step !== 'tools' ? preparingNote(preparing) : null;
     const note = version.reasoning ? '추론 중' : '기다리는 중';
-    body = waiting ? <Waiting note={waiting} /> : preparing?.step === 'tools' ? <Elapsed note={toolWaiting(preparing.running)} since={preparing.since} /> : message.reading ? <Elapsed note={note} since={message.reading.at} /> : <Waiting note={note} />;
+    body = waiting ? <Waiting note={waiting} /> : preparing?.step === 'tools' ? <Elapsed note={toolWaiting(preparing.running, preparing.note)} since={preparing.since} /> : message.reading ? <Elapsed note={note} since={message.reading.at} /> : <Waiting note={note} />;
   } else if (failed) {
     body = (
       <>
@@ -254,7 +254,7 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
       {editing === null && translationMark}
       {editing === null && receipt?.toolsRefused && <Marker reason="tool" label="이 모델은 모델 도구를 지원하지 않아서 도구 없이 응답했어요." />}
       {editing === null && receipt && toolLine(receipt) && <Marker reason="tool" label={toolLine(receipt)!} />}
-      {live && !empty && message.preparing?.step === 'tools' && <Marker reason="tool" label={toolFinishing(message.preparing.running)} />}
+      {live && !empty && message.preparing?.step === 'tools' && <Marker reason="tool" label={toolFinishing(message.preparing.running, message.preparing.note)} />}
       {drawing?.writing && <Marker reason="illustration" label="장면 구성 중" />}
       {polishing && <Marker reason="agent" label={polishingNow(polishing)} />}
       {raw && <Marker reason="agent" label="다듬기 전 응답" action={{ label: '다듬기 전으로 복원', disabled: busy, onClick: () => actions.restoreRaw(message) }} />}

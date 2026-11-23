@@ -27,7 +27,14 @@ export const toolComposer = (tools: ToolMenu[]): ToolComposer[] => tools.flatMap
 
 export const toolIsOn = (tool: ToolComposer, settings: Record<string, unknown>) => tool.fields.some((field) => field.type === 'switch' && settings[field.key] === true);
 
-export const pressRuns = (tool: ToolComposer): MenuItem | null => tool.inputs.length === 1 && !tool.fields.length && !tool.page ? tool.inputs[0]! : null;
+// What a press of the button does when it holds one thing alone: its one input item runs, its page opens. null: it
+// holds more, which its menu lists.
+export type ToolPress = { kind: 'run'; item: MenuItem } | { kind: 'page' };
+export function pressOf(tool: ToolComposer): ToolPress | null {
+  if (tool.fields.length) return null;
+  if (tool.inputs.length === 1 && !tool.page) return { kind: 'run', item: tool.inputs[0]! };
+  return tool.inputs.length === 0 && tool.page ? { kind: 'page' } : null;
+}
 
 const BADGE_CHARS = 10;
 
