@@ -193,7 +193,7 @@ function RegexItem(props: ItemProps & { script: RegexScript; status: boolean; se
       <Disclosure label="고급">
         <TextField label="플래그" kind="key" value={shown.flags ?? ''} placeholder="g" onChange={(flags) => save.change({ flags: flags || null })} />
       </Disclosure>
-      <Disclosure label="테스트">
+      <Disclosure label={TRIAL.name}>
         <Stack gap="related">
           <TextField label="예시 텍스트" lines={3} value={sample} onChange={setSample} />
           <TextField label="결과" kind="key" lines={3} readOnly help={`${COMMAND}는 채팅에서 실제 값으로 바뀌어요.`} value={sample && (tried ?? '')} onChange={() => {}} error={sample && tried === null ? TRIAL.failed : undefined} />

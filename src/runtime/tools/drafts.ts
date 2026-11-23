@@ -57,20 +57,33 @@ export async function deleteDraft(store: ObjectStore, id: string): Promise<ApiRe
 // 초안 삭제's 되돌리기: the draft as it was, under its own id.
 export const restoreDraft = (store: ObjectStore, id: string, draft: ToolDraft) => store.batch([{ type: 'restore', kind: 'tooldraft', id, parent: null, value: draft }]);
 
-export async function draftOfTool(store: ObjectStore, files: Files, module: string): Promise<ApiResult<string>> {
+// A plugin made for Hazelle, as installed: a Risu one opens in no draft and runs in no test (ruled 2026-10-29).
+function ownTool(store: Pick<ObjectStore, 'get'>, module: string): ApiResult<Stored<'tool'>> {
   const tool = live(store.get('module', module)) && store.get('tool', toolId(module));
   if (!tool) return { ok: false, error: 'gone' };
-  const { manifest } = tool.value;
-  if (manifest.risu) return { ok: false, error: 'risu-plugin' };
+  return tool.value.manifest.risu ? { ok: false, error: 'risu-plugin' } : { ok: true, data: tool };
+}
+
+// The installed file as a draft holds one, saved nowhere: what a draft is opened from, and what 테스트 runs of a
+// plugin whose file is past a draft's size.
+export async function installedFile(store: Pick<ObjectStore, 'get'>, files: Files, module: string): Promise<ApiResult<DraftFile>> {
+  const tool = ownTool(store, module);
+  if (!tool.ok) return tool;
+  const read = await files.read(tool.data.value.file);
+  return read.ok ? { ok: true, data: fileOf(tool.data.value.manifest, new TextDecoder().decode(read.data)) } : read;
+}
+
+export async function draftOfTool(store: ObjectStore, files: Files, module: string): Promise<ApiResult<string>> {
+  const tool = ownTool(store, module);
+  if (!tool.ok) return tool;
   const existing = draftsOf(store).find(({ value }) => value.module === module);
   if (existing) return { ok: true, data: existing.id };
-  if (tool.value.size > DRAFT_BYTES) return { ok: false, error: 'draft-too-large' };
-  const read = await files.read(tool.value.file);
-  if (!read.ok) return read;
-  if (read.data.byteLength > DRAFT_BYTES) return { ok: false, error: 'draft-too-large' };
-  const file = fileOf(manifest, new TextDecoder().decode(read.data));
+  if (tool.data.value.size > DRAFT_BYTES) return { ok: false, error: 'draft-too-large' };
+  const file = await installedFile(store, files, module);
+  if (!file.ok) return file;
+  if (tooLarge(file.data)) return { ok: false, error: 'draft-too-large' };
   const id = crypto.randomUUID();
-  const saved = await store.create('tooldraft', { ...file, module, applied: sourceOf(file), asks: [], at: Date.now() }, { id, parent: null });
+  const saved = await store.create('tooldraft', { ...file.data, module, applied: sourceOf(file.data), asks: [], at: Date.now() }, { id, parent: null });
   return saved.ok ? { ok: true, data: id } : saved;
 }
 

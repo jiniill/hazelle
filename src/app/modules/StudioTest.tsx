@@ -2,7 +2,6 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import type { ModelRef } from '../../connectors/assignment';
 import { sumCosts } from '../../connectors/pricing';
 import { sharedModel } from '../../runtime/models/assignment';
-import type { ToolDraft } from '../../model/tool';
 import { splitTool } from '../../engine/import/tool';
 import { chatNow } from '../../runtime/chat/chat-context';
 import type { ChatScope } from '../../engine/render';
@@ -100,7 +99,11 @@ export function TestRuns({ runs }: { runs: TestRun[] }) {
 
 type Ran = { body: string; pick: TestPick; result: Tested };
 
-export function TestPane({ draft, setup, onSetup, reveal, onFix }: { draft: ToolDraft; setup: TestSetup; onSetup: (setup: TestSetup) => void; reveal: (at: [number, number]) => void; onFix: (ask: string) => void }) {
+// The code beside the pane: where a failure's line is shown, and the AI asked to fix it.
+type TestEditor = { reveal: (at: [number, number]) => void; onFix: (ask: string) => void };
+
+// editor: absent where the file is only run, an installed plugin's (PluginTestScreen).
+export function TestPane({ draft, setup, onSetup, editor }: { draft: DraftFile; setup: TestSetup; onSetup: (setup: TestSetup) => void; editor?: TestEditor }) {
   const session = useSession();
   const chats = useChats();
   const read = useMemo(() => draftTrial(session.store, draft), [session.store, draft.identity, draft.body]);
@@ -143,27 +146,26 @@ export function TestPane({ draft, setup, onSetup, reveal, onFix }: { draft: Tool
         <TestResult
           ran={ran}
           stale={ran.body !== draft.body}
-          onLine={(line) => reveal(lineRange(draft.body, line))}
-          onFix={(failed, line) => onFix(fixAsk(failed, ran.pick.label, ran.body, line))}
+          fix={editor && { onLine: (line) => editor.reveal(lineRange(draft.body, line)), onFix: (failed, line) => editor.onFix(fixAsk(failed, ran.pick.label, ran.body, line)) }}
         />
       )}
     </Stack>
   );
 }
 
-type ResultProps = { ran: Ran; stale: boolean; onLine: (line: number) => void; onFix: (failed: string, line: number | null) => void };
+type ResultProps = { ran: Ran; stale: boolean; fix?: { onLine: (line: number) => void; onFix: (failed: string, line: number | null) => void } };
 
-function TestResult({ ran: { pick, result }, stale, onLine, onFix }: ResultProps) {
+function TestResult({ ran: { pick, result }, stale, fix }: ResultProps) {
   if (result === null) return <Text variant="note">{`이 코드에는 '${pick.sub.split(' ')[0]!}' 핸들러가 없어요.`}</Text>;
   if ('failed' in result) {
     const { failed, line, code } = result;
     return (
       <Stack gap="related">
         <Callout tone="warn">{failed}</Callout>
-        {!stale && (code || line !== null) && (
+        {fix && !stale && (code || line !== null) && (
           <Row kind="actions">
-            {line !== null && <Button variant="secondary" size="sm" onClick={() => onLine(line)}>{SEE_IN_CODE}</Button>}
-            {code && <Button variant="primary" size="sm" onClick={() => onFix(failed, line)}>AI로 수정</Button>}
+            {line !== null && <Button variant="secondary" size="sm" onClick={() => fix.onLine(line)}>{SEE_IN_CODE}</Button>}
+            {code && <Button variant="primary" size="sm" onClick={() => fix.onFix(failed, line)}>AI로 수정</Button>}
           </Row>
         )}
       </Stack>

@@ -237,7 +237,7 @@ function placeFacts(session: Reader, { kind, id }: Place): Facts | Promise<Facts
   if (id === null) return null;
   if (kind === 'chat') return chatFacts(session, id);
   if (kind === 'prompt') return promptFacts(session.store, id);
-  if (kind === 'module' || kind === 'plugin' || kind === 'plugin-page') return moduleFacts(session.store, id);
+  if (kind === 'module' || kind === 'plugin' || kind === 'plugin-page' || kind === 'plugin-test') return moduleFacts(session.store, id);
   if (kind === 'connection') {
     const connection = session.store.get('connection', id)?.value;
     return connection ? { type: known(connection.type), models: connection.starred.length } : { found: false };
