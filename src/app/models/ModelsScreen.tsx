@@ -6,7 +6,7 @@ import { overviewOf } from '../../runtime/tasks/overview';
 import { availableFeatures } from '../../runtime/tasks/features';
 import { ofSort, type StoredPrompt } from '../../runtime/library/prompts';
 import { addDefaultProfile, modelProfile, profileUsers } from '../../runtime/models/profiles';
-import { findStarred, ROLE_ROWS, RoleCard } from '../common/RolePicker';
+import { findStarred, ROLE_ROWS, RoleCard, RolePicker } from '../common/RolePicker';
 import { defaultFirst, NO_PROFILE, NO_PROFILE_VALUES, profileLine, valuesLine } from '../common/settingWords';
 import { useSearch } from '../common/useSearch';
 import { ACTS, addOf, newOf } from '../common/acts';
@@ -15,12 +15,14 @@ import { useConnections, useProfiles, usePrompts, useSettings, useStore } from '
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { useToast } from '../toast';
-import { Beside, Button, Callout, Divider, Empty, List, ListItem, Menu, MenuItem, NavBar, PickCards, Row, Screen, Section } from '../ui';
+import { Beside, Button, Callout, Divider, Empty, List, ListItem, Menu, MenuItem, NavBar, PickCards, Row, Screen, Section, SettingGroup } from '../ui';
 
 // The bottom rung of every chat's settings: what a prompt, a character or a chat does not set reads from here.
 const DEFAULTS = SCOPE.default;
 const SETTINGS_HELP = '온도나 추론, 캐시 같은 값이에요. 모델마다 따로 정해 둘 수도 있어요.';
 const PINNED_ROLES = ['main', 'aux'] as const satisfies Role[];
+// The roles no prompt or chat sets, 공용's alone: a row each under the two cards, so a new one adds a row.
+const ACCOUNT_ROLES = (Object.keys(MODEL_ROLES) as Role[]).filter((role) => !(PINNED_ROLES as readonly Role[]).includes(role));
 export function ModelsScreen({ back }: { back: Back | null }) {
   const store = useStore();
   const toast = useToast();
@@ -144,9 +146,12 @@ export function ModelsScreen({ back }: { back: Back | null }) {
         <PickCards>
           <RoleCard role="main" {...ROLE_ROWS.main} own={main} connections={connections} onPick={(ref) => ref && pickModel('main', ref)} {...cardOf(main)} />
           <RoleCard role="aux" {...ROLE_ROWS.aux} own={settings.models.aux} connections={connections} onPick={(ref) => pickModel('aux', ref)} {...cardOf(settings.models.aux)} />
-          <RoleCard role="embed" {...ROLE_ROWS.embed} own={settings.models.embed} connections={connections} onPick={(ref) => pickModel('embed', ref)} />
-          <RoleCard role="decide" {...ROLE_ROWS.decide} own={settings.models.decide} connections={connections} onPick={(ref) => pickModel('decide', ref)} />
         </PickCards>
+        <SettingGroup label={`그 밖의 ${DEFAULTS} 모델`}>
+          {ACCOUNT_ROLES.map((role) => (
+            <RolePicker key={role} role={role} {...ROLE_ROWS[role]} own={settings.models[role]} connections={connections} onPick={(ref) => pickModel(role, ref)} />
+          ))}
+        </SettingGroup>
         {main && !findStarred(main, connections) && <Callout tone="warn">{`${MODEL_ROLES.main}로 정한 모델이 ${STARRED}에 없어요.`}</Callout>}
       </Section>
       <Beside side={side}>
