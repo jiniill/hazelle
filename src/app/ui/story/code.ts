@@ -7,17 +7,18 @@ const MARK = '<pre><code class="language-';
 
 const asWritten: Draw = (html) => html;
 
-// Undefined until the highlighter loads; asWritten when it could not.
-let drawCode: Draw | undefined;
+// Undefined until the highlighter loads; null when it could not.
+let highlight: typeof import('./highlight') | null | undefined;
 let loading: Promise<unknown> | null = null;
 
-// Lazy-load highlighting only for named-language fences; retain the promise until it resolves.
+// Lazy-load highlighting only for named-language fences, and each fence's mode with the first that names it; retain the
+// highlighter's promise until it resolves.
 function codeFor(html: string): Draw | Promise<unknown> {
-  if (drawCode) return drawCode;
-  if (!html.includes(MARK)) return asWritten;
+  if (!html.includes(MARK) || highlight === null) return asWritten;
+  if (highlight) return highlight.modesFor(html) ?? highlight.drawCode;
   return (loading ??= import('./highlight').then(
-    (module) => (drawCode = module.drawCode),
-    () => (drawCode = asWritten),
+    (module) => (highlight = module).modesFor(html),
+    () => (highlight = null),
   ));
 }
 
