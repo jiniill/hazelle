@@ -46,6 +46,14 @@ const scope: ChatScope = {
 };
 
 describe('display', () => {
+  it('says whether a text of it read the screen\'s size, in a message or outside one, known or not', () => {
+    expect(display(scope).sized).toBe(false);
+    const read = display({ ...scope, screen: { width: 400, height: 800 }, messages: [message('a1', 'assistant', 'w {{screenwidth}}')] });
+    expect(read.sized).toBe(true);
+    expect(read.texts[0]).toContain('400');
+    expect(display({ ...scope, packs: [{ ...card, background: '<style>.a { height: {{screenheight}}px }</style>' }] }).sized).toBe(true);
+  });
+
   it('passes the backgroundHTML through the display scripts, which fill its placeholders, repeating nothing there', () => {
     const regex = [
       { id: 'regex-2', name: 'border', find: '{border}', replace: '3px solid red', stage: 'display' as const, flags: null },
@@ -173,7 +181,7 @@ describe('asset tags', () => {
   const wave = '22222222-2222-4222-8222-222222222222';
   const clip = '33333333-3333-4333-8333-333333333333';
   const withAssets: ChatScope = { ...scope, assets: [{ id: smile, name: 'Smile.png', type: 'image/png' }, { id: wave, name: 'wave', type: 'image/png' }, { id: clip, name: 'clip', type: 'video/mp4' }], faces: { char: 'data:char', user: null } };
-  const run = (text: string, stage: 'display' | 'prompt') => evaluate(text, contexts(withAssets, stage, null, '', null)({ seed: 's' }, new Map()));
+  const run = (text: string, stage: 'display' | 'prompt') => evaluate(text, contexts(withAssets, stage, null, '', null, null)({ seed: 's' }, new Map()));
 
   it('show a picture by name in any case, or the nearest name, on screen only, and list the names everywhere', () => {
     expect(run('{{img::smile.png}}|{{raw::smiling}}|{{image::none of these}}|{{source::char}}{{source::user}}', 'display')).toBe(
@@ -197,7 +205,7 @@ describe('asset tags', () => {
   const kept: ChatScope = { ...withAssets, assets: [...withAssets.assets, { id: night, name: 'wave', type: 'image/png', use: 'background' }] };
 
   it('keep a background out of the asset tags and {{assetlist}}', () => {
-    const shown = (text: string, stage: 'display' | 'prompt') => evaluate(text, contexts(kept, stage, null, '', null)({ seed: 's' }, new Map()));
+    const shown = (text: string, stage: 'display' | 'prompt') => evaluate(text, contexts(kept, stage, null, '', null, null)({ seed: 's' }, new Map()));
     expect(shown('{{raw::wave}}', 'display')).toBe(`asset:${wave}`);
     expect(shown('{{assetlist}}', 'prompt')).toBe('["Smile.png","wave","clip"]');
   });

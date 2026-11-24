@@ -69,7 +69,7 @@ function stoppable<T>(build: () => T): T | RanAway {
 // {{language}} reads, which only a translation's prompt sets. trace, when given, gets the steps, unescaped as the text is.
 export const renderAfter = (scope: ChatScope, text: string, source: CbsContext['source'], language: string | null = null, trace: CbsTrace | null = null, variables?: ReadonlyMap<string, string>): string | RanAway =>
   stoppable(() => {
-    const out = unescapeCbs(evaluate(text, contexts(scope, 'prompt', language, '', null)(source, new Map(variables ?? renderChat('prompt', scope).variables)), trace));
+    const out = unescapeCbs(evaluate(text, contexts(scope, 'prompt', language, '', null, null)(source, new Map(variables ?? renderChat('prompt', scope).variables)), trace));
     for (const step of trace?.steps ?? []) step.result = unescapeCbs(step.result);
     return out;
   });
@@ -150,8 +150,8 @@ type Laid = {
 
 function lay(scope: ChatScope, blocks: Block[], history: HistoryMessage[], variables: Map<string, string>, seed: string, tokens: (text: string) => number, language: string | null): Laid {
   const { card } = scope;
-  const context = contexts(scope, 'prompt', language, '', null);
-  const casts = new Map(scope.cast.map((member) => [member.id, contexts({ ...scope, card: member.card }, 'prompt', language, '', null)]));
+  const context = contexts(scope, 'prompt', language, '', null, null);
+  const casts = new Map(scope.cast.map((member) => [member.id, contexts({ ...scope, card: member.card }, 'prompt', language, '', null, null)]));
   // Each text outside the chat's messages rolls its random tags anew for each request, apart from every other
   // text, and reads the variables as the chat's messages left them. The text last rendered at a place is kept, so
   // what is rendered there again is the same text and not a second roll.

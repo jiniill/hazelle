@@ -306,6 +306,8 @@ export class ChatScreenRead {
   private running: Promise<void> | null = null;
   private again = false;
   private screen: ChatScope['screen'] = null;
+  // The screen the pass last begun was made at.
+  private passedAt: ChatScope['screen'] = null;
   // Whether the latest refresh ran under a verdict.
   private judged = false;
   private turn: Turn | null;
@@ -318,7 +320,7 @@ export class ChatScreenRead {
     this.base = this.based();
     this.turn = this.currentTurn();
     this.drawing = drawingKey(id, drawings.snapshot());
-    this.state = new Snapshot<ChatScreen>({ chat: opening.chat, messages: [], display: { texts: [], css: '', picture: null, background: '', drawn: [], boxes: [], pass: false, unfound: [], stopped: null }, stuck: false, pending: true, placed: new Map() });
+    this.state = new Snapshot<ChatScreen>({ chat: opening.chat, messages: [], display: { texts: [], css: '', picture: null, background: '', drawn: [], boxes: [], pass: false, unfound: [], sized: false, stopped: null }, stuck: false, pending: true, placed: new Map() });
   }
 
   readonly snapshot = () => this.state.snapshot();
@@ -347,6 +349,7 @@ export class ChatScreenRead {
       const passed = this.open.subscribe(this.id, (display) => {
         if (!display) return this.refresh();
         this.state.set({ ...this.state.snapshot(), ...placing(display) });
+        if (this.resized()) this.refresh();
       });
       this.leave = () => { this.again = false; this.evaluation?.abort(); store(); talk(); drawn(); passed(); lease.release(); };
       const base = this.based();
@@ -370,10 +373,17 @@ export class ChatScreenRead {
   };
 
   setInputs(opening: Opening, screen: ChatScope['screen']) {
-    const changed = this.screen?.width !== screen?.width || this.screen?.height !== screen?.height || (!this.base && (opening.chat !== this.opening.chat || opening.messages !== this.opening.messages));
+    const changed = !this.base && (opening.chat !== this.opening.chat || opening.messages !== this.opening.messages);
     this.opening = opening;
     this.screen = screen;
-    if (changed) this.refresh();
+    if (changed || this.resized()) this.refresh();
+  }
+
+  // The display on screen read the screen's size and was made at another: only then is a window that changed (a
+  // phone's address bar coming and going, a keyboard) a reason to pass the whole chat again. Asked when the size
+  // changes and when a display lands, since one that lands may be the first to read it.
+  private resized() {
+    return this.state.snapshot().display.sized && (this.passedAt?.width !== this.screen?.width || this.passedAt?.height !== this.screen?.height);
   }
 
   private currentTurn() {
@@ -420,6 +430,7 @@ export class ChatScreenRead {
     const evaluation = new AbortController();
     this.evaluation = evaluation;
     const judged = this.judged = this.verdict();
+    this.passedAt = this.screen;
     const chat = this.base ? this.base.chat : this.opening.chat;
     const messages = withTurn(this.base ? this.base.messages : this.opening.messages, this.turn, this.id);
     const { store } = this.models;
@@ -431,6 +442,7 @@ export class ChatScreenRead {
     return value.then((display) => {
       if (evaluation.signal.aborted) return;
       this.state.set({ chat, messages, ...placing(display), stuck: judged });
+      if (this.resized()) this.refresh();
       // Only a visible screen's completed display may prefetch the tokenizer; account projections must not load it.
       if (this.listeners.size) store.evaluation.warm();
     }, (error: unknown) => {

@@ -37,7 +37,7 @@ export function stepInk(ink: Ink, since: number, now: number, pace: Pace): Ink {
   return { ...ink, speed, edge, solid: Math.max(ink.solid, edge - WIDTH, closing) };
 }
 
-// The ranges are the CSS Custom Highlight API's: the story's nodes are never touched, so the story's morph meets the
+// The ranges are the CSS Custom Highlight API's: the story's text is never touched, so the story's morph meets the
 // DOM it left. A highlight is shared by every story by its name, so each story adds and takes back its own ranges.
 const UNSEEN = 'ink-unseen';
 const highlights = new Map<string, Highlight>();
@@ -50,21 +50,16 @@ function highlight(name: string) {
   return made;
 }
 
-// currentColor in a highlight is not the words' own colour (Chromium 153 paints black), so each colour met in a
-// gradient gets its steps written out. Started again when a bot's colours have filled it; the next frame names anew.
-const PALETTE = 48;
-let palette: string[] = [];
-let paletteSheet: CSSStyleSheet | undefined;
+// currentColor in a highlight is not the words' own colour (Chromium 153 paints black), so the element a step's
+// words stand in is given its own colour to mix (OWN) and marked (LIT), and the steps' rules name the marked alone.
+// A rule every element met (::highlight(name) by itself) is resolved for every element at every restyle, whether it
+// holds a range or not: with a rule for each step of each colour a bot used, one story's restyle took seconds.
+export const LIT = 'data-ink-lit';
+const OWN = '--ink-own';
+let stepSheet: CSSStyleSheet | undefined;
 export function inkSheet() {
-  return (paletteSheet ??= new CSSStyleSheet());
-}
-function colourNumber(colour: string) {
-  let at = palette.indexOf(colour);
-  if (at >= 0) return at;
-  if (palette.length === PALETTE) palette = [];
-  at = palette.push(colour) - 1;
-  inkSheet().replaceSync(palette.map((each, number) => Array.from({ length: STEPS }, (_, step) => '::highlight(ink-' + number + '-' + step + '){color:color-mix(in srgb,' + each + ' ' + (((step + 0.5) / STEPS) * 100).toFixed(1) + '%,transparent)}').join('')).join(''));
-  return at;
+  if (!stepSheet) (stepSheet = new CSSStyleSheet()).replaceSync(Array.from({ length: STEPS }, (_, step) => '[' + LIT + ']::highlight(ink-' + step + '){color:color-mix(in srgb,var(' + OWN + ') ' + (((step + 0.5) / STEPS) * 100).toFixed(1) + '%,transparent)}').join(''));
+  return stepSheet;
 }
 
 // Without the API, or where motion is to be reduced, a reply is written as it was: whole to its cursor.
@@ -83,24 +78,29 @@ function textOf(shadow: ShadowRoot) {
   return { pieces, text };
 }
 
-// What Story.shadow.css and Story.module.css read on the host: behind while some text is unseen, level otherwise.
-const INK = 'data-ink';
+// What the story's sheets read. On the host: INKED while the ink runs (Story.shadow.css), BEHIND while some text is
+// unseen (Story.module.css). Two names, since the shadow's rule reads the host's and a change of that attribute
+// restyles the whole story, which BEHIND makes at every piece of a reply.
+// WAIT, on a block the edge has not reached: the block's own change, where a rule naming the blocks by their place
+// (:nth-child) is a change of the sheet, which restyles the whole story at every block the edge enters. The story's
+// draw takes WAIT and LIT off the elements it fits, so they are set again after each one.
+const INKED = 'data-inked';
+const BEHIND = 'data-ink-behind';
+export const WAIT = 'data-ink-wait';
 
-export type StoryInk = { drawn: (writing: boolean) => void; end: () => void; gate: CSSStyleSheet };
+export type StoryInk = { drawn: (writing: boolean) => void; end: () => void };
 
 // One story's ink. fresh: the story is first drawn while written, so all of it comes in by ink; otherwise what
 // stood before the writing began (a continuation's earlier text) is solid. drawn: told after every draw, in the draw's own task, since a text node given new data collapses
-// the ranges in it and the unseen would show for a frame. gate: holds back the blocks past the one the edge is in,
-// their pictures, bullets and boxes with them, which no highlight reaches.
+// the ranges in it and the unseen would show for a frame. The blocks past the one the edge is in are held back, their
+// pictures, bullets and boxes with them, which no highlight reaches.
 export function inkOn(host: HTMLElement, shadow: ShadowRoot, fresh: boolean): StoryInk {
   const pace: Pace = { follow: tokenMs('--duration-ink-follow', host), even: tokenMs('--duration-ink-even', host), idle: tokenMs('--duration-ink-idle', host), close: tokenMs('--duration-ink-close', host) };
-  const gate = new CSSStyleSheet();
-  shadow.adoptedStyleSheets = [...shadow.adoptedStyleSheets, gate];
   let ink: Ink | null = fresh ? startInk(0, performance.now()) : null;
   let pieces: Piece[] = [];
   let text = '';
   let own: [Highlight, Range][] = [];
-  let gated: number | null = null;
+  let lit = new Map<Element, string>();
   let frame = 0;
   let last = 0;
   let writing = false;
@@ -111,6 +111,19 @@ export function inkOn(host: HTMLElement, shadow: ShadowRoot, fresh: boolean): St
   const clear = () => {
     for (const [made, range] of own) made.delete(range);
     own = [];
+  };
+  // now: the elements the gradient's words stand in, each with its words' colour.
+  const light = (now: Map<Element, string>) => {
+    for (const element of lit.keys()) {
+      if (now.has(element)) continue;
+      element.removeAttribute(LIT);
+      (element as HTMLElement).style.removeProperty(OWN);
+    }
+    for (const [element, colour] of now) {
+      element.toggleAttribute(LIT, true);
+      if ((element as HTMLElement).style.getPropertyValue(OWN) !== colour) (element as HTMLElement).style.setProperty(OWN, colour);
+    }
+    lit = now;
   };
   const pieceAt = (offset: number) => pieces.findLastIndex(({ start }) => start <= offset);
   const add = (name: string, node: Text, from: number, endNode: Text, to: number) => {
@@ -123,13 +136,12 @@ export function inkOn(host: HTMLElement, shadow: ShadowRoot, fresh: boolean): St
   };
   // from: the first of the root's elements held back, counted from 1; null for none.
   const gateAt = (from: number | null) => {
-    if (from === gated) return;
-    gated = from;
-    gate.replaceSync(from === null ? '' : ':host > :nth-child(n+' + from + '){opacity:0;transition:none}');
+    [...shadow.children].forEach((block, at) => block.toggleAttribute(WAIT, from !== null && at >= from - 1));
   };
   const lay = () => {
     clear();
     if (!ink || settled(ink)) {
+      light(new Map());
       gateAt(null);
       return;
     }
@@ -149,11 +161,11 @@ export function inkOn(host: HTMLElement, shadow: ShadowRoot, fresh: boolean): St
         const [first, second] = [Math.max(0, from - start), Math.min(node.data.length, to - start)];
         const parent = node.parentElement;
         if (first >= second || !parent) continue;
-        let colour = colours.get(parent);
-        if (!colour) colours.set(parent, (colour = getComputedStyle(parent).color));
-        add('ink-' + colourNumber(colour) + '-' + at, node, first, node, second);
+        if (!colours.has(parent)) colours.set(parent, getComputedStyle(parent).color);
+        add('ink-' + at, node, first, node, second);
       }
     }
+    light(colours);
     // The block of the last character the edge has passed, or the one before the line break between two blocks,
     // which is a text node of the root; the blocks after it wait.
     if (edge >= length) return gateAt(null);
@@ -164,13 +176,15 @@ export function inkOn(host: HTMLElement, shadow: ShadowRoot, fresh: boolean): St
     gateAt(reached ? [...shadow.children].indexOf(reached) + 2 : 1);
   };
   const mark = () => {
-    if (!ink || (settled(ink) && !writing)) host.removeAttribute(INK);
-    else host.setAttribute(INK, Math.round(ink.edge) < ink.length ? 'behind' : 'level');
+    const runs = ink !== null && (writing || !settled(ink));
+    host.toggleAttribute(INKED, runs);
+    host.toggleAttribute(BEHIND, runs && Math.round(ink!.edge) < ink!.length);
   };
   const rest = () => {
     cancelAnimationFrame(frame);
     frame = 0;
     clear();
+    light(new Map());
   };
   // The story's nodes are not the ink's alone: a browser's translation or an extension cuts and moves text between
   // two draws, and a range then names an offset or a node that is gone. The ink ends for this story, its text stands
@@ -204,7 +218,6 @@ export function inkOn(host: HTMLElement, shadow: ShadowRoot, fresh: boolean): St
   };
 
   return {
-    gate,
     drawn(now) {
       if (lost) return;
       writing = now;

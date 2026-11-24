@@ -567,11 +567,11 @@ describe('per-chat read models', () => {
     store.close();
   });
 
-  it('keeps transient sent messages stable across chunks and resizes only the open chat', async () => {
+  it('keeps transient sent messages stable across chunks, and passes only the open chat again for a size its display read', async () => {
     const { store } = await account();
     await store.create('chat', chat, { id: 'a' });
     await store.create('chat', chat, { id: 'b' });
-    await store.create('entry', message('latest: {{lastmessage}}'), { parent: 'a' });
+    await store.create('entry', message('{{screenwidth}}: {{lastmessage}}'), { parent: 'a' });
     await hold(store, ...store.list('chat').map(({ id }) => id));
     const read = new ReadModels(store);
     const talk = liveTalk();
@@ -580,7 +580,8 @@ describe('per-chat read models', () => {
     const leave = screen.subscribe(() => {});
     await hold(store, screen.id);
     screen.setInputs(opening, { width: 800, height: 600 });
-    await vi.waitFor(() => expect(screen.snapshot().pending).not.toBe(true));
+    // The pass begun before the size was known read it, so it is made again at the size.
+    await vi.waitFor(() => expect(screen.snapshot().display.texts[0]).toMatch(/^800: /));
     const displayed = vi.spyOn(store.evaluation, 'display');
     const first = screen.snapshot();
     // A composer or panel render has new wrapper objects, not new display inputs.
@@ -590,13 +591,12 @@ describe('per-chat read models', () => {
     expect(displayed).not.toHaveBeenCalled();
     const turn: Turn = { chat: 'a', said: { id: 'said', text: 'question' }, reply: { id: 'reply', message: null, replaces: null, continues: null }, text: 'one', reasoning: '' };
     talk.set(turn);
-    await vi.waitFor(() => expect(screen.snapshot().display.texts[0]).toBe('latest: one'));
+    await vi.waitFor(() => expect(screen.snapshot().display.texts[0]).toBe('800: one'));
     const chunk = screen.snapshot();
     talk.set({ ...turn, text: 'one two' });
-    await vi.waitFor(() => expect(screen.snapshot().display.texts[0]).toBe('latest: one two'));
+    await vi.waitFor(() => expect(screen.snapshot().display.texts[0]).toBe('800: one two'));
     const next = screen.snapshot();
     expect(displayed.mock.calls.map(([lane]) => lane.chat)).toEqual(['a', 'a']);
-    expect(next.display.texts[0]).toBe('latest: one two');
     expect(next.messages[0]).toBe(chunk.messages[0]);
     expect(next.messages[1]).toBe(chunk.messages[1]);
     expect(next.messages[2]).not.toBe(chunk.messages[2]);
@@ -726,15 +726,15 @@ describe('per-chat read models', () => {
     const display = open.display.bind(open);
     let stalled = false;
     const displayed = vi.spyOn(open, 'display').mockImplementation(async (...args) => {
-      if (stalled || !args[3]) return display(...args);
+      if (stalled) return display(...args);
       stalled = true;
       throw new EvaluationStuck('stuck', true);
     });
-    const leave = screen.subscribe(() => {});
     screen.setInputs(opening, { width: 800, height: 600 });
+    const leave = screen.subscribe(() => {});
     await vi.waitFor(() => expect(screen.snapshot()).toMatchObject({ stuck: true }));
     expect(screen.snapshot().error).toBeUndefined();
-    expect(displayed).toHaveBeenCalledTimes(3);
+    expect(displayed).toHaveBeenCalledTimes(2);
     screen.retryRegex();
     await vi.waitFor(() => expect(screen.snapshot()).toMatchObject({ stuck: false }));
     leave();

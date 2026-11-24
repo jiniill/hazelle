@@ -72,7 +72,7 @@ const CONTEXTS = new WeakMap<Snapshot, { triggerId: string; context: ReturnType<
 export function cbs(run: Run, value: string): string {
   let cached = CONTEXTS.get(run.snapshot);
   if (cached?.triggerId !== run.triggerId) {
-    const context = contexts({ ...run.snapshot.scope, packs: [], toggles: { get: (key) => run.globals.get(`${TOGGLE_GLOBAL}${key}`) } }, 'prompt', null, run.triggerId, null);
+    const context = contexts({ ...run.snapshot.scope, packs: [], toggles: { get: (key) => run.globals.get(`${TOGGLE_GLOBAL}${key}`) } }, 'prompt', null, run.triggerId, null, null);
     CONTEXTS.set(run.snapshot, (cached = { triggerId: run.triggerId, context }));
   }
   const { context } = cached;

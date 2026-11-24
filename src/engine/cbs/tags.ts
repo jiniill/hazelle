@@ -528,8 +528,14 @@ define('axmodel', 0, (_, { context: { axModel } }) => axModel);
 const maxContext = (model: CbsContext['model']) => (model && model.maxContext !== null ? String(model.maxContext) : null);
 define('maxcontext', 0, (_, { context: { model } }) => maxContext(model));
 define('prefillsupported prefill', 0, (_, { context: { model } }) => (model && model.prefill !== null ? bool(model.prefill) : null));
-define('screenwidth', 0, (_, { context }) => (context.screen ? String(context.screen.width) : null));
-define('screenheight', 0, (_, { context }) => (context.screen ? String(context.screen.height) : null));
+function screenSide(side: 'width' | 'height') {
+  return (_: unknown, { context }: { context: CbsContext }) => {
+    if (context.sized) context.sized.read = true;
+    return context.screen ? String(context.screen[side]) : null;
+  };
+}
+define('screenwidth', 0, screenSide('width'));
+define('screenheight', 0, screenSide('height'));
 // Risu's keys about its own app, which no answer here fits, so they stay as written: its platform, version, UI language
 // (not {{language}}'s translation target) and model enums.
 const RISU_METADATA = new Set(['mobile', 'local', 'node', 'risutype', 'version', 'majorversion', 'majorver', 'major', 'language', 'locale', 'lang', 'browserlanguage', 'browserlocale', 'browserlang', 'modelshortname', 'modelformat', 'modelprovider', 'modeltokenizer']);

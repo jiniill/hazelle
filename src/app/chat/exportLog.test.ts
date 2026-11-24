@@ -25,6 +25,7 @@ const view: Display = {
   boxes: [[{ script: 0, html: '<b>HP 7</b>', at: 'bottom' }], [], [], [], []],
   pass: false,
   unfound: [],
+  sized: false,
   stopped: null,
 };
 const NONE = { placed: new Map(), pictures: new Map() };

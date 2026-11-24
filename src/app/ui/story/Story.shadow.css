@@ -241,8 +241,14 @@
   color: transparent;
 }
 
-:host([data-ink]) > * {
+:host([data-inked]) > * {
   transition: opacity var(--duration-ink-block) var(--ease-enter);
+}
+
+/* Over a bot's own opacity and transition, whence !important: the bot's sheet comes after this one. */
+:host > [data-ink-wait] {
+  opacity: 0 !important;
+  transition: none !important;
 }
 
 /* Fold the line, never stretch the picture. Story.tsx eases explicit heights because none cannot transition; hover/tap reveals it. */

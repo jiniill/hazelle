@@ -41,6 +41,9 @@ export type CbsContext = {
   triggerId: string;
   // The window's size, as Risu reads window.innerWidth: null in the prompt, and when the display does not know it.
   screen: { width: number; height: number } | null;
+  // Whether a text of the display read that size, set as one does: a display that read none is the same at any size.
+  // null outside a display.
+  sized: { read: boolean } | null;
   // now in ms since the epoch; timeZone an IANA name, since the engine reads no zone of the device it runs on.
   clock: { now: number; timeZone: string };
   // The language a translation prompt translates into, as the English name the model reads; null outside one.

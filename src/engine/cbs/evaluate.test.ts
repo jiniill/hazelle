@@ -31,6 +31,7 @@ const context = (over: Partial<CbsContext> = {}): CbsContext => {
     axModel: 'aux',
     triggerId: '',
     screen: null,
+    sized: null,
     clock: { now: Date.UTC(2026, 8, 28, 5, 4, 3), timeZone: 'UTC' },
     language: null,
     assets: [],

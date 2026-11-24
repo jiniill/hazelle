@@ -45,11 +45,15 @@ it('stays inside a text that got shorter', () => {
   expect(ink).toMatchObject({ length: 230, edge: 230, solid: 220 });
 });
 
-// One story of one text node on a page of stubs. setStart: what laying a range does.
+// One story on a page of stubs: a text node of the root's, then two blocks. setStart: what laying a range does.
 function story(setStart: () => void = () => {}) {
   const frames = new Map<number, FrameRequestCallback>();
-  const text = { data: '', parentElement: { localName: 'p' }, parentNode: null as unknown };
-  const shadow = { adoptedStyleSheets: [], children: [] };
+  const flags = (on = new Set<string>()) => ({ on, toggleAttribute: (name: string, force: boolean) => void (force ? on.add(name) : on.delete(name)), removeAttribute: (name: string) => void on.delete(name) });
+  const own = new Map<string, string>();
+  const parent = { localName: 'p', ...flags(), own, style: { getPropertyValue: (name: string) => own.get(name) ?? '', setProperty: (name: string, value: string) => void own.set(name, value), removeProperty: (name: string) => void own.delete(name) } };
+  const text = { data: '', parentElement: parent, parentNode: null as unknown, previousElementSibling: null };
+  const blocks = [flags(), flags()];
+  const shadow = { children: blocks };
   text.parentNode = shadow;
   vi.stubGlobal('requestAnimationFrame', (tick: FrameRequestCallback) => frames.set(frames.size + 1, tick).size);
   vi.stubGlobal('cancelAnimationFrame', (id: number) => frames.delete(id));
@@ -61,9 +65,38 @@ function story(setStart: () => void = () => {}) {
   vi.stubGlobal('Element', class {});
   vi.stubGlobal('NodeFilter', { SHOW_TEXT: 4 });
   vi.stubGlobal('document', { createTreeWalker: () => { const left = [text]; return { nextNode: () => left.shift() ?? null }; } });
-  const host = { setAttribute: vi.fn(), removeAttribute: vi.fn() };
-  return { frames, text, host, ink: inkOn(host as unknown as HTMLElement, shadow as unknown as ShadowRoot, true) };
+  const host = flags();
+  return { frames, text, parent, host, blocks, ink: inkOn(host as unknown as HTMLElement, shadow as unknown as ShadowRoot, true) };
 }
+
+it('marks what it holds back and what its gradient lights on the elements themselves, again after a draw took a mark off, and takes every mark back once it settles', () => {
+  const { frames, text, parent, host, blocks, ink } = story();
+  const frame = (now: number) => {
+    const [id, tick] = [...frames][0]!;
+    frames.delete(id);
+    tick(now);
+  };
+  let now = performance.now();
+  text.data = '가나다라마바사';
+  ink.drawn(true);
+  expect([...host.on].sort()).toEqual(['data-ink-behind', 'data-inked']);
+  expect(blocks.map((block) => [...block.on])).toEqual([['data-ink-wait'], ['data-ink-wait']]);
+  blocks[1]!.on.clear();
+  ink.drawn(true);
+  expect(blocks[1]!.on.has('data-ink-wait')).toBe(true);
+  frame((now += 50));
+  expect([...parent.on]).toEqual(['data-ink-lit']);
+  expect([...parent.own]).toEqual([['--ink-own', 'rgb(0, 0, 0)']]);
+  parent.on.clear();
+  parent.own.clear();
+  ink.drawn(true);
+  expect(parent.on.size + parent.own.size).toBe(2);
+  ink.drawn(false);
+  while (frames.size) frame((now += 50));
+  expect(host.on.size + parent.on.size + parent.own.size).toBe(0);
+  expect(blocks.every((block) => block.on.size === 0)).toBe(true);
+  vi.unstubAllGlobals();
+});
 
 it('asks for no frame once a text rewritten whole is no longer written', () => {
   const { frames, text, ink } = story();
@@ -82,7 +115,7 @@ it('asks for no frame once a text rewritten whole is no longer written', () => {
 it('ends for a story whose text a range no longer fits: the draw does not throw, the text stands whole and the error is told', () => {
   const gone = new DOMException('offset is larger than the node', 'IndexSizeError');
   let cut = false;
-  const { frames, text, host, ink } = story(() => {
+  const { frames, text, host, blocks, ink } = story(() => {
     if (cut) throw gone;
   });
   const told = vi.fn();
@@ -93,7 +126,8 @@ it('ends for a story whose text a range no longer fits: the draw does not throw,
   text.data = '가나다라마바사 그리고 더';
   expect(() => ink.drawn(true)).not.toThrow();
   expect(told).toHaveBeenCalledExactlyOnceWith(gone);
-  expect(host.removeAttribute).toHaveBeenLastCalledWith('data-ink');
+  expect(host.on.size).toBe(0);
+  expect(blocks.every((block) => block.on.size === 0)).toBe(true);
   expect(frames.size).toBe(0);
   ink.drawn(true);
   expect(told).toHaveBeenCalledOnce();

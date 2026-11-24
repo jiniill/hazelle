@@ -425,6 +425,37 @@ describe("the display with the bot's Lua", () => {
       leave();
     }));
 
+  it('passes a chat again for a window that changed only when its display read the window\'s size', () =>
+    server.withSession(async (session) => {
+      await answerable(session);
+      const open = async (greeting: string) => {
+        const card = { ...blankCard('루나'), greetings: [greeting] };
+        const character = await session.store.create('character', { card, folder: null, loreFolders: [] });
+        if (!character.ok) throw new Error(character.error);
+        const chat = crypto.randomUUID();
+        await server.hold(session.store, chat);
+        await startChat(session.store, chat, { title: null, character: character.data.id, models: {} }, projectGreetings(card.greetings, [crypto.randomUUID()], 0));
+        const opening = { chat: session.store.get('chat', chat)!.value, messages: fold(session.store.children('entry', chat)) };
+        const screen = session.read.screen(chat, session.talk, session.illustrator, opening, session.display);
+        const leave = screen.subscribe(() => {});
+        // The size comes after the first pass has begun without one, as a page's does.
+        screen.setInputs(opening, { width: 1200, height: 800 });
+        return { texts: () => screen.snapshot().display.texts, resize: () => screen.setInputs(opening, { width: 1200, height: 744 }), leave };
+      };
+      const plain = await open('어서 와.');
+      await expect.poll(plain.texts).toEqual(['어서 와.']);
+      const sized = await open('{{screenwidth}}x{{screenheight}}');
+      await expect.poll(sized.texts).toEqual(['1200x800']);
+      const passes = vi.spyOn(session.store.evaluation, 'display');
+      plain.resize();
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      expect(passes).not.toHaveBeenCalled();
+      sized.resize();
+      await expect.poll(sized.texts).toEqual(['1200x744']);
+      plain.leave();
+      sized.leave();
+    }));
+
   it('leaves it to the engine whether a script listens: one that only names the hook is passed once, one registered under a computed name is passed', () =>
     server.withSession(async (session) => {
       const open = async (script: string | Trigger[]) => {
@@ -433,7 +464,7 @@ describe("the display with the bot's Lua", () => {
         const screen = session.read.screen(chat, session.talk, session.illustrator, opening, session.display);
         screen.setInputs(opening, { width: 1200, height: 800 });
         const leave = screen.subscribe(() => {});
-        return { texts: () => screen.snapshot().display.texts, again: () => screen.setInputs(opening, { width: 800, height: 800 }), leave };
+        return { texts: () => screen.snapshot().display.texts, again: () => screen.refresh(), leave };
       };
       const { display, hold } = luaDisplays();
       let release = hold();

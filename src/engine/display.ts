@@ -13,10 +13,12 @@ import { contexts, renderChat, type ChatScope, type LuaDisplay, type Missed } fr
 // null when it has none. background: the packs' backgroundHTML past CBS and the display regex, its styles taken out,
 // which Risu draws behind the chat; '' when only styles stand there.
 // pass means Lua editDisplay has pending messages; stopped records a Runaway, with runaway backgroundHTML omitted.
-export type Display = { texts: string[]; css: string; picture: string | null; background: string; drawn: number[][]; boxes: Box[][]; pass: boolean; unfound: string[]; stopped: Runaway | null };
+// sized: some text of it read the screen's size ({{screenwidth}}, {{screenheight}}), so it is another display at
+// another size; one that read none stands as it is whatever the window does.
+export type Display = { texts: string[]; css: string; picture: string | null; background: string; drawn: number[][]; boxes: Box[][]; pass: boolean; unfound: string[]; sized: boolean; stopped: Runaway | null };
 
 export type DisplayWork = { items: Missed[]; staged: string[]; start: [string, string][] };
-export type DisplayPatch = { rows: { index: number; text: string; drawn: number[]; boxes: Box[] }[]; css: string; pass: boolean; unfound: string[]; stopped: Runaway | null };
+export type DisplayPatch = { rows: { index: number; text: string; drawn: number[]; boxes: Box[] }[]; css: string; pass: boolean; unfound: string[]; sized: boolean; stopped: Runaway | null };
 
 export const display = (scope: ChatScope, take: ReadonlySet<number> = new Set(), lua?: LuaDisplay): Display => new DisplayPass(scope, take, lua).value;
 
@@ -61,7 +63,7 @@ export class DisplayPass {
     const texts = rendered.texts.map((text, index) => this.stripStyles(text, this.textStyles[index]!));
     const boxes = rendered.boxes.map((rows, index) => rows.map((box) => ({ ...box, html: this.stripStyles(box.html, this.boxStyles[index]!) })));
     // Joined as Risu joins the character's to the modules'.
-    this.value = { texts, boxes, drawn: rendered.drawn, css: this.css(), picture: main ? assetUrl(main.id) : null, background: background.join('\n').trim(), pass: this.missing.size > 0, unfound: [...rendered.unfound!], stopped: rendered.stopped ?? this.ownStop };
+    this.value = { texts, boxes, drawn: rendered.drawn, css: this.css(), picture: main ? assetUrl(main.id) : null, background: background.join('\n').trim(), pass: this.missing.size > 0, unfound: [...rendered.unfound!], sized: rendered.sized!.read, stopped: rendered.stopped ?? this.ownStop };
   }
 
   patch(items: { version: string; text: string }[]): DisplayPatch {
@@ -86,9 +88,10 @@ export class DisplayPass {
     for (const errors of [this.rendered.failures.input, this.rendered.failures.display]) for (const [index, error] of errors) {
       if (index < first) { first = index; stopped = error; }
     }
-    const patch = { rows, css: this.css(), pass: this.missing.size > 0, unfound: [...this.rendered.unfound!], stopped: stopped ?? this.ownStop };
+    const patch = { rows, css: this.css(), pass: this.missing.size > 0, unfound: [...this.rendered.unfound!], sized: this.rendered.sized!.read, stopped: stopped ?? this.ownStop };
     this.value.css = patch.css;
     this.value.unfound = patch.unfound;
+    this.value.sized = patch.sized;
     this.value.pass = patch.pass;
     this.value.stopped = patch.stopped;
     return patch;
@@ -119,7 +122,7 @@ export class DisplayPass {
 
 // CBS read outside any message, which writes no variable.
 function outside(scope: ChatScope, rendered: ReturnType<typeof renderChat>, seed: string) {
-  const context = contexts(scope, 'display', null, '', rendered.unfound)({ seed }, rendered.variables);
+  const context = contexts(scope, 'display', null, '', rendered.unfound, rendered.sized)({ seed }, rendered.variables);
   return (text: string) => evaluate(text, context);
 }
 

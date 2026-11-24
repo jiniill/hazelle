@@ -6,7 +6,7 @@ import { MEDIA, mediaQuery } from '../foundation/media';
 import { tokenMotion, tokenMs } from '../foundation/tokenPx';
 import { useQuoteShape } from '../foundation/quotes';
 import { unread, useVeil, useVeilTaps, type Veil } from '../foundation/veil';
-import { inkable, inkOn, inkSheet, type StoryInk } from './ink';
+import { inkable, inkOn, inkSheet, LIT, WAIT, type StoryInk } from './ink';
 import { inlaid } from './inlay';
 import { useMarginRoom } from '../layout/ChatFrame';
 import { MarginPictures } from './MarginPictures';
@@ -100,7 +100,7 @@ const CONFIG = {
   RETURN_DOM_FRAGMENT: true as const,
   ADD_TAGS: ['semantics', 'annotation'],
   FORBID_TAGS: ['style'],
-  FORBID_ATTR: ['style', 'action', 'popover', 'popovertarget', 'popovertargetaction', 'command', 'commandfor', PICTURE, OPEN, HOVER, WIDE, VEILED, COVER, COPY],
+  FORBID_ATTR: ['style', 'action', 'popover', 'popovertarget', 'popovertargetaction', 'command', 'commandfor', PICTURE, OPEN, HOVER, WIDE, VEILED, COVER, COPY, WAIT, LIT],
   ADD_ATTR: ['risu-btn', 'risu-trigger', 'risu-id', 'risu-mark', 'risu-form', VAR_NAME, VAR_VALUE],
   ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|matrix|blob):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,
 };
@@ -697,7 +697,7 @@ export function Story({ html, css = '', cursor = false, inked = false, tone = 'p
   }, [html, cursor, pictures, veil, veilTaps, term, placed, math, code]);
 
   useLayoutEffect(() => {
-    root().adoptedStyleSheets = [baseSheet(), inkSheet(), ...(css ? [sheetFor(css, veil !== null)] : []), ...(ink.current ? [ink.current.gate] : [])];
+    root().adoptedStyleSheets = [baseSheet(), inkSheet(), ...(css ? [sheetFor(css, veil !== null)] : [])];
   }, [css, veil]);
 
   useEffect(() => {
