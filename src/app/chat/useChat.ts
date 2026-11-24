@@ -32,9 +32,9 @@ import { LORE_BUDGET_LABEL, CHAT_SHOW_FAILED } from '../common/words';
 import { useAssetUrl, useCaptured, useChatDisplay, useChatMemory, useChatTools, useChildren, useSession, useToolFrames, useReplying } from '../session';
 import { useToast } from '../toast';
 import { useChatEdits } from './ChatEdits';
-import { storyText, useMenuHandle, useTimePin, useVeil, useViewport, type BotButton, type Reading } from '../ui';
+import { useMenuHandle, useTimePin, useVeil, useViewport, type BotButton, type Reading } from '../ui';
 import { useSendNotes } from './useSendNotes';
-import { displayed } from './exportLog';
+import { displayedRows } from './exportLog';
 import { useDraft } from './useDraft';
 import { useToolInput } from './useToolInput';
 import { budgetCut } from './infoReply';
@@ -319,12 +319,12 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
     const failure = text ? await say(text) : await asked(chat, { kind: 'answer' });
     return failure?.kind === 'busy' ? 'busy' : failure ? 'failed' : null;
   }
+  const toolRows = useMemo(() => displayedRows(view, bot), [view, bot]);
   // The row as drawn, on the version shown and not under an edit.
   function renderedForTool(at: ScreenAt): Hazelle.Rendered | null {
     const index = at === null ? (greetingOf(messages) ? 0 : -1) : messages.findIndex((each) => each.id === at.id);
     if (index < 0 || (at !== null && shown(messages[index]!).id !== at.version)) return null;
-    const { stories, css } = displayed(view, index, bot);
-    return { html: stories.join(''), css, text: stories.map(storyText).filter(Boolean).join('\n\n') };
+    return toolRows(index);
   }
   const toolScreen = useRef({ send: sendForTool, rendered: renderedForTool });
   toolScreen.current = { send: sendForTool, rendered: renderedForTool };
