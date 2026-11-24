@@ -63,6 +63,8 @@ export class ObjectStore {
   private restored = false;
   private openingFailure: ApiFailure | null = null;
   private readonly cachedObjects: ObjectCacheSession;
+  // What the feed state last handed to the cache was made of: a write that would put it again leaves it out.
+  private cachedFeed: string | null = null;
   private readonly codec: ObjectCodec;
   private readonly writes: ObjectWrites;
 
@@ -173,12 +175,19 @@ export class ObjectStore {
 
   // scope: the parent whose rows were read up to cursor (a chat's, or a walked kind's).
   private cacheWrite(changes: SealedChange[], scope?: { chat: string; cursor: number; complete: boolean }) {
-    if (!this.cachedObjects.available || this.timeline === null) return;
     const scopes = scope ? [{ chat: scope.chat, state: this.cacheState(scope) }] : [...new Set(changes.filter((row) => SCOPED.has(row.kind)).map((row) => row.parent!))].flatMap((chat) => {
       const held = this.scopes.get(chat);
       return held?.state === 'loaded' && !held.loading ? [{ chat, state: this.cacheState({ cursor: held.cursor, complete: true }) }] : [];
     });
-    this.cachedObjects.write({ changes, feed: this.cacheState(), scopes });
+    this.cachePut(changes, scopes);
+  }
+
+  private cachePut(changes: SealedChange[], scopes: { chat: string; state: CacheState }[]) {
+    if (!this.cachedObjects.available || this.timeline === null) return;
+    const feed = JSON.stringify([this.cursor, this.bootstrapped, this.bootstrap, this.limits, this.objects.revisionsVersion()]);
+    if (feed === this.cachedFeed && !changes.length && !scopes.length) return;
+    this.cachedObjects.write({ changes, scopes, ...(feed !== this.cachedFeed && { feed: this.cacheState() }) });
+    this.cachedFeed = feed;
   }
 
   // Report dropped writes once on rewind; late subscribers receive the result immediately.
@@ -514,7 +523,7 @@ export class ObjectStore {
       const ends = !more || Date.now() - saved >= FILL_SAVE_MS;
       // A scope's state says its rows are whole up to its cursor, true of every chat the pass has gone past.
       const scopes = ends ? [...due].flatMap(([chat, since]) => (since <= cursor && !this.scopes.has(chat) ? [{ chat, state: this.cacheState({ cursor, complete: !more }) }] : [])) : [];
-      if (this.timeline !== null) this.cachedObjects.write({ changes: result.data.changes.filter((row) => SCOPED.has(row.kind) && due.has(row.parent!)), feed: this.cacheState(), scopes });
+      this.cachePut(result.data.changes.filter((row) => SCOPED.has(row.kind) && due.has(row.parent!)), scopes);
       if (ends) saved = Date.now();
       share(head > from ? Math.min((cursor - from) / (head - from), 1) : 1);
     }

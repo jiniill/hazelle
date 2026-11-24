@@ -17,6 +17,8 @@ export class ObjectIndex {
   private readonly byParent = new Map<string, Map<string, Set<string>>>();
   private readonly heads = new Map<string, number>();
   private readonly revisions = new Map<string, number>();
+  // Moves whenever snapshotRevisions would answer differently.
+  private version = 0;
   private unreadableCount = 0;
 
   get(id: string): Held | undefined { return this.live.get(id); }
@@ -39,19 +41,26 @@ export class ObjectIndex {
   loadRevisions({ heads, revisions }: Revisions) {
     for (const [chat, head] of heads) this.heads.set(chat, head);
     for (const [read, rev] of revisions) this.revisions.set(read, rev);
+    this.version++;
   }
 
   snapshotRevisions(): Revisions {
     return { heads: [...this.heads], revisions: [...this.revisions] };
   }
 
+  revisionsVersion(): number { return this.version; }
+
   // A feed may omit the body of an unheld chat. Its revision still invalidates reads and advances its entry head.
   recordRevision({ kind, parent, rev }: StoreChange & { rev: number }) {
-    for (const read of [{ kind, list: true }, ...(parent ? [{ kind, parent }] : [])]) {
-      const key = JSON.stringify(read);
-      this.revisions.set(key, Math.max(this.revisions.get(key) ?? 0, rev));
-    }
-    if (kind === 'entry' && parent) this.heads.set(parent, Math.max(this.heads.get(parent) ?? 0, rev));
+    for (const read of [{ kind, list: true }, ...(parent ? [{ kind, parent }] : [])]) this.raise(this.revisions, JSON.stringify(read), rev);
+    if (kind === 'entry' && parent) this.raise(this.heads, parent, rev);
+  }
+
+  private raise(revisions: Map<string, number>, key: string, rev: number) {
+    const held = revisions.get(key);
+    if (held !== undefined && held >= rev) return;
+    revisions.set(key, rev);
+    this.version++;
   }
 
   // Every write takes the account's next rev, so one not above the rev held for the id is that write or an older
@@ -107,6 +116,7 @@ export class ObjectIndex {
     this.byParent.clear();
     this.heads.clear();
     this.revisions.clear();
+    this.version++;
     this.unreadableCount = 0;
   }
 }

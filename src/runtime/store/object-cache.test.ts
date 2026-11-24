@@ -352,6 +352,22 @@ it('does not await a cache write or fail a successful object write when caching 
   store.close();
 });
 
+it('writes nothing for a pull that brought nothing, and the feed state again once it moved', async () => {
+  const f = await fixture();
+  await f.add('kept', 'connection', null, connection);
+  const store = await f.open();
+  await store.pull();
+  await f.flush();
+  const writing = vi.spyOn(f.cache, 'write');
+  expect(await store.pull()).toBeNull();
+  await f.add('later', 'connection', null, connection);
+  expect(await store.pull()).toBeNull();
+  await f.flush();
+  expect(writing).toHaveBeenCalledOnce();
+  expect(writing.mock.calls[0]![1].feed?.cursor).toBe(2);
+  store.close();
+});
+
 it('keeps the generation rules a browser cache keeps', async () => {
   expect(await generationSteps(new MemoryCache())).toEqual(GENERATION_STEPS);
 });

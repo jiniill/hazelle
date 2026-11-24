@@ -201,7 +201,7 @@ class BrowserCache implements DeviceCache {
           if (cacheNewer(get.result as SealedChange | undefined, row)) objects.put({ ...row, account: this.account, scope: cacheScope(row) }, key);
         };
       }
-      tx.objectStore('states').put(feed, [this.account, '']);
+      if (feed) tx.objectStore('states').put(feed, [this.account, '']);
       for (const scope of scopes ?? []) tx.objectStore('states').put(scope.state, [this.account, scope.chat]);
     });
     await done;
