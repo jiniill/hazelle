@@ -2,8 +2,9 @@
 // (r2-bucket.ts), chosen at startup (choose.ts). Every reader of that layout goes through a Bucket.
 
 type Common = {
-  // Durable once either put answers: a catalog row is written only after publication.
-  put(key: string, body: ArrayBuffer | Uint8Array): Promise<void>;
+  // Durable once either put answers: a catalog row is written only after publication. sha256: the body's, in hex, when
+  // the caller has checked it; R2 signs with it instead of hashing the body again, and still checks the body against it.
+  put(key: string, body: ArrayBuffer | Uint8Array, sha256?: string): Promise<void>;
   putFile(key: string, path: string): Promise<void>;
   archives(): Promise<{ key: string; modified: number }[]>;
   get(key: string): Promise<ReadableStream<Uint8Array> | null>;
