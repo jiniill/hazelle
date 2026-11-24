@@ -5,41 +5,53 @@ export const MAX_EVENT_CHARS = 64 * 1024 * 1024;
 // Comment lines and other fields are dropped: providers send keep-alive comments such as ": OPENROUTER PROCESSING",
 // and every codec reads its event type from the JSON data, not from the event field.
 export class SseParser {
-  private buffer = '';
-  private scanned = 0;
+  // The event not ended yet, as its pieces came. They are joined once, at its boundary: joining or searching the whole
+  // at each chunk copies it each time, which for one event of many MB is its length squared.
+  private pieces: string[] = [];
+  private length = 0;
+  // Its last three characters. A CRLF boundary can straddle chunks, so they are searched again with the next piece.
+  private tail = '';
   private readonly boundary = /\r?\n\r?\n/g;
 
   push(text: string): string[] {
     const events: string[] = [];
     for (let at = 0; at < text.length;) {
-      const take = Math.min(text.length - at, MAX_EVENT_CHARS + 4 - this.buffer.length);
-      this.buffer += text.slice(at, at + take);
-      at += take;
-      this.boundary.lastIndex = this.scanned;
-      let boundary = this.boundary.exec(this.buffer);
-      let consumed = 0;
-      while (boundary) {
-        if (boundary.index - consumed > MAX_EVENT_CHARS) throw new Error('SSE event is too large');
-        events.push(...data(this.buffer.slice(consumed, boundary.index)));
-        consumed = this.boundary.lastIndex;
-        boundary = this.boundary.exec(this.buffer);
+      const piece = text.slice(at, at + Math.min(text.length - at, MAX_EVENT_CHARS + 4 - this.length));
+      at += piece.length;
+      this.boundary.lastIndex = 0;
+      if (this.boundary.test(this.tail + piece)) {
+        const buffer = this.pieces.join('') + piece;
+        this.boundary.lastIndex = this.length - this.tail.length;
+        let consumed = 0;
+        for (let boundary = this.boundary.exec(buffer); boundary; boundary = this.boundary.exec(buffer)) {
+          if (boundary.index - consumed > MAX_EVENT_CHARS) throw new Error('SSE event is too large');
+          events.push(...data(buffer.slice(consumed, boundary.index)));
+          consumed = this.boundary.lastIndex;
+        }
+        this.hold(buffer.slice(consumed));
+      } else {
+        this.pieces.push(piece);
+        this.length += piece.length;
+        this.tail = (this.tail + piece).slice(-3);
       }
-      this.buffer = this.buffer.slice(consumed);
-      const partialBoundary = /\r?\n\r?$|\r$/.exec(this.buffer.slice(-3))?.[0].length ?? 0;
-      if (this.buffer.length - partialBoundary > MAX_EVENT_CHARS) throw new Error('SSE event is too large');
-      // A CRLF boundary can straddle chunks; only its last three characters need another scan.
-      this.scanned = Math.max(0, this.buffer.length - 3);
+      const partialBoundary = /\r?\n\r?$|\r$/.exec(this.tail)?.[0].length ?? 0;
+      if (this.length - partialBoundary > MAX_EVENT_CHARS) throw new Error('SSE event is too large');
     }
     return events;
   }
 
   // A stream may end without the blank line after its last event.
   end(): string[] {
-    if (this.buffer.length > MAX_EVENT_CHARS) throw new Error('SSE event is too large');
-    const events = data(this.buffer);
-    this.buffer = '';
-    this.scanned = 0;
+    if (this.length > MAX_EVENT_CHARS) throw new Error('SSE event is too large');
+    const events = data(this.pieces.join(''));
+    this.hold('');
     return events;
+  }
+
+  private hold(rest: string) {
+    this.pieces = rest ? [rest] : [];
+    this.length = rest.length;
+    this.tail = rest.slice(-3);
   }
 }
 
