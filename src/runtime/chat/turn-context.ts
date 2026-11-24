@@ -29,6 +29,8 @@ import { chatPersona, type PersonaSource } from '../library/personas';
 import { writerOf } from '../models/profiles';
 import { lastAdditional } from './additional';
 import type { Session } from '../session';
+import type { ObjectStore } from '../store/store';
+import type { ChatProjections } from '../store/summary';
 import type { Ask, Turn } from './talk';
 
 type Reader = Pick<Session, 'store'>;
@@ -121,6 +123,20 @@ export type Unsendable = Exclude<EvaluatedPrompt, Assembled>;
 
 type Forecaster = Pick<Session, 'store' | 'read' | 'scriptTurns' | 'tokens' | 'additions'>;
 type Asker = 'forecast' | 'memory' | 'view';
+
+// Kinds a forecast never reads. Projections and summaries reach it only through the chat's verdict, which refuses it
+// (evaluation GATES), so a batch of these alone forecasts again only when the verdict came or went.
+const UNFORECAST = new Set(['remark', 'illustration', 'projection', 'summary']);
+
+export function forecastChanges(store: Pick<ObjectStore, 'subscribe'> & { projections: Pick<ChatProjections, 'verdict'> }, chat: string, changed: () => void) {
+  const stuck = () => store.projections.verdict(chat) !== null;
+  let judged = stuck();
+  return store.subscribe((changes) => {
+    const was = judged;
+    judged = stuck();
+    if (judged !== was || changes.some(({ kind }) => !UNFORECAST.has(kind))) changed();
+  });
+}
 
 // For callers that act only on a request that can go.
 export const wouldSend = async (session: Forecaster, chat: string, target: Target, signal?: AbortSignal, asker: Asker = 'forecast', unsaved: Unsaved | null = null): Promise<Sending | null> => {

@@ -11,7 +11,7 @@ import { autoChat, cacheCause, cacheFacts } from '../../runtime/diagnostics/diag
 import { leaving, leavingCauses } from '../../runtime/tasks/memory-view';
 import type { Shown } from '../../runtime/chat/talk';
 import type { SentRequest } from '../../runtime/models/request-log';
-import { cacheSend, forecastSend, previewRequest, type Sending, type Unsendable, type Unsaved } from '../../runtime/chat/turn-context';
+import { cacheSend, forecastChanges, forecastSend, previewRequest, type Sending, type Unsendable, type Unsaved } from '../../runtime/chat/turn-context';
 import { useLab } from '../common/labs';
 import { useSession } from '../session';
 
@@ -25,8 +25,8 @@ export type SendNotes = { cache: CacheNotes; leaving: number | null; unseen: num
 // prior receipts.
 export type CacheNotes = { until: number | null; recurrence: CacheRecurrence; replies: ReturnType<typeof replyCalls>; next: { forecast: Forecast; diagnosis: CacheDiagnosis | null | undefined; prescriptions: CachePrescription[] | null | undefined; cost: ReturnType<typeof breakCost>; route: Route } | null | undefined };
 
-// The draft is read again after any store change settles, so an edit to the prompt, a lorebook or the model shows in
-// the forecast while it is open. unsaved: a new chat not saved yet, forecast as its first save will write it.
+// The draft is read again after a store change it can follow settles, so an edit to the prompt, a lorebook or the model
+// shows in the forecast while it is open. unsaved: a new chat not saved yet, forecast as its first save will write it.
 export function useSendNotes(id: string, unsaved: Unsaved | null, chat: Chat, messages: Shown[], memory: Memory | null, text: string, busy: boolean): SendNotes {
   const session = useSession();
   const guard = useLab('cacheguard');
@@ -96,7 +96,7 @@ export function useSendNotes(id: string, unsaved: Unsaved | null, chat: Chat, me
       });
     };
     run();
-    const stop = session.store.subscribe(run);
+    const stop = forecastChanges(session.store, id, run);
     return () => {
       stop();
       stopRun();
