@@ -10,8 +10,6 @@ import {
   NodeType,
   OpenPGPCryptoWithCryptoProxy,
   ProtonDriveClient,
-  RateLimitedError,
-  ServerError,
   ValidationError,
   type ProtonDriveHTTPClientBlobRequest,
   type ProtonDriveHTTPClientJsonRequest,
@@ -69,7 +67,7 @@ export async function downloadProton(url: string, password: string | undefined, 
     try {
       return await work();
     } catch (error) {
-      return { ok: false, failure: error === WRONG ? { kind: 'wrong-password' } : refusal(error) };
+      return { ok: false, failure: error instanceof Told ? error.failure : refusal(error) };
     }
   };
 
@@ -96,8 +94,10 @@ export async function downloadProton(url: string, password: string | undefined, 
     const { isCustomPasswordProtected } = await client.experimental.getURLAccessInfo(url);
     if (isCustomPasswordProtected && password === undefined) return { ok: false, failure: { kind: 'needs-password' } };
     const link = await client.experimental.authURLAccess(url, password, true).catch((error: unknown) => {
-      // A refusal in Proton's own codes, as a wrong proof gets; an outage carries an HTTP status and a limit its own class.
-      if (isCustomPasswordProtected && error instanceof ServerError && error.statusCode === undefined && !(error instanceof RateLimitedError)) throw WRONG;
+      // Proton answers a proof it refuses as a wrong value (its code 2026), which the SDK reads as a ValidationError; an
+      // outage and a limit are other classes. The proof is made of the address's part after # and the owner's password
+      // together, so with no password to be wrong it is the address that is not whole.
+      if (error instanceof ValidationError) throw new Told({ kind: isCustomPasswordProtected ? 'wrong-password' : 'wrong-address' });
       throw error;
     });
     const root = (await link.getRootNode()) as Named;
@@ -142,7 +142,11 @@ export async function downloadProton(url: string, password: string | undefined, 
   });
 }
 
-const WRONG = new Error('wrong password');
+class Told extends Error {
+  constructor(readonly failure: LinkFailure) {
+    super(failure.kind);
+  }
+}
 const QUIET = { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} };
 const unavailable = async (): Promise<never> => {
   throw new Error('not available to an anonymous visitor');

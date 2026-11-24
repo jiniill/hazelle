@@ -25,7 +25,8 @@ const drive = vi.hoisted(() => {
       }),
     }),
   };
-  return { link, downloaded };
+  // locked: the link has its owner's password. refused: Proton refuses the proof.
+  return { link, downloaded, locked: false, refused: false };
 });
 
 vi.mock('@protontech/crypto', () => ({ CryptoProxy: { setEndpoint: () => {} } }));
@@ -33,18 +34,23 @@ vi.mock('@protontech/crypto/proxy/endpoint/api.ts', () => ({ Api: class { static
 vi.mock('@protontech/crypto/srp', () => ({ computeKeyPassword: () => {}, getSrp: () => {} }));
 vi.mock('@protontech/drive-sdk', () => {
   class Failure extends Error {}
+  class Invalid extends Error {}
   return {
     NodeType: { File: 'file', Folder: 'folder' },
     ConnectionError: Failure,
     DecryptionError: Failure,
     IntegrityError: Failure,
-    RateLimitedError: Failure,
-    ServerError: Failure,
-    ValidationError: Failure,
+    ValidationError: Invalid,
     MemoryCache: class {},
     OpenPGPCryptoWithCryptoProxy: class {},
     ProtonDriveClient: class {
-      experimental = { getURLAccessInfo: async () => ({ isCustomPasswordProtected: false }), authURLAccess: async () => drive.link };
+      experimental = {
+        getURLAccessInfo: async () => ({ isCustomPasswordProtected: drive.locked }),
+        authURLAccess: async () => {
+          if (drive.refused) throw new Invalid();
+          return drive.link;
+        },
+      };
     },
   };
 });
@@ -61,4 +67,12 @@ it('lists a folder of bots, modules and prompts with its subfolders before downl
   const taken = await answer.folder.take([4], signal, () => {});
   expect(taken.ok && 'files' in taken && [taken.files.map((file) => file.name), taken.skipped]).toEqual([['c.risum'], []]);
   expect(drive.downloaded).toEqual(['c']);
+});
+
+it('tells a proof Proton refuses as the password where the link has one, and as the address where it has none', async () => {
+  const signal = new AbortController().signal;
+  drive.refused = true;
+  expect(await downloadProton('https://drive.proton.me/urls/A#b', undefined, signal, () => {})).toEqual({ ok: false, failure: { kind: 'wrong-address' } });
+  drive.locked = true;
+  expect(await downloadProton('https://drive.proton.me/urls/A#b', 'guess', signal, () => {})).toEqual({ ok: false, failure: { kind: 'wrong-password' } });
 });

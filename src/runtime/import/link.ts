@@ -14,7 +14,7 @@ export type LinkFailure =
   | { kind: 'cancelled' }
   | { kind: 'needs-password' }
   | { kind: 'wrong-password' }
-  | { kind: 'missing' | 'refused' | 'not-a-file' | 'guest-blocked' | 'needs-account' | 'no-file' | 'damaged' | 'lost' }
+  | { kind: 'missing' | 'wrong-address' | 'refused' | 'not-a-file' | 'guest-blocked' | 'needs-account' | 'no-file' | 'damaged' | 'lost' }
   | { kind: 'relay'; failure: RelayFailure };
 export type Progress = (done: number, total: number | undefined) => void;
 // A folder of more than one importable file, listed before any is downloaded: name as its path from the link's root,
