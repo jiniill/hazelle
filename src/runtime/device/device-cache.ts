@@ -317,7 +317,7 @@ function splitRevisions(tx: IDBTransaction, revisions: IDBObjectStore) {
     const at = walk.result;
     if (!at) return;
     const [account, chat] = at.key as [string, string];
-    const { heads, revisions: reads, ...state } = at.value as CacheState & CacheRevisions;
+    const { heads = [], revisions: reads = [], ...state } = at.value as CacheState & Partial<CacheRevisions>;
     if (chat === '') {
       for (const [name, rev] of heads) revisions.put(rev, [account, 'heads', name]);
       for (const [name, rev] of reads) revisions.put(rev, [account, 'revisions', name]);
