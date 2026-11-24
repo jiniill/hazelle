@@ -493,8 +493,21 @@ export class ToolApi {
   }
 
   private state(frame: Frame, context: Context): Promise<ToolState> {
-    context.state ??= this.read(frame, context, (lane) => this.session.store.evaluation.state(lane, context.scope, '', context.signal));
+    context.state ??= context.event === undefined ? this.outside(frame, context) : this.evaluate(frame, context);
     return context.state;
+  }
+
+  private outside(frame: Frame, context: Context): Promise<ToolState> {
+    const { messages } = this.session.store.foldedChat(context.chat);
+    if (frame.outside?.chat === context.chat && frame.outside.messages === messages) return frame.outside.state;
+    const kept = { chat: context.chat, messages, state: this.evaluate(frame, context) };
+    frame.outside = kept;
+    kept.state.catch(() => { if (frame.outside === kept) frame.outside = null; });
+    return kept.state;
+  }
+
+  private evaluate(frame: Frame, context: Context): Promise<ToolState> {
+    return this.read(frame, context, (lane) => this.session.store.evaluation.state(lane, context.scope, '', context.signal));
   }
 
   // Concurrent events have immutable snapshots but one ordered changed-tail transport per frame.

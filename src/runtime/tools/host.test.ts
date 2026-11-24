@@ -739,6 +739,32 @@ it('notifies a running tool after pulling a data change written on another devic
   } finally { host.close(); }
 });
 
+it('reads a page\'s chat state once while nothing changes, again once the chat does, and keeps no read that failed', () => withTools(async (session, connect) => {
+  const f = await fixture(session);
+  const transport = inProcessTools(() => {});
+  const host = connect(transport.open);
+  const close = host.page(f.module, page(f.chat));
+  const states = vi.spyOn(session.store.evaluation, 'state');
+  try {
+    await vi.waitFor(() => expect(transport.frames[0]!.api).not.toBeNull());
+    const chat = transport.frames[0]!.api!.page!.chat!;
+    const texts = async () => (await chat.messages()).map(({ text }) => text);
+    expect(await texts()).toEqual(['hello']);
+    expect(await chat.variables.entries()).toEqual([]);
+    expect(await texts()).toEqual(['hello']);
+    expect(states).toHaveBeenCalledTimes(1);
+    await appendUserMessage(session.store, f.chat, { id: crypto.randomUUID(), text: 'again' });
+    states.mockResolvedValueOnce({ kind: 'runaway' });
+    await expect(chat.messages()).rejects.toThrow();
+    expect(await texts()).toEqual(['hello', 'again']);
+    expect(await texts()).toEqual(['hello', 'again']);
+    expect(states).toHaveBeenCalledTimes(3);
+    await setModels(session.store, { kind: 'module', id: f.module }, true);
+    expect(await texts()).toEqual(['hello', 'again']);
+    expect(states).toHaveBeenCalledTimes(4);
+  } finally { close(); host.close(); }
+}));
+
 it('applies page chat writes through the page runtime, distinguishes null and deletion, and keeps the page alive while open', () => withTools(async (session, connect) => {
   const f = await fixture(session);
   const transport = inProcessTools(() => {});

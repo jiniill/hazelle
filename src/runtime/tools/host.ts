@@ -355,7 +355,7 @@ export class ToolHost implements Tools, Binding<ToolUnit, ToolEvent, ToolReach> 
       id: ++this.ids, entry, connection, page, closing: new AbortController(),
       heart: new Heartbeat(() => this.send(frame, { kind: 'ping' }), () => this.stalled(frame)),
       loaded: false, ready, resolve, reject, loadTimer: null,
-      listens: new Set(), pending: new Map(), calls: new Map(), messages: [], reading: Promise.resolve(), lanes: new Set(), release: () => lease?.release(), network,
+      listens: new Set(), pending: new Map(), calls: new Map(), messages: [], reading: Promise.resolve(), outside: null, lanes: new Set(), release: () => lease?.release(), network,
       unloading: false,
     };
     connection.port.onmessage = ({ data }: MessageEvent<unknown>) => this.receive(frame, data);
@@ -518,6 +518,7 @@ export class ToolHost implements Tools, Binding<ToolUnit, ToolEvent, ToolReach> 
 
   private changed(changes: readonly StoreChange[]) {
     for (const entry of [...this.entries.values()]) {
+      for (const frame of framesOf(entry)) frame.outside = null;
       const tool = this.session.store.get('tool', toolId(entry.module))?.value;
       if (!tool || !live(this.session.store.get('module', entry.module)) || tool.file.id !== entry.file?.id || (tool.manifest !== entry.tool.manifest && JSON.stringify(tool.manifest) !== JSON.stringify(entry.tool.manifest))) { this.end(entry, new ToolStopped()); continue; }
       // A withdrawn network answer cannot wait for the frame's next start: its CSP still lets pictures out.

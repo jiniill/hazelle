@@ -18,6 +18,9 @@ export type Frame = {
   loaded: boolean; ready: Promise<void>; resolve(): void; reject(error: Error): void; loadTimer: ReturnType<typeof setTimeout> | null;
   listens: Set<EventName>; pending: Map<number, Pending>; calls: Map<number, AbortController>; messages: Message[];
   reading: Promise<unknown>; lanes: Set<string>; release(): void;
+  // The state its calls outside an event read, while the store has not changed since (ToolHost changed) and its chat's
+  // messages are the ones it was read over: a write can land in the store before it is published.
+  outside: { chat: string; messages: object; state: Promise<ToolState> } | null;
   // Opened with the sandbox's network variant (pictures and fonts from outside), fixed for the frame's life.
   network: boolean;
   // Ended, with its port still open while the connection lets its unload callbacks run: their calls are answered.
