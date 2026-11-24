@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useState, type ComponentProps } from 'react';
 import { ChoiceGroup } from '../controls/ChoiceGroup';
 import { useReducedMotion } from '../foundation/media';
 import type { DemoName } from './drawings';
@@ -9,6 +9,8 @@ export type Way = 0 | 1;
 
 // The drawings come apart from the kit, with the first demo drawn: its stage keeps its size meanwhile.
 const Drawing = lazy(() => import('./drawings').then(({ Drawing }) => ({ default: Drawing })));
+// The round's clock comes with the drawings it times, so the first round is as long as the rest.
+const Hand = lazy(() => import('./drawings').then(() => ({ default: (props: ComponentProps<'span'>) => <span {...props} /> })));
 
 // Without ways, a demo plays only what turning its setting on adds; with them it alternates both, the current one marked.
 // on: a switch's two ways. labels: a choice of two, `now` the one chosen.
@@ -46,7 +48,9 @@ export function Demo({ label, name, ways, bare = false }: DemoSpec & { label: st
       )}
       {/* The round's clock: its end starts the next, so the round's length is the token's alone. Still, it stops after one. */}
       <span className={styles.clock} aria-hidden>
-        <span key={round.count} className={round.held ? `${styles.hand} ${styles.held}` : styles.hand} onAnimationEnd={() => !still && setRound((now) => nextRound(now, choice !== undefined))} />
+        <Suspense fallback={null}>
+          <Hand key={round.count} className={round.held ? `${styles.hand} ${styles.held}` : styles.hand} onAnimationEnd={() => !still && setRound((now) => nextRound(now, choice !== undefined))} />
+        </Suspense>
       </span>
     </div>
   );
