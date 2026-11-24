@@ -242,7 +242,8 @@ export class ChatProjections {
   }
 
   // before: the projection made before this one, whose display stands when a write changed nothing it was made of (a
-  // memory record, a remark, an entry the server took as it was shown). Its clock stays the one it was rendered at.
+  // memory record, a remark, an entry the server took as it was shown). Its clock stays the one it was rendered at, within
+  // its minute only, so what a bot shows of the time is never older than that.
   private async project(id: string, before: Projection | null, signal?: AbortSignal): Promise<Projection | null> {
     const store = this.source;
     const stored = live(store.get('chat', id));
@@ -251,8 +252,9 @@ export class ChatProjections {
     const head = store.loadedHead(id);
     const marks = store.shownMark(id);
     const { scope, take, dependencies } = this.basis(id, stored.value, messages);
-    const standing = before && (before.summary.stuck !== undefined) === (this.verdict(id) !== null) && alike(before.from.take, take) && alike({ ...before.from.scope, clock: scope.clock }, scope);
-    const rendered = standing ? before.summary.rendered : { now: Date.now(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone };
+    const now = Date.now();
+    const standing = before && Math.floor(before.summary.rendered.now / 60_000) === Math.floor(now / 60_000) && (before.summary.stuck !== undefined) === (this.verdict(id) !== null) && alike(before.from.take, take) && alike({ ...before.from.scope, clock: scope.clock }, scope);
+    const rendered = standing ? before.summary.rendered : { now, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone };
     const lane = { asker: 'projection', chat: id } as const;
     // A run that stuck with the bot's regex judged the chat, so it is run once more without; one that stuck without it
     // fails the chat.

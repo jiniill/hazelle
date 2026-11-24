@@ -137,7 +137,11 @@ describe('a chat whose bot does not end', () => {
   });
 });
 
-it('displays a held chat again only for a write that changes what its display was made from', async () => {
+it('displays a held chat again only for a write that changes what its display was made from, or once the minute has turned', async () => {
+  // From the top of the next minute, so none turns under the writes before the one that is stepped to.
+  let from = Math.ceil(Date.now() / 60_000) * 60_000;
+  const started = performance.now();
+  const clock = vi.spyOn(Date, 'now').mockImplementation(() => Math.floor(from + performance.now() - started));
   const { store } = await server.account();
   const a = crypto.randomUUID();
   expect((await store.batch([root(a), message(a, 'one')], undefined, { unheld: true })).ok).toBe(true);
@@ -155,5 +159,11 @@ it('displays a held chat again only for a write that changes what its display wa
   await vi.waitFor(() => expect(store.get('summary', summaryId(a))!.value.preview).toBe('two'));
   expect((await store.projections.evaluate(a))!.model.display.texts).toEqual(['one', 'two']);
   expect(displayed).toHaveBeenCalledTimes(1);
+  from += 60_000;
+  const shown = store.projections.get(a)!.shown;
+  expect((await store.update('memory', memoryId(a), (value) => ({ ...value, threads: [...value.threads] }))).ok).toBe(true);
+  await vi.waitFor(() => expect(store.projections.get(a)!.shown).not.toBe(shown));
+  expect(displayed).toHaveBeenCalledTimes(2);
+  clock.mockRestore();
   lease.release();
 });
