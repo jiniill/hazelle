@@ -1,4 +1,4 @@
-import { useId, useMemo, type ReactNode, type Ref } from 'react';
+import { memo, useId, useMemo, type ReactNode, type Ref } from 'react';
 import type { Chord } from '../foundation/keys';
 import { NO_AUTOFILL } from '../foundation/noAutofill';
 import { CodeField, type CodeAside } from './CodeField';
@@ -66,6 +66,25 @@ function spansOf(kind: Props['kind'], language: CodeLanguage | undefined, text: 
   return joined(text === '' || text.endsWith('\n') ? [...runs, { text: '\u200b', className: undefined }] : runs);
 }
 
+// A block for each line, so a key lays out its own line, not the whole text. Each keeps its '\n', so the layer reads
+// the area's text character for character (revealIn). A line is keyed by its text and how many lines before it read
+// the same: one put in or taken out leaves the keys of the lines after it, and they are not drawn again.
+export function linesOf(kind: Props['kind'], language: CodeLanguage | undefined, text: string): { key: string; runs: Run[] }[] {
+  const lines: Run[][] = [[]];
+  for (const run of spansOf(kind, language, text))
+    for (const piece of run.text.split(/(?<=\n)/)) {
+      lines.at(-1)!.push({ text: piece, className: run.className });
+      if (piece.endsWith('\n')) lines.push([]);
+    }
+  const seen = new Map<string, number>();
+  return lines.map((runs) => {
+    const content = runs.map((run) => run.text).join('');
+    const count = seen.get(content) ?? 0;
+    seen.set(content, count + 1);
+    return { key: `${count}:${content}`, runs };
+  });
+}
+
 // Use native insertText, not state assignment, so browser undo owns the insertion and input reaches onChange.
 export function typeInto(area: HTMLTextAreaElement, [start, end]: [number, number], text: string) {
   area.focus();
@@ -96,13 +115,23 @@ export function revealIn(area: HTMLTextAreaElement, [start, end]: [number, numbe
 
 type TextProps = Pick<Props, 'kind' | 'language'> & { text: string };
 
+const sameRuns = ({ runs: a }: { runs: Run[] }, { runs: b }: { runs: Run[] }) => a.length === b.length && a.every((run, index) => run.text === b[index]!.text && run.className === b[index]!.className);
+
+const Line = memo(function Line({ runs }: { runs: Run[] }) {
+  return (
+    <div>
+      {runs.map((run, index) => (
+        <span key={index} className={run.className}>
+          {run.text}
+        </span>
+      ))}
+    </div>
+  );
+}, sameRuns);
+
 function Spans({ kind, language, text }: TextProps) {
-  const pieces = useMemo(() => spansOf(kind, language, text), [kind, language, text]);
-  return pieces.map((piece, index) => (
-    <span key={index} className={piece.className}>
-      {piece.text}
-    </span>
-  ));
+  const lines = useMemo(() => linesOf(kind, language, text), [kind, language, text]);
+  return lines.map(({ key, runs }) => <Line key={key} runs={runs} />);
 }
 
 // The text as the area draws it, to be read and not typed in.
