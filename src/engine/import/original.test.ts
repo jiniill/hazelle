@@ -6,7 +6,7 @@ import { isFrame, joinOriginal, originalParts, risumParts, standIn, stoodFor } f
 import { withText } from './png';
 import { risumBlock, risumHead, RISUM_END } from './risum';
 import type { FileSource } from './source';
-import { crc32 } from './zip';
+import { crc32 } from './zip-format';
 
 function chunk(type: string, data: Uint8Array): Uint8Array<ArrayBuffer> {
   const out = new Uint8Array(12 + data.length);

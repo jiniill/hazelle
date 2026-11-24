@@ -1,5 +1,5 @@
 import { concat } from './inflate';
-import { crc32 } from './zip';
+import { crc32 } from './zip-format';
 
 const SIGNATURE = [137, 80, 78, 71, 13, 10, 26, 10];
 const TEXT_KEYS = new Set(['chara', 'ccv3', 'persona']);

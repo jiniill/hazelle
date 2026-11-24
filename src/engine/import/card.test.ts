@@ -6,7 +6,7 @@ import { concat, METADATA_BYTES } from './inflate';
 import { fileSource } from './source';
 import { readRisum, readRisumModule, risumBlock, risumHead, RISUM_END, unpack, writeRisum } from './risum';
 import { PLAIN_LUA, type Bot, type ImportResult, type Imported, type Trigger, type TypedModule } from './types';
-import { crc32 } from './zip';
+import { crc32 } from './zip-format';
 import { trySample } from '../regex/scripts';
 import { hex } from '../../hex';
 import { seal } from './risu-seal';

@@ -102,13 +102,24 @@ export function zipDataStart(header: Uint8Array, entry: ZipEntry, limit: number)
   return start;
 }
 
+// fflate's CRC-32, which only its zip streams expose.
+function checksum() {
+  const sum = new ZipPassThrough('');
+  sum.ondata = () => {};
+  return sum;
+}
+
+export function crc32(bytes: Uint8Array) {
+  const sum = checksum();
+  sum.push(bytes, true);
+  return sum.crc >>> 0;
+}
+
 export class ZipIntegrity {
-  private readonly checksum = new ZipPassThrough('');
+  private readonly checksum = checksum();
   private size = 0;
 
-  constructor(private readonly entry: Pick<ZipEntry, 'size' | 'crc'>) {
-    this.checksum.ondata = () => {};
-  }
+  constructor(private readonly entry: Pick<ZipEntry, 'size' | 'crc'>) {}
 
   push(chunk: Uint8Array) {
     this.size += chunk.length;
