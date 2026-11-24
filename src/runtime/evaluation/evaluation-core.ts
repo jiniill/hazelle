@@ -66,12 +66,36 @@ export type EvaluationDown = { id: number; input: EvaluationInput } | { forget: 
 // (engine/progress). trouble: why the tokenizer did not load, for 문제 진단's recent problems (runtime/diagnostics/diagnostics).
 export type EvaluationUp = { id: number; result: EvaluationResult } | { id: number; error: string } | { pong: true } | { started: number } | { progress: Sign } | { trouble: string } | { probed: string };
 
+// The characters of text whose counts a worker keeps: several long chats' worth.
+export const COUNTED = 4_000_000;
+
 export class Evaluator {
   private readonly displays = new Map<string, { revision: number; pass: DisplayPass }>();
   private readonly held = new Map<string, Map<string, LuaText>>();
   private readonly histories = new Map<string, ChatScope['messages']>();
+  private readonly counts = new Map<string, number>();
+  private counted = 0;
 
   forget(lane: string) { this.histories.delete(lane); this.displays.delete(lane); this.held.delete(lane); }
+
+  // A count is its text's alone, and a chat's messages read the same from one job to the next, on every lane: the
+  // newest texts' counts stay for the worker's life.
+  private async counter(): Promise<((text: string) => number) | null> {
+    const count = await tokenizer().catch(() => null);
+    return count && ((text) => {
+      let tokens = this.counts.get(text);
+      if (tokens !== undefined) return tokens;
+      tokens = count(text);
+      this.counts.set(text, tokens);
+      this.counted += text.length;
+      for (const old of this.counts.keys()) {
+        if (this.counted <= COUNTED) break;
+        this.counts.delete(old);
+        this.counted -= old.length;
+      }
+      return tokens;
+    });
+  }
 
   async run(input: EvaluationInput, started: () => void): Promise<EvaluationResult> {
     if ('patch' in input) {
@@ -86,7 +110,7 @@ export class Evaluator {
       return patch;
     }
     if ('count' in input) {
-      const countTokens = await tokenizer().catch(() => null);
+      const countTokens = await this.counter();
       if (!countTokens) return { kind: 'tokenizer' };
       started();
       return input.count.map(countTokens);
@@ -124,7 +148,7 @@ export class Evaluator {
       return { texts, staged, variables: [...variables].filter(([key]) => key.startsWith(job.prefix)), wrote };
     }
     if (job.kind !== 'display') {
-      const countTokens = await tokenizer().catch(() => null);
+      const countTokens = await this.counter();
       if (!countTokens) return { kind: 'tokenizer' };
       started();
       switch (job.kind) {
