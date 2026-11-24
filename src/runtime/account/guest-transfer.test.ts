@@ -10,7 +10,7 @@ import { unavailableCalibration } from '../../model/token-calibration';
 import { ledgerId } from '../models/usage';
 import { summaryId } from '../store/summary';
 import { blankCard } from '../../engine/import/card';
-import { BATCH_LIMITS, type SealedChange } from '../../contracts/objects';
+import { BATCH_LIMITS, type SealedChange, type SealedWrite } from '../../contracts/objects';
 import { SETTINGS_ID } from '../../model/settings';
 import { ORDER_ID } from '../../model/order';
 import { addDefaults, addPrompt, PREREADER_ID, STARTER_ID } from '../library/prompts';
@@ -32,7 +32,7 @@ import { feedQuery, serverBackend, type Backend } from '../store/backend';
 import { deviceCache } from '../device/device-cache';
 import { Files } from '../files/files';
 import { guestAccount, guestBackend, guestBoardSecret } from './guest-store';
-import { discardGuest, guestWithContent, transferGuest, type GuestTransferStep } from './guest-transfer';
+import { batchEnd, discardGuest, guestWithContent, transferGuest, type GuestTransferStep } from './guest-transfer';
 import { addLore } from '../library/lore';
 import { addStarter } from '../library/characters';
 import { openSession } from '../session';
@@ -754,4 +754,19 @@ it('moves a board-only guest to an existing account when 올리기 is chosen and
   const post = await readPost(written.data.id);
   expect(post).toMatchObject({ ok: true, data: { post: { comments: [{ author: { mine: true } }] } } });
   expect(await recallGuest()).toBeNull();
+});
+
+it('ends a batch where its request’s JSON would pass the byte limit, measuring each write once', () => {
+  const write = (body: string): SealedWrite => ({ id: crypto.randomUUID(), kind: 'persona', parent: null, body, baseRev: null });
+  const request = (writes: SealedWrite[]) => new TextEncoder().encode(JSON.stringify({ timeline: 't', writes, files: [] })).length;
+  const first = write('가'.repeat(600_000));
+  const room = BATCH_LIMITS.bytes - request([first, write('')]);
+  expect(batchEnd('t', [first, write('a'.repeat(room)), write('')], 0)).toBe(2);
+  expect(batchEnd('t', [first, write('a'.repeat(room + 1)), write('')], 0)).toBe(1);
+  const small = Array.from({ length: 300 }, (_, index) => write(String(index).repeat(1000)));
+  const once = JSON.stringify(small).length;
+  const stringify = vi.spyOn(JSON, 'stringify');
+  expect(batchEnd('t', small, 50)).toBe(50 + BATCH_LIMITS.items);
+  expect(stringify.mock.results.reduce((sum, { value }) => sum + (value as string).length, 0)).toBeLessThan(once);
+  stringify.mockRestore();
 });
