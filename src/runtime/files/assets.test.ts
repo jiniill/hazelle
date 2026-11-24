@@ -183,3 +183,23 @@ it('moves a watch only once a file its view looked up has changed', async () => 
   expect([shows.snapshot(), shows.snapshot(), other.snapshot()]).toEqual([before[0]! + 1, before[0]! + 1, before[1]]);
   urls.close();
 });
+
+it('tells its watchers once for pictures that land in separate tasks of one burst', async () => {
+  const store = { get: (_kind: string, id: string) => ({ value: { ...asset, file: { id, key: 'k' } } }), subscribe: () => () => {} } as unknown as ObjectStore;
+  const read = () => new Promise<ApiResult<Uint8Array<ArrayBuffer>>>((resolve) => setTimeout(() => resolve({ ok: true, data: new Uint8Array(1) })));
+  const urls = new AssetUrls(store, { read });
+  const told = vi.fn();
+  urls.subscribe(told);
+  const watch = urls.watch();
+  const view = watch.view();
+  view.url('asset', 'a');
+  view.url('asset', 'b');
+  const before = watch.snapshot();
+  await settled();
+  await settled();
+  expect(told).toHaveBeenCalledOnce();
+  expect(watch.snapshot()).toBe(before + 1);
+  const shown = watch.view();
+  expect([shown.url('asset', 'a'), shown.url('asset', 'b')]).toEqual([expect.stringMatching(/^blob:/), expect.stringMatching(/^blob:/)]);
+  urls.close();
+});
