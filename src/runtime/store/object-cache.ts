@@ -1,16 +1,14 @@
 import type { BatchLimits, SealedChange } from '../../contracts/objects';
 
-export type CacheState = {
-  cursor: number;
-  complete: boolean;
-  until: number | null;
-  limits: BatchLimits | null;
-  heads: [string, number][];
-  revisions: [string, number][];
-};
+export type CacheState = { cursor: number; complete: boolean; until: number | null; limits: BatchLimits | null };
+// The feed's revisions (ObjectIndex), a row each: a write puts only those it raised.
+export type CacheRevisions = { heads: [string, number][]; revisions: [string, number][] };
+export const REVISION_FIELDS = ['heads', 'revisions'] as const satisfies (keyof CacheRevisions)[];
 export type CachedScope = { state: CacheState; changes: SealedChange[] };
-// feed is left out when it would put the state already there.
-export type CacheWrite = { changes: SealedChange[]; feed?: CacheState; scopes?: { chat: string; state: CacheState }[] };
+export type CachedFeed = CachedScope & { revisions: CacheRevisions };
+// feed is left out when it would put the state already there. Two tabs write one generation, so a revision row keeps
+// the highest either raised it to, as ObjectIndex does.
+export type CacheWrite = { changes: SealedChange[]; feed?: CacheState; raised: CacheRevisions; scopes?: { chat: string; state: CacheState }[] };
 
 // The account's one cache generation, shared by every tab. id is new after every clear; timeline is the server's
 // token, set once by adopt, and every row of a generation is of its timeline.
@@ -25,7 +23,7 @@ export class GenerationChanged extends Error {
 export interface DeviceCache {
   // One without a timeline is a clear whose bootstrap has not answered yet, which a tab joins; none at all is a cache
   // from before generations, whose rows go as a new generation is made, in the same transaction.
-  open(): Promise<{ generation: Generation; saved: CachedScope | null }>;
+  open(): Promise<{ generation: Generation; saved: CachedFeed | null }>;
   read(generation: Generation, chat: string): Promise<CachedScope | null>;
   // Every chat scope's state, without its rows (ObjectStore.fillChats).
   scopes(generation: Generation): Promise<Map<string, CacheState>>;
@@ -46,6 +44,7 @@ export const UNFED = new Set<string>([...SCOPED, ...WALKED]);
 export const cacheScope = (row: SealedChange) => UNFED.has(row.kind) ? row.parent! : '';
 // A newer omission invalidates the old body; a same-revision echo must not erase a body already cached.
 export const cacheNewer = (old: SealedChange | undefined, row: SealedChange) => !old || row.rev > old.rev || (row.rev === old.rev && old.omitted && !row.omitted);
+export const cacheRaises = (stored: number | undefined, rev: number) => stored === undefined || rev > stored;
 export const sameGeneration = (stored: Generation | undefined, stated: Generation) => stored !== undefined && stored.id === stated.id && stored.timeline === stated.timeline;
 export const adoptable = (stored: Generation | undefined, stated: Generation, timeline: string) =>
   stored !== undefined && stored.id === stated.id && (stored.timeline === null || stored.timeline === timeline);

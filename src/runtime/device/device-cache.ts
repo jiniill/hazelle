@@ -1,12 +1,12 @@
 import { cachedDatabase } from '../../vault/database';
 import type { SealedChange } from '../../contracts/objects';
 import { lockVault } from '../../vault/device';
-import { adoptable, cacheNewer, cacheScope, GenerationChanged, sameGeneration, type CachedScope, type CacheState, type CacheWrite, type DeviceCache, type Generation } from '../store/object-cache';
+import { adoptable, cacheNewer, cacheRaises, cacheScope, GenerationChanged, REVISION_FIELDS, sameGeneration, type CachedFeed, type CachedScope, type CacheRevisions, type CacheState, type CacheWrite, type DeviceCache, type Generation } from '../store/object-cache';
 
 const caches = new Map<string, BrowserCache>();
 const draftCaches = new Map<string, BrowserDraftCache>();
 const logCaches = new Map<string, BrowserLogCache>();
-const STORES = ['generations', 'states', 'objects'];
+const STORES = ['generations', 'states', 'revisions', 'objects'];
 
 export function deviceCache(account: string): DeviceCache {
   let cache = caches.get(account);
@@ -144,10 +144,10 @@ class BrowserCache implements DeviceCache {
   forgotten = false;
   constructor(private readonly account: string) {}
 
-  async open(): Promise<{ generation: Generation; saved: CachedScope | null }> {
+  async open(): Promise<{ generation: Generation; saved: CachedFeed | null }> {
     const { tx, done } = await this.transaction();
     let generation!: Generation;
-    let saved: CachedScope | null = null;
+    let saved: CachedFeed | null = null;
     const get = tx.objectStore('generations').get(this.account);
     get.onsuccess = () => {
       const stored = get.result as Generation | undefined;
@@ -159,7 +159,14 @@ class BrowserCache implements DeviceCache {
       }
       generation = stored;
       if (stored.timeline === null) return;
-      this.scope(tx, '', (scope) => { saved = scope; });
+      const revisions: CacheRevisions = { heads: [], revisions: [] };
+      for (const field of REVISION_FIELDS) {
+        const range = IDBKeyRange.bound([this.account, field], [this.account, field, []]);
+        const keys = tx.objectStore('revisions').getAllKeys(range);
+        const values = tx.objectStore('revisions').getAll(range);
+        values.onsuccess = () => { revisions[field] = keys.result.map((key, index) => [(key as string[])[2]!, values.result[index] as number]); };
+      }
+      this.scope(tx, '', (scope) => { saved = { ...scope, revisions }; });
     };
     await done;
     return { generation, saved };
@@ -190,7 +197,7 @@ class BrowserCache implements DeviceCache {
     return found;
   }
 
-  async write(generation: Generation, { changes, feed, scopes }: CacheWrite): Promise<void> {
+  async write(generation: Generation, { changes, feed, raised, scopes }: CacheWrite): Promise<void> {
     const { tx, done } = await this.transaction();
     this.compare(tx, (stored) => sameGeneration(stored, generation), () => {
       const objects = tx.objectStore('objects');
@@ -202,6 +209,14 @@ class BrowserCache implements DeviceCache {
         };
       }
       if (feed) tx.objectStore('states').put(feed, [this.account, '']);
+      const revisions = tx.objectStore('revisions');
+      for (const field of REVISION_FIELDS) {
+        for (const [name, rev] of raised[field]) {
+          const key = [this.account, field, name];
+          const get = revisions.get(key);
+          get.onsuccess = () => { if (cacheRaises(get.result as number | undefined, rev)) revisions.put(rev, key); };
+        }
+      }
       for (const scope of scopes ?? []) tx.objectStore('states').put(scope.state, [this.account, scope.chat]);
     });
     await done;
@@ -264,6 +279,7 @@ class BrowserCache implements DeviceCache {
   private wipe(tx: IDBTransaction) {
     const range = IDBKeyRange.bound([this.account], [this.account, []]);
     tx.objectStore('states').delete(range);
+    tx.objectStore('revisions').delete(range);
     tx.objectStore('objects').delete(range);
   }
 }
@@ -273,7 +289,7 @@ const changed = new WeakSet<IDBTransaction>();
 
 // Also a guest's own store (runtime/account/guest-store), the account's master rather than a copy of the server's.
 // An account's page goes on without a blocked cache; the guest store cannot, so it surfaces the block.
-export const database = cachedDatabase('risu-alpha-objects', 5, (req, event) => {
+export const database = cachedDatabase('risu-alpha-objects', 6, (req, event) => {
   const db = req.result;
   if (event.oldVersion === 0) {
     db.createObjectStore('generations');
@@ -291,7 +307,25 @@ export const database = cachedDatabase('risu-alpha-objects', 5, (req, event) => 
   }
   if (event.oldVersion < 4) db.createObjectStore('drafts');
   if (event.oldVersion < 5) db.createObjectStore('request-logs').createIndex('recent', ['account', 'at']);
+  if (event.oldVersion < 6) splitRevisions(req.transaction!, db.createObjectStore('revisions'));
 });
+
+// Every state held its revisions until version 6, the feed's alone filled; they move to rows of their own.
+function splitRevisions(tx: IDBTransaction, revisions: IDBObjectStore) {
+  const walk = tx.objectStore('states').openCursor();
+  walk.onsuccess = () => {
+    const at = walk.result;
+    if (!at) return;
+    const [account, chat] = at.key as [string, string];
+    const { heads, revisions: reads, ...state } = at.value as CacheState & CacheRevisions;
+    if (chat === '') {
+      for (const [name, rev] of heads) revisions.put(rev, [account, 'heads', name]);
+      for (const [name, rev] of reads) revisions.put(rev, [account, 'revisions', name]);
+    }
+    at.update(state);
+    at.continue();
+  };
+}
 
 function completed(tx: IDBTransaction): Promise<void> {
   return new Promise((resolve, reject) => {

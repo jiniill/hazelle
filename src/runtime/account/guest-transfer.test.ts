@@ -251,7 +251,7 @@ it('keeps account-bound seals and content-sealed pictures unchanged, clears the 
   const cache = deviceCache(source.accountId);
   const { generation } = await cache.open();
   const adopted = await cache.adopt(generation, 'guest-era');
-  await cache.write(adopted, { changes: before.data.changes, feed: { cursor: 999, complete: true, until: null, limits: BATCH_LIMITS, heads: [], revisions: [] } });
+  await cache.write(adopted, { changes: before.data.changes, feed: { cursor: 999, complete: true, until: null, limits: BATCH_LIMITS }, raised: { heads: [], revisions: [] } });
   const draft = await prepareGuestSignup('tester', password);
   const recovered = (await recoveryCredential(draft.recoveryKey))!;
   expect(await openVault(source.accountId, draft.signup, recovered)).toEqual(source.vaultKey);
