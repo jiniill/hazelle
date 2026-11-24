@@ -39,7 +39,7 @@ export const chatModel = (store: Pick<ObjectStore, 'get'>, chat: Chat, role: Rol
 // 모델 고정: the prompt whose own 대화 모델 the chat talks on, the chat picking none of its own.
 export const pinnedBy = (chat: Pick<Chat, 'models'>, prompt: PromptChoice) => (chat.models.main === undefined && prompt.kind === 'prompt' && prompt.prompt.value.models.main !== undefined ? prompt.prompt : null);
 
-// 임베딩 모델 and 결정 모델 are set in 공용 alone (connectors/assignment ROLES). A model whose connection does not serve
+// 임베딩 모델 and 판단 모델 are set in 공용 alone (connectors/assignment ROLES). A model whose connection does not serve
 // the role is gone for it, as one no longer added is.
 export function accountRole(store: Pick<ObjectStore, 'get'>, role: 'embed' | 'decide'): RolePick {
   const ref = accountSettings(store).models[role];

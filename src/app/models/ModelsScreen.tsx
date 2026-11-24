@@ -147,7 +147,7 @@ export function ModelsScreen({ back }: { back: Back | null }) {
           <RoleCard role="main" {...ROLE_ROWS.main} own={main} connections={connections} onPick={(ref) => ref && pickModel('main', ref)} {...cardOf(main)} />
           <RoleCard role="aux" {...ROLE_ROWS.aux} own={settings.models.aux} connections={connections} onPick={(ref) => pickModel('aux', ref)} {...cardOf(settings.models.aux)} />
         </PickCards>
-        <SettingGroup label={`그 밖의 ${DEFAULTS} 모델`}>
+        <SettingGroup label={`다른 ${DEFAULTS} 모델`}>
           {ACCOUNT_ROLES.map((role) => (
             <RolePicker key={role} role={role} {...ROLE_ROWS[role]} own={settings.models[role]} connections={connections} onPick={(ref) => pickModel(role, ref)} />
           ))}

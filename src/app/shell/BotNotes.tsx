@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { live } from '../../model/library';
 import { scriptVoice } from '../common/script-voice';
 import { describeIllustrateFailure, RUNAWAY_FIX } from '../common/failure';
-import { BOT_STUCK, IMAGE_MODEL, MODEL_ROLES, TOOL_DISABLED, TOOL_LATE, TOOL_STALE, TOOL_STUCK } from '../common/words';
+import { BOT_STUCK, IMAGE_MODEL, MODEL_ROLES, PLUGIN_DRAWS, TOOL, TOOL_DISABLED, TOOL_LATE, TOOL_STALE, TOOL_STUCK } from '../common/words';
 import { useScripts, useSession } from '../session';
 import { useToast } from '../toast';
 
@@ -38,11 +38,11 @@ export function BotNotes() {
           break;
         case 'no-model': {
           const model = note.role === 'image' ? IMAGE_MODEL : MODEL_ROLES[note.role];
-          toast.error(note.own ? `선택한 ${model}을 쓸 수 없어요` : `호출할 ${model}이 없어요`, { detail: from?.name });
+          toast.error(note.own ? `선택한 ${model}을 쓸 수 없어요` : `선택한 ${model}이 없어요`, { detail: from?.name });
           break;
         }
         case 'unpaid':
-          toast.show(`${from?.name ?? '플러그인'}의 이미지를 만들지 않았어요`, { detail: describeIllustrateFailure({ kind: 'costs', why: note.why }) });
+          toast.show(`${from?.name ?? TOOL}의 ${PLUGIN_DRAWS}을 건너뛰었어요`, { detail: describeIllustrateFailure({ kind: 'costs', why: note.why }) });
           break;
         case 'late':
           toast.show(TOOL_LATE, { detail: from?.name });

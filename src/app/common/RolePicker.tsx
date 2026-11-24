@@ -15,7 +15,7 @@ export const ROLE_ROWS: Record<Role, { help: string; follow: string | null }> = 
   decide: { help: DECIDE_HELP, follow: NOT_PICKED },
 };
 
-// 임베딩 모델 and 결정 모델 offer only what the connection serves: the type says so, not the model (design §4).
+// 임베딩 모델 and 판단 모델 offer only what the connection serves: the type says so, not the model (design §4).
 export function starredModels(connections: readonly Stored<'connection'>[], role: Role): Route[] {
   return connections.flatMap((connection) =>
     connection.value.starred.filter((model) => fitsRole(model, role) && servesRole(connection.value, model, role)).map((model) => ({ connection, model })),

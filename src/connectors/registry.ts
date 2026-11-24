@@ -180,7 +180,7 @@ export function decideAnswer(route: Route, model: Model, payload: unknown, quest
 
 const SERVED: Partial<Record<Role, (connection: Connection, model: Model) => Route | null>> = { embed: embedRoute, decide: decideRoute };
 
-// 임베딩 모델 and 결정 모델 run only where the connection's type serves them, whatever the model says (design §4).
+// 임베딩 모델 and 판단 모델 run only where the connection's type serves them, whatever the model says (design §4).
 export const servesRole = (connection: Connection, model: Model, role: Role) => !SERVED[role] || SERVED[role](connection, model) !== null;
 
 const cacheWay = ({ type, codec }: Route, model: Model): CacheWay | null => codec.cache ?? type?.cachePoints?.(model) ?? null;

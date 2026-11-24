@@ -132,7 +132,7 @@ declare namespace Hazelle {
     model(role: 'main' | 'aux' | (string & {}), messages: ModelMessage[]): Promise<ModelAnswer>;
     // needs //@uses embed. as: what the texts are for, which retrieval-tuned models embed differently.
     embed(texts: string[], as?: 'query' | 'document'): Promise<EmbedAnswer>;
-    // needs //@uses decide. The account's 결정 모델 reads input once and answers every question in one call, far sooner
+    // needs //@uses decide. The account's 판단 모델 reads input once and answers every question in one call, far sooner
     // and cheaper than a reply a model writes: who is in a scene, which entry applies, how strong a change was.
     // questions: 1 to 1,000, each under an id of letters, numbers, _ or -, at most 64 characters. Throws on questions
     // outside those bounds.

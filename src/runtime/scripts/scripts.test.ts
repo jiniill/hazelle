@@ -847,7 +847,7 @@ describe('tool events through Scripts', () => {
     }, { run, close: () => {} });
   });
 
-  it('answers an unasked consent with no card under a tool deadline, asks from a menu press, and tells a missing 임베딩 모델 or 결정 모델 once', async () => {
+  it('answers an unasked consent with no card under a tool deadline, asks from a menu press, and tells a missing 임베딩 모델 or 판단 모델 once', async () => {
     const answers: unknown[] = [];
     const binding: Binding<ToolUnit> = { run: async (_chat, unit, _scope, event, host) => {
       if (event.kind === 'showing' || event.kind === 'menu') {

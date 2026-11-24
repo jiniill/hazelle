@@ -35,7 +35,7 @@ export type ToolReach = Omit<Host, 'model'> & {
   // role: one of its own models too (//@model), by id.
   model(role: string, messages: ModelMessage[], spender: PackOwner, signal?: AbortSignal): Promise<ModelResult>;
   progress(text: string): void;
-  // With the account's 결정 모델, under the same answer as model.
+  // With the account's 판단 모델, under the same answer as model.
   decide(input: string, questions: Record<string, Hazelle.DecideQuestion>, spender: PackOwner, signal?: AbortSignal): Promise<DecideResult>;
   // With the chat's image model, under the same answer as model.
   draw(picture: Hazelle.DrawRequest, spender: PackOwner, signal?: AbortSignal): Promise<DrawResult>;

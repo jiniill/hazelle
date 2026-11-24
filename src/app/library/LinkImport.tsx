@@ -14,7 +14,7 @@ type Brought = { kind: 'files'; files: File[]; skipped: string[] } | { kind: 'fo
 const linkFailure = (failure: Exclude<LinkFailure, { kind: 'cancelled' | 'needs-password' | 'wrong-password' }>) => {
   switch (failure.kind) {
     case 'missing': return '파일을 찾지 못했어요. 삭제됐거나 비공개일 수 있어요.';
-    case 'wrong-address': return '링크의 # 뒤 글자가 맞지 않아요. 링크를 끝까지 그대로 붙여 넣어 주세요.';
+    case 'wrong-address': return '링크의 # 뒷부분이 잘렸거나 잘못됐어요. 끝까지 그대로 붙여 넣어 주세요.';
     case 'refused': return '사이트에서 다운로드를 거절했어요. 잠시 뒤 다시 시도해 주세요.';
     case 'not-a-file': return '웹 페이지가 열리는 링크예요. 파일을 바로 받는 링크를 넣어 주세요.';
     case 'guest-blocked': return '이 사이트는 손님 모드에서 바로 가져올 수 없어요. 파일을 직접 받아서 넣어 주세요.';

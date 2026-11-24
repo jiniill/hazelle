@@ -14,7 +14,7 @@ import { KEPT_TAGS } from './cbs';
 import { LUA_EVENTS } from './luaApi';
 import { SAMPLE, SAMPLE_LANGUAGE, SAMPLE_NOTE } from './sample';
 import { chatVariable, writerName, type ChatVariables, type Defaults, type Variables } from './variables';
-import { COUNTING, TRIAL } from '../words';
+import { COUNTING, DECIDE_CALLS, PLUGIN_DRAWS, TRIAL } from '../words';
 
 const LABEL = TRIAL.name;
 // The lane name the sample runs on, which no chat id takes.
@@ -237,8 +237,8 @@ export function trialFacts({ outcome, said, asked, calls }: Trial, own: { label:
     ...own,
     ...count('생략된 모델 호출', calls.model, '번'),
     ...count('생략된 임베딩 생성', calls.embed, '번'),
-    ...count('생략된 결정 호출', calls.decide, '번'),
-    ...count('생략된 이미지 생성', calls.draw, '번'),
+    ...count(`생략된 ${DECIDE_CALLS}`, calls.decide, '번'),
+    ...count(`생략된 ${PLUGIN_DRAWS}`, calls.draw, '번'),
     ...count('생략된 배경 변경', calls.background, '번'),
     ...count('생략된 네트워크 요청', calls.fetch, '번'),
   ];

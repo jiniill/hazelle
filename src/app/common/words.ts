@@ -20,8 +20,8 @@ import { withParticle } from './particles';
 // one. 컨텍스트 길이 is the model's own, 컨텍스트 한도 the setting. 원문 is what a translation came from, 요청 원문
 // the request a reply was asked with, 응답 원문 the provider's answer as it came. 사용 중 marks what is in use, 생성 중 a reply being written.
 
-export const MODEL_ROLES: Record<Role, string> = { main: '대화 모델', aux: '보조 모델', embed: '임베딩 모델', decide: '결정 모델' };
-export const ROLE_TAGS: Record<Role, string> = { main: '대화', aux: '보조', embed: '임베딩', decide: '결정' };
+export const MODEL_ROLES: Record<Role, string> = { main: '대화 모델', aux: '보조 모델', embed: '임베딩 모델', decide: '판단 모델' };
+export const ROLE_TAGS: Record<Role, string> = { main: '대화', aux: '보조', embed: '임베딩', decide: '판단' };
 // A conversation prompt that picks its own models (model/prompt pinsModels), marked wherever it stands.
 export const MODEL_PINNED = '모델 고정';
 
@@ -34,7 +34,7 @@ export const UNKNOWN_PICTURES = `이 모델이 이미지 입력을 지원하는�
 export const MAIN_HELP = '프롬프트나 채팅에서 모델을 따로 정하지 않았을 때 쓰는 모델이에요.';
 export const AUX_HELP = '번역이나 장기 기억 정리처럼 대화 밖의 작업에 써요.';
 export const EMBED_HELP = '장기 기억과 추가 설명, 플러그인이 비슷한 내용을 찾을 때 써요. 모델을 바꾸면 임베딩을 다시 만들어요.';
-export const DECIDE_HELP = '플러그인이 글을 쓰지 않고 예/아니오, 선택, 점수만 빠르게 판단할 때 써요.';
+export const DECIDE_HELP = '플러그인이 글 대신 예/아니오, 선택, 점수만 빠르게 받을 때 써요.';
 
 export const BOT_MODELS = '봇의 모델 호출';
 export const BOT_MODELS_HELP = '봇 스크립트가 대화 응답과 별개로 모델을 호출해요. 호출할 때마다 토큰과 비용이 추가로 사용돼요.';
@@ -51,6 +51,8 @@ export const REGEX_OFF = '봇 스크립트가 끝나지 않아서 정규식을 �
 export const TOOL = '플러그인';
 export const RISU_PLUGIN = 'Risu 플러그인';
 export const MODULE_MODELS = '모델 호출';
+export const DECIDE_CALLS = `${MODEL_ROLES.decide} 호출`;
+export const PLUGIN_DRAWS = '이미지 생성';
 export const MODULE_MODEL_HELP = `${MODEL_ROLES.aux} 호출에만 써요.`;
 export const OUTGOING = '보낼 메시지';
 // A script's or a plugin's 테스트, run on a chat without saving.

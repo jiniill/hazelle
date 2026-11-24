@@ -41,7 +41,7 @@ it('answers flood with no receipt, and fails with a failed receipt on a refusal 
   expect(await decide(deps(), route, 'x', questions, chat, live)).toMatchObject({ answer: { ok: false, reason: 'failed' }, receipt: { state: 'failed', error: { kind: 'bad-event' } } });
 });
 
-it('takes 결정 모델 from 공용 alone, and counts one whose connection serves no decisions as gone, before any network call', async () => {
+it('takes 판단 모델 from 공용 alone, and counts one whose connection serves no decisions as gone, before any network call', async () => {
   const vertex: Stored<'connection'> = { ...connection, id: 'v', value: { ...connection.value, type: 'openai' } };
   const store = (picked?: { connection: string; model: string }) => ({
     get: ((kind: string, id: string) => (kind === 'settings' ? { value: { models: { main: { connection: 'c', model: model.id }, ...(picked && { decide: picked }) } } } : [connection, vertex].find((each) => each.id === id))) as never,
