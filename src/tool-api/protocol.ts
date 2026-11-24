@@ -11,10 +11,10 @@ export type ToolOutcome = {
   variables: [string, string | undefined][];
 };
 export type Method =
-  | 'chat.messages' | 'chat.greeting' | 'chat.card' | 'chat.state.get' | 'chat.variables.get' | 'chat.variables.entries' | 'chat.data.get' | 'chat.data.keys' | 'chat.lorebook' | 'chat.inlay' | 'chat.asset' | 'chat.cbs' | 'chat.setup' | 'chat.picture' | 'chat.send' | 'chat.rendered' | 'chat.card.edit' | 'model' | 'embed' | 'fetch' | 'ask' | 'say' | 'progress' | 'tokens' | 'lore'
+  | 'chat.messages' | 'chat.greeting' | 'chat.card' | 'chat.state.get' | 'chat.variables.get' | 'chat.variables.entries' | 'chat.data.get' | 'chat.data.keys' | 'chat.lorebook' | 'chat.inlay' | 'chat.asset' | 'chat.cbs' | 'chat.setup' | 'chat.picture' | 'chat.send' | 'chat.rendered' | 'chat.card.edit' | 'model' | 'embed' | 'decide' | 'draw' | 'fetch' | 'ask' | 'say' | 'progress' | 'tokens' | 'lore'
   | 'storage.get' | 'storage.set' | 'storage.delete' | 'storage.keys' | 'assets.save' | 'assets.read' | 'settings' | 'settings.set' | 'account' | 'post' | 'page.close' | 'frame.chat' | 'frame.show' | 'frame.hide' | 'frame.menu' | 'frame.actions' | 'frame.missing' | 'frame.layer' | 'frame.missed';
 // A method as a plugin's code names it (hazelle.d.ts), for a test run's record of its calls; the arguments stay as sent.
-const ON_CHAT = new Set<string>(['model', 'embed', 'fetch', 'ask', 'say', 'progress', 'tokens', 'lore'] satisfies Method[]);
+const ON_CHAT = new Set<string>(['model', 'embed', 'decide', 'draw', 'fetch', 'ask', 'say', 'progress', 'tokens', 'lore'] satisfies Method[]);
 const RENAMED: Partial<Record<string, string>> = { 'chat.card.edit': 'chat.editCard', 'settings.set': 'hazelle.setSetting' } satisfies Partial<Record<Method, string>>;
 export const called = (method: string) => RENAMED[method] ?? (method.startsWith('chat.') ? method : ON_CHAT.has(method) ? `chat.${method}` : `hazelle.${method}`);
 export const LOG_LEVELS = ['log', 'info', 'warn', 'error', 'debug'] as const;

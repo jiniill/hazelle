@@ -1,5 +1,5 @@
 import type { ChatScope } from '../../engine/render';
-import type { Event, ModelMessage, ScriptUnit, ToolEvent, ToolReach } from '../../engine/script-api';
+import type { Event, Host, ModelMessage, ScriptUnit, ToolEvent, ToolReach } from '../../engine/script-api';
 import type { Chat } from '../../model/chat';
 import type { Writes } from '../../model/chat';
 import { live, type PackOwner } from '../../model/library';
@@ -102,7 +102,7 @@ export class ScriptExecution {
   // A bot's script's model call, through the chat's tools' calling first, as Risu's replacers meet a Lua LLM call
   // (requestChatData); a tool's own call meets none, as Risu's runLLMModel meets none. Run where the script waits, on
   // no queue: its event holds the chat's.
-  private calling(chat: string, scope: ChatScope, model: ToolReach['model']): ToolReach['model'] {
+  private calling(chat: string, scope: ChatScope, model: Host['model']): Host['model'] {
     return async (role, messages, from, signal) => {
       const stored = live(this.session.store.get('chat', chat));
       const units = stored ? this.listening(stored.value, 'calling') : [];

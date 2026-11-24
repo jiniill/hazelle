@@ -14,11 +14,32 @@ declare namespace Hazelle {
   interface RequestMessage extends ModelMessage { message?: string; cache?: true }
   // A message about to be shown; at: null for the greeting.
   type Shown = { at: At | null; text: string };
-  // flood: past 20 model, embed and fetch calls a minute in the chat, its bot's scripts and every tool counted together.
+  // flood: past 20 model, embed, decide, draw and fetch calls a minute in the chat, its bot's scripts and every tool counted together.
   type ModelRefusal = 'not-allowed' | 'not-declared' | 'no-model' | 'flood' | 'failed';
   type ModelAnswer = { ok: true; text: string } | { ok: false; reason: ModelRefusal };
   // model: the embedding model that made the vectors; vectors from another model cannot be compared with them.
   type EmbedAnswer = { ok: true; model: string; vectors: number[][] } | { ok: false; reason: ModelRefusal | 'too-large' };
+  // A question a decision model answers without writing: instructions say what is asked of the input. noul: a yes or
+  // no, criteria wording each side where the instructions alone do not. choice: one of 2 to 255 options, each an id and
+  // what it means. score: a level of a rubric of 2 to 10, lowest first.
+  type DecideQuestion =
+    | { type: 'noul'; instructions: string; criteria?: { true: string; false: string } }
+    | { type: 'choice'; instructions: string; criteria: { [option: string]: string } }
+    | { type: 'score'; instructions: string; criteria: string[] };
+  // noul: the probability of yes, 0 to 1. choice: the likeliest option's id, and every option's probability. score:
+  // the probability-weighted level, counted from 0 (1.2 lies between the second and the third), and each level's
+  // probability in the rubric's order.
+  type Decision =
+    | { type: 'noul'; noul: number }
+    | { type: 'choice'; choice: string; probabilities: { [option: string]: number } }
+    | { type: 'score'; score: number; probabilities: number[] };
+  // answers: one for each question, under the question's id. model: the decision model that answered.
+  type DecideAnswer = { ok: true; model: string; answers: { [id: string]: Decision } } | { ok: false; reason: ModelRefusal };
+  // A picture asked of the chat's image model (삽화's) in the tags or words that model takes; the plugin never learns
+  // which model it is. shape: portrait when absent. seed: 0 to 4294967295, random when absent.
+  type DrawRequest = { prompt: string; negative?: string; shape?: 'portrait' | 'landscape' | 'square'; seed?: number };
+  // costs: the picture is not known to cost nothing, and the chat's 삽화 draws such a picture only when asked.
+  type DrawAnswer = { ok: true; type: string; bytes: Uint8Array } | { ok: false; reason: ModelRefusal | 'costs' };
   // refused: the relay or the app refused the call, code naming why (not-https, not-public, upstream-redirect,
   // upstream-not-api, relay-host-limit, relay-traffic-limit, …). A body is text, or bytes sent as they are, with POST
   // only; a redirect is not followed.
@@ -105,9 +126,20 @@ declare namespace Hazelle {
     edit(index: number, text: string): void;    // a new version, as Lua's setChat; throws in change and branch
     add(role: Role, text: string): void;        // as Lua's addChat; throws in change and branch
     remove(index: number): void;                // as Lua's removeChat; throws in change and branch
-    model(role: 'main' | 'aux', messages: ModelMessage[]): Promise<ModelAnswer>;   // needs //@uses model
+    // needs //@uses model. main: the chat's 대화 모델. aux: its 보조 모델, or the one the user picked for this plugin.
+    // Any other role is the id of a //@model line: the model the user picked for it on the plugin's page, and while
+    // none is picked, the same as aux. Throws on an id no line declares.
+    model(role: 'main' | 'aux' | (string & {}), messages: ModelMessage[]): Promise<ModelAnswer>;
     // needs //@uses embed. as: what the texts are for, which retrieval-tuned models embed differently.
     embed(texts: string[], as?: 'query' | 'document'): Promise<EmbedAnswer>;
+    // needs //@uses decide. The account's 결정 모델 reads input once and answers every question in one call, far sooner
+    // and cheaper than a reply a model writes: who is in a scene, which entry applies, how strong a change was.
+    // questions: 1 to 1,000, each under an id of letters, numbers, _ or -, at most 64 characters. Throws on questions
+    // outside those bounds.
+    decide(input: string, questions: { [id: string]: DecideQuestion }): Promise<DecideAnswer>;
+    // needs //@uses draw. One picture from the chat's image model, at the size and generation settings the user chose
+    // for 삽화. Nothing is saved: chat.picture puts it under a message. Throws on a request that is no DrawRequest.
+    draw(picture: DrawRequest): Promise<DrawAnswer>;
     // needs //@uses network, which the user allows once per module; through the app's relay. An aborted signal rejects
     // with its reason, as fetch does.
     fetch(url: string, init?: FetchInit): Promise<FetchAnswer>;

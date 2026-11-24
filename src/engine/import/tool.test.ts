@@ -30,6 +30,12 @@ describe('tool header', () => {
     expect(read(header)).toMatchObject({ ok: true, tool: { manifest: { actions: [], composer: null, functions: [] } } });
   });
 
+  it('reads the plugin’s own models, which declare the model use too', () => {
+    const result = read(`${header}//@model sorter 인물 선별\n//@model writer 기록 작성`);
+    expect(result).toMatchObject({ ok: true, tool: { manifest: { uses: ['model'], models: [{ id: 'sorter', label: '인물 선별' }, { id: 'writer', label: '기록 작성' }] } } });
+    expect(read(header)).toMatchObject({ ok: true, tool: { manifest: { uses: [], models: [] } } });
+  });
+
   it('reads the tools the chat model may call, one without parameters as one that takes none', () => {
     const roll = { name: 'roll', description: 'Rolls dice.', parameters: { type: 'object', properties: { sides: { type: 'number' } } } };
     const result = read(`${header}//@tool ${JSON.stringify(roll)}\n//@tool {"name":"bag","description":"Lists the bag."}`);
@@ -45,6 +51,10 @@ describe('tool header', () => {
     ['a composer field without the item', '//@setting {"key":"x","type":"switch","label":"X","composer":true}', 'tool-composer-needed'],
     ['an input item without the button', '//@input tidy 다듬기', 'tool-composer-needed'],
     ['a fourth input item', '//@composer 글\n//@input a A\n//@input b B\n//@input c C\n//@input d D', 'tool-input'],
+    ['a model named as a role', '//@model aux 보조', 'tool-model'],
+    ['a repeated model', '//@model a A\n//@model a B', 'tool-model'],
+    ['a ninth model', Array.from({ length: 9 }, (_, index) => `//@model m${index} M`).join('\n'), 'tool-model'],
+    ['a long model label', '//@model a 열일곱글자열일곱글자열일곱글자열일곱글', 'tool-model'],
     ['a tool name no provider takes', '//@tool {"name":"주사위","description":"Rolls."}', 'tool-function'],
     ['a tool without a description', '//@tool {"name":"roll","description":" "}', 'tool-function'],
     ['tool parameters that are no object schema', '//@tool {"name":"roll","description":"Rolls.","parameters":{"type":"array"}}', 'tool-function'],

@@ -8,7 +8,7 @@ import { sha256Hex, sha256Id } from '../../hex';
 import { without } from '../../model/fields';
 import { live } from '../../model/library';
 import { badgesOf, toolId, type Badges, type Tool } from '../../model/tool';
-import { dataBytes, TOOL_KEY_CHARS, TOOL_ROW_BYTES, type Json, type Settings, type ToolManifest } from '../../tool-api/manifest';
+import { callsModels, dataBytes, TOOL_KEY_CHARS, TOOL_ROW_BYTES, type Json, type Settings, type ToolManifest } from '../../tool-api/manifest';
 import type { ApiResult } from '../api';
 import type { BackupOutput } from '../export/backup-zip';
 import { writeWhole } from '../export/export-file';
@@ -70,9 +70,12 @@ export async function importTool(store: ObjectStore, files: Files, { manifest, b
     // Reset new-use consent before exposing code; failed saves may re-ask but must never grant silently.
     // Re-ask only affected uses: adding memory must preserve model consent.
     const added = manifest.uses.filter((use) => !existing.value.manifest.uses.includes(use));
-    const answers = [...(added.includes('model') || added.includes('embed') ? ['botModels' as const] : []), ...(added.includes('memory') ? ['takesMemory' as const] : []), ...(added.includes('network') ? ['network' as const] : [])];
-    if (answers.length) {
-      const reset = await store.update('module', id, (current) => current.deleted === undefined ? answers.reduce((module, answer) => without(module, answer), current) : null);
+    const answers = [...(callsModels(added) ? ['botModels' as const] : []), ...(added.includes('memory') ? ['takesMemory' as const] : []), ...(added.includes('network') ? ['network' as const] : [])];
+    // A pick for a model the new version no longer declares goes with it.
+    const dropped = Object.keys(store.get('module', id)!.value.models ?? {}).filter((picked) => !manifest.models?.some((each) => each.id === picked));
+    if (answers.length || dropped.length) {
+      const reset = await store.update('module', id, (current) =>
+        current.deleted === undefined ? { ...answers.reduce((module, answer) => without(module, answer), current), ...(current.models && { models: dropped.reduce((models, picked) => without(models, picked), current.models) }) } : null);
       if (!reset.ok) return reset;
     }
     const saved = await store.update('tool', existing.id, (current) => live(store.get('module', id)) ? { ...value, settings: toolSettings(manifest, current.settings) } : null);

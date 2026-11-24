@@ -4,9 +4,9 @@ import type { Modality, Starred } from '../../connectors/types';
 import type { Stored } from '../../model/kinds';
 import type { ProfileChoice } from '../../runtime/models/profiles';
 import { count } from './typedNumber';
-import { DISCOUNT, MODEL_SETTINGS, NOT_PICKED, PDF_SEND, RETRY_COUNT, SCOPE, UNKNOWN, UNSET } from './words';
+import { DISCOUNT, MODEL_SETTINGS, NOT_PICKED, PDF_SEND, RETRY_COUNT, ROLE_TAGS, SCOPE, UNKNOWN, UNSET } from './words';
 
-export const MODALITY: Record<Modality, string> = { text: '텍스트', image: '이미지', audio: '오디오', video: '영상', file: '파일', embedding: '임베딩' };
+export const MODALITY: Record<Modality, string> = { text: '텍스트', image: '이미지', audio: '오디오', video: '영상', file: '파일', embedding: ROLE_TAGS.embed, decision: ROLE_TAGS.decide };
 
 export const inputs = (model: Starred) => (model.input ? model.input.map((modality) => MODALITY[modality]).join(', ') : UNKNOWN);
 

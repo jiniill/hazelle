@@ -21,6 +21,7 @@ import type { FlowColumn, FlowEdge, FlowKind, FlowNode } from '../ui';
 // 내 구성: the map and what needs fixing, both read off one Overview (runtime/tasks/overview).
 
 export const ROLES_TITLE = '역할';
+const ROLES = Object.keys(MODEL_ROLES) as Role[];
 export const LEGEND: Partial<Record<FlowKind, string>> = { follow: '기본 모델 사용', own: '직접 지정', gap: EMPTY_VALUE, off: '꺼진 기능' };
 
 const nodeOf = {
@@ -131,7 +132,7 @@ export function mapOf(overview: Overview, connections: readonly Stored<'connecti
   const columns: FlowColumn[] = [
     { title: PAGES.connections, nodes: connections.map(({ id, value }) => ({ id: nodeOf.connection(id), title: value.label, note: `모델 ${value.starred.length}개` })) },
     { title: STARRED, idle: IDLE_MODELS, nodes: starred.map(({ ref, model, connection }) => ({ id: nodeOf.model(ref), title: entryName(model), note: connection.value.label, tone: tone(nodeOf.model(ref), overview.used.some((each) => sameModelRef(each, ref))) })) },
-    { title: ROLES_TITLE, nodes: [role('main'), role('aux'), role('embed')] },
+    { title: ROLES_TITLE, nodes: ROLES.map(role) },
     {
       title: FEATURES_TITLE,
       nodes: [
@@ -142,7 +143,7 @@ export function mapOf(overview: Overview, connections: readonly Stored<'connecti
   ];
 
   const edges: FlowEdge[] = starred.map(({ ref, connection }) => ({ from: nodeOf.connection(connection.id), to: nodeOf.model(ref), kind: 'follow' }));
-  for (const each of ['main', 'aux', 'embed'] as const) {
+  for (const each of ROLES) {
     const { runs, from } = roles[each];
     if (!('kind' in runs)) edges.push({ from: routeNode(runs), to: nodeOf.role(each), kind: from?.layer === 'settings' || from?.role !== each ? 'follow' : 'own', label: from?.layer === 'prompt' ? MODEL_PINNED : undefined });
   }
@@ -160,7 +161,7 @@ export function mapOf(overview: Overview, connections: readonly Stored<'connecti
   const targets = new Map<string, Target>([
     ...connections.map((connection) => [nodeOf.connection(connection.id), { kind: 'connection', connection }] as const),
     ...starred.map(({ ref, model }) => [nodeOf.model(ref), { kind: 'model', ref, name: entryName(model) }] as const),
-    ...(['main', 'aux', 'embed'] as const).map((each) => [nodeOf.role(each), { kind: 'role', role: each }] as const),
+    ...ROLES.map((each) => [nodeOf.role(each), { kind: 'role', role: each }] as const),
     [nodeOf.feature('talk'), { kind: 'talk', pins: talk.pins }] as const,
     ...tasks.map((task) => [nodeOf.feature(task.feature), { kind: 'task', task }] as const),
   ]);

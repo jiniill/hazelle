@@ -1,13 +1,15 @@
 import { entryKey, type Model, type Modality, type Starred } from './types';
 
-// Role fallbacks end at chat except embeddings, which are global-only to keep vectors comparable.
+// Role fallbacks end at chat except embeddings, which are global-only to keep vectors comparable, and decisions, which
+// no text model can make.
 // Task prompts own their model choice and otherwise use auxiliary.
-export type Role = 'main' | 'aux' | 'embed';
+export type Role = 'main' | 'aux' | 'embed' | 'decide';
 
 const ROLES: Record<Role, { needs: Modality; fallsBackTo: Role | null }> = {
   main: { needs: 'text', fallsBackTo: null },
   aux: { needs: 'text', fallsBackTo: 'main' },
   embed: { needs: 'embedding', fallsBackTo: null },
+  decide: { needs: 'decision', fallsBackTo: null },
 };
 
 // model: the entry's key (types entryKey), not the id the provider is sent.

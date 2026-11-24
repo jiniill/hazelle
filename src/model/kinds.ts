@@ -15,6 +15,7 @@ import type { Prompt } from './prompt';
 import { isRecord } from '../record';
 import { SETTINGS_ID, type Settings } from './settings';
 import type { Tool, ToolChatData, ToolData, ToolDraft, ToolFile } from './tool';
+import type { ToolUse } from '../tool-api/manifest';
 import type { Stream } from './stream';
 import { isPurpose, type Ledger } from './usage';
 import type { Presence } from './presence';
@@ -149,6 +150,8 @@ const ENTRIES = {
   status: (value) => shape({ version: str, changes: listOf(shape({ definition: str, kind: str })), at: num })(value) && isRecord(value) && (value.byHand === true || shape({ of: listOf(str), receipt: orNull(isRecord) })(value)),
 } satisfies Record<Entry['type'], Check>;
 
+// Typed by the tool contract's own list, which the model may not import as a value (eslint/boundaries.js).
+const TOOL_USES: Record<ToolUse, true> = { model: true, embed: true, decide: true, draw: true, memory: true, network: true };
 const picture = shape({ name: str, type: str, size: num, file: shape({ id: str, key: str }) });
 const toggle = shape({ key: str, label: str, kind: str });
 const mark = shape({ label: str });
@@ -188,7 +191,7 @@ const SHAPES = {
     loreFolders: listOf(shape({ id: str, name: str })),
   }),
   module: shape({ name: str, description: str, namespace: orNull(str), folder: optStr, regex: listOf(shape({ id: str })), triggers: listOf(shape({ id: str, kind: str, name: str })), toggles: listOf(toggleLine), status, loreFolders: listOf(shape({ id: str, name: str })) }),
-  tool: shape({ manifest: shape({ api: (value) => value === 1, ...all(str, 'name', 'author', 'displayName', 'version', 'description'), uses: listOf((value) => value === 'model' || value === 'embed' || value === 'memory' || value === 'network'), page: orNull(shape({ label: str })), menu: listOf(shape({ id: str, label: str })), settings: listOf(shape({ key: str, type: str, label: str })) }), file: shape({ id: str, key: str }), size: num, settings: isRecord }),
+  tool: shape({ manifest: shape({ api: (value) => value === 1, ...all(str, 'name', 'author', 'displayName', 'version', 'description'), uses: listOf((value) => typeof value === 'string' && Object.hasOwn(TOOL_USES, value)), page: orNull(shape({ label: str })), menu: listOf(shape({ id: str, label: str })), settings: listOf(shape({ key: str, type: str, label: str })) }), file: shape({ id: str, key: str }), size: num, settings: isRecord }),
   tooldraft: shape({ identity: shape(all(str, 'name', 'author', 'displayName', 'version', 'description')), body: str, module: orNull(str), applied: orNull(str), asks: listOf(shape({ ask: str, note: str, model: shape(all(str, 'connection', 'model')), cost: orNull(isRecord), at: num })), at: num }),
   tooldata: shape({ key: str, value: (value) => value !== undefined }),
   toolfile: shape({ key: str, size: num, file: shape({ id: str, key: str }) }),

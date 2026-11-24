@@ -171,8 +171,9 @@ function readCall(part: unknown, facts: StreamFacts, position?: number) {
   if (typeof named.arguments === 'string') call.arguments += named.arguments;
 }
 
-// An embedding writes nothing, so its output is a measured zero: a price-list cost can be worked out from the input.
-export const embedUsage = (inputTokens: number | null): Usage => ({ inputTokens, cachedInputTokens: null, cacheWriteInputTokens: null, outputTokens: 0, reasoningTokens: null });
+// An embedding or a decision writes nothing, so its output is a measured zero: a price-list cost can be worked out
+// from the input.
+export const inputUsage = (inputTokens: number | null): Usage => ({ inputTokens, cachedInputTokens: null, cacheWriteInputTokens: null, outputTokens: 0, reasoningTokens: null });
 
 // OpenAI's /embeddings, which the responses format shares. Voyage states only total_tokens, which for an embedding is all
 // input.
@@ -192,7 +193,7 @@ export const openAiEmbeds: Embeds = {
       vectors[item.index] = item.embedding;
     }
     const usage = isRecord(payload.usage) ? payload.usage : {};
-    return { vectors, usage: embedUsage(count(usage.prompt_tokens) ?? count(usage.total_tokens)), raw: usage };
+    return { vectors, usage: inputUsage(count(usage.prompt_tokens) ?? count(usage.total_tokens)), raw: usage };
   },
 };
 

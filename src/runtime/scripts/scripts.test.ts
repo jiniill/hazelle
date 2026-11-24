@@ -847,12 +847,13 @@ describe('tool events through Scripts', () => {
     }, { run, close: () => {} });
   });
 
-  it('answers an unasked consent with no card under a tool deadline, asks from a menu press, and tells a missing 임베딩 모델 once', async () => {
+  it('answers an unasked consent with no card under a tool deadline, asks from a menu press, and tells a missing 임베딩 모델 or 결정 모델 once', async () => {
     const answers: unknown[] = [];
     const binding: Binding<ToolUnit> = { run: async (_chat, unit, _scope, event, host) => {
       if (event.kind === 'showing' || event.kind === 'menu') {
         answers.push(await host.embed(['query'], 'query', { kind: 'module', id: unit.module }));
         if (event.kind === 'showing') answers.push(await host.model('aux', [{ role: 'user', content: 'x' }], { kind: 'module', id: unit.module }));
+        if (event.kind === 'menu') answers.push(await (host as ToolReach).decide('x', { q: { type: 'noul', instructions: 'x' } }, { kind: 'module', id: unit.module }));
       }
       return noOutcome();
     }, close: () => {} };
@@ -869,8 +870,8 @@ describe('tool events through Scripts', () => {
       session.scriptInteractions.answer(session.scriptInteractions.snapshot().questions[0]!.id, 'yes');
       await pressed;
       await session.scriptCommands.menu(f.chat, f.module, 'now');
-      expect(answers.slice(2)).toEqual([{ ok: false, reason: 'no-model' }, { ok: false, reason: 'no-model' }]);
-      expect(session.scriptInteractions.snapshot().notes.filter(({ kind }) => kind === 'no-model')).toMatchObject([{ role: 'embed' }]);
+      expect(answers.slice(2)).toEqual(Array(4).fill({ ok: false, reason: 'no-model' }));
+      expect(session.scriptInteractions.snapshot().notes.filter(({ kind }) => kind === 'no-model')).toMatchObject([{ role: 'embed' }, { role: 'decide' }]);
     }, binding);
   });
 
@@ -902,6 +903,40 @@ describe('tool events through Scripts', () => {
       expect(session.store.get('module', f.module)!.value).not.toHaveProperty('model');
       await session.scriptCommands.menu(f.chat, f.module, 'now');
       expect(called().slice(3)).toEqual(['m', 'm']);
+    }, binding);
+  });
+
+  it("runs one of a plugin's own models on the model picked for it, as a 보조 call while it has none, and refuses once its pick is gone", async () => {
+    const answers: ModelResult[] = [];
+    const binding: Binding<ToolUnit> = { run: async (_chat, unit, _scope, _event, host) => {
+      answers.push(await (host as ToolReach).model('sorter', [{ role: 'user', content: 'x' }], { kind: 'module', id: unit.module }));
+      return noOutcome();
+    }, close: () => {} };
+    await server.withSession(async (session) => {
+      const f = await toolChat(session);
+      const connection = session.store.list('connection')[0]!.id;
+      const own = await addModel(session.store, connection, { ...bareModel('own'), name: 'own' });
+      const sorter = await addModel(session.store, connection, { ...bareModel('sorter'), name: 'sorter' });
+      if (!own.ok || !sorter.ok) throw new Error('fixture');
+      await setModels(session.store, { kind: 'module', id: f.module }, true);
+      const log = stubRelay(() => saying('ok'));
+      const called = () => log.map(({ sent }) => (JSON.parse(sent.body!) as { model: string }).model);
+      await session.scriptCommands.menu(f.chat, f.module, 'now');
+      await setModuleModel(session.store, f.module, { connection, model: own.data });
+      await session.scriptCommands.menu(f.chat, f.module, 'now');
+      await setModuleModel(session.store, f.module, { connection, model: sorter.data }, 'sorter');
+      await session.scriptCommands.menu(f.chat, f.module, 'now');
+      expect(called()).toEqual(['m', 'own', 'sorter']);
+
+      await removeModel(session.store, connection, sorter.data);
+      await session.scriptCommands.menu(f.chat, f.module, 'now');
+      expect(answers.at(-1)).toMatchObject({ success: false, reason: 'no-model' });
+      expect(session.scriptInteractions.snapshot().notes.filter(({ kind }) => kind === 'no-model')).toMatchObject([{ role: 'aux', own: true }]);
+
+      await setModuleModel(session.store, f.module, null, 'sorter');
+      expect(session.store.get('module', f.module)!.value.models).toEqual({});
+      await session.scriptCommands.menu(f.chat, f.module, 'now');
+      expect(called().slice(3)).toEqual(['own']);
     }, binding);
   });
 
@@ -1303,7 +1338,7 @@ describe('a rehearsal of the pre-send scripts', () => {
       const sending = (await wouldSend(session, chat, { kind: 'send', text: '안녕' }, undefined, 'view'))!;
       const rehearsal = (await session.scriptPreview.rehearse(chat, sending, new AbortController().signal))!;
       expect(log).toHaveLength(0);
-      expect(rehearsal.calls).toEqual({ model: 1, embed: 0, background: 0, fetch: 0 });
+      expect(rehearsal.calls).toEqual({ model: 1, embed: 0, decide: 0, draw: 0, background: 0, fetch: 0 });
       expect(rehearsal.scope.pending).toEqual([['answer', NOT_REHEARSED]]);
     }));
 

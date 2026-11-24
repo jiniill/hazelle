@@ -38,7 +38,7 @@ export type Account = { id: string; secret: string; name?: string };
 export type Turns = { day: number; groups: Group[]; anchor: { group: string; cycle: number } };
 export type Group = { id: string; name: string; accounts: string[] };
 
-export type Modality = 'text' | 'image' | 'audio' | 'video' | 'file' | 'embedding';
+export type Modality = 'text' | 'image' | 'audio' | 'video' | 'file' | 'embedding' | 'decision';
 
 // null means neither the catalog nor models.dev says. It is shown as unknown, never as "no".
 export type Model = {
@@ -209,6 +209,26 @@ export type Embeds = {
   parse(payload: unknown, count: number): { vectors: number[][]; usage: Usage; raw: Record<string, unknown> } | null;
 };
 
+// A decision call's questions, as the Gemini Decisions API and TypeSafe's both word them: noul a yes or no, choice one
+// of its options, score a level of its rubric, lowest first. Their shared bounds are connectors/decide's.
+export type DecideQuestion =
+  | { type: 'noul'; instructions: string; criteria?: { true: string; false: string } }
+  | { type: 'choice'; instructions: string; criteria: Record<string, string> }
+  | { type: 'score'; instructions: string; criteria: string[] };
+// noul: the probability of yes. choice: the likeliest option, with each option's probability. score: the
+// probability-weighted level, counted from 0, with each level's probability in the rubric's order.
+export type Decision =
+  | { type: 'noul'; noul: number }
+  | { type: 'choice'; choice: string; probabilities: Record<string, number> }
+  | { type: 'score'; score: number; probabilities: number[] };
+
+// A decision model reads the input once and answers every question, writing no text.
+export type Decides = {
+  request(endpoint: Endpoint, model: Model, input: string, questions: Record<string, DecideQuestion>): HttpRequest;
+  // One answer per question asked; null for an invalid reply. Provider cost hooks read raw usage.
+  parse(payload: unknown, questions: Record<string, DecideQuestion>): { answers: Record<string, Decision>; usage: Usage; raw: Record<string, unknown> } | null;
+};
+
 // Absent hooks inherit the codec. Static models replace fetching; image-only types have no chat endpoint.
 // endpointFor reads a non-pool secret (e.g. Vertex project) and the connection's location, returning null for an
 // invalid key or a location the type does not list.
@@ -283,6 +303,8 @@ type TypeHooks = {
   embeds?: Embeds | null;
   // An embedding call's purpose in a field of the provider's own, where its format has none (Voyage's input_type).
   embedPurpose?: (as: EmbedPurpose | null) => Record<string, unknown>;
+  // The type serves decision calls. No two providers share a wire for them, so no codec holds one.
+  decides?: Decides;
 };
 
 export type Discount = {

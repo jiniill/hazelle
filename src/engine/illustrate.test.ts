@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Model } from '../connectors/types';
 import type { Portrait } from '../model/likeness';
-import { asPov, illustratorPrompt, lastScene, parseScene, pictureRequest, PICTURE_DEFAULTS, profileNames, sceneText, sentText, toldProfiles } from './illustrate';
+import { asPov, illustratorPrompt, isDrawRequest, lastScene, parseScene, pictureRequest, PICTURE_DEFAULTS, plainPicture, profileNames, sceneText, sentText, toldProfiles } from './illustrate';
 
 const answer = {
   after: 2,
@@ -136,4 +136,26 @@ it('drops the viewer’s figures by name or alias and leads the framing with pov
   expect(seen).toEqual({ ...scene, setting: '1girl', framing: 'pov, wide shot', characters: [figure] });
   expect(asPov({ ...scene, characters: [{ ...figure, name: 'TRAVELER' }] }, ['Jin', 'traveler'])).toMatchObject({ setting: 'no humans', characters: [] });
   expect(asPov(seen, ['Jin']).framing).toBe('pov, wide shot');
+});
+
+it("builds a picture asked for in its own words with the prompt's size and controls and none of its tags, the asked seed over the prompt's", () => {
+  const model = { id: 'nai-diffusion-5' } as Model;
+  const picture = { size: 'large' as const, steps: 28, scale: 5, rescale: 0, sampler: 'k_euler', seed: 3 };
+  expect(plainPicture(model, { prompt: '1girl, rain' }, undefined, 42)).toEqual({ model, prompt: '1girl, rain', negative: '', characters: [], width: 832, height: 1216, seed: 42, steps: null, scale: null, rescale: null, sampler: null });
+  expect(plainPicture(model, { prompt: 'a cat', negative: 'text', shape: 'square' }, picture, 42)).toEqual({ model, prompt: 'a cat', negative: 'text', characters: [], width: 1472, height: 1472, seed: 3, steps: 28, scale: 5, rescale: 0, sampler: 'k_euler' });
+  expect(plainPicture(model, { prompt: 'a cat', seed: 9 }, picture, 42)).toMatchObject({ seed: 9 });
+});
+
+it.each([
+  [{ prompt: '1girl' }, true],
+  [{ prompt: '1girl', negative: 'text', shape: 'landscape', seed: 4294967295 }, true],
+  [{ prompt: ' ' }, false],
+  [{ prompt: '1girl', shape: 'wide' }, false],
+  [{ prompt: '1girl', shape: 'toString' }, false],
+  [{ prompt: '1girl', seed: -1 }, false],
+  [{ prompt: '1girl', seed: 1.5 }, false],
+  [{ prompt: '1girl', negative: 3 }, false],
+  ['1girl', false],
+])('reads %j as a picture request: %s', (value, is) => {
+  expect(isDrawRequest(value)).toBe(is);
 });

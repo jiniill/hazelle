@@ -20,7 +20,7 @@ const source = (version = '1.0', uses = '') => {
 };
 
 describe('tool storage', () => {
-  it('updates the identity in place, retaining data and settings and resetting only expanded consent', async () => {
+  it('updates the identity in place, retaining data and settings, resetting only expanded consent and dropping a pick for a model no longer declared', async () => {
     const { store, files } = await server.account();
     const added = await importTool(store, files, source());
     if (!added.ok) throw new Error(added.error);
@@ -35,9 +35,11 @@ describe('tool storage', () => {
     expect(store.get('module', module)!.value.botModels).toBeUndefined();
     expect(store.get('tool', toolId(module))!.value.settings).toEqual({ title: 'mine' });
     expect(await toolData({ store, files }, module, 'note')).toEqual({ ok: true, data: { text: 'hello' } });
-    await store.update('module', module, (current) => ({ ...current, botModels: false }));
-    await importTool(store, files, source('1.2', '//@uses model\n'));
-    expect(store.get('module', module)!.value.botModels).toBe(false);
+    const picked = { connection: 'c', model: 'm' };
+    await store.update('module', module, (current) => ({ ...current, botModels: false, models: { sorter: picked, writer: picked } }));
+    await importTool(store, files, source('1.2', '//@model sorter 선별\n'));
+    expect(store.get('module', module)!.value).toMatchObject({ botModels: false, models: { sorter: picked } });
+    expect(store.get('module', module)!.value.models).not.toHaveProperty('writer');
     await store.update('module', module, (current) => ({ ...current, botModels: true, takesMemory: false }));
     await importTool(store, files, source('1.3', '//@uses model\n//@uses memory\n'));
     expect(store.get('module', module)!.value).toMatchObject({ botModels: true });

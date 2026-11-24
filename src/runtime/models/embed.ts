@@ -1,14 +1,11 @@
-import { embedAnswer, embedRequests, embedRoute, withCredential } from '../../connectors/registry';
+import { embedAnswer, embedRequests, embedRoute } from '../../connectors/registry';
 import type { Cost, EmbedPurpose, Usage } from '../../connectors/types';
-import type { HttpRequest } from '../../contracts/http';
 import type { Receipt } from '../../model/chat';
 import type { Route } from './assignment';
 import type { Credentials } from './credential';
-import { receiptError, type ReplyError } from './generate';
 import { pause } from '../pause';
-import { callLabel, PULSE_ROLE } from '../service/pulse';
-import { relayJson } from './relay';
-import { redacted, type RequestLog } from './request-log';
+import { openPlain } from './plain';
+import type { RequestLog } from './request-log';
 import type { ObjectStore } from '../store/store';
 
 export type Embedded = { ok: true; model: string; vectors: number[][] } | { ok: false; reason: 'too-large' | 'flood' | 'failed' };
@@ -30,6 +27,7 @@ const PART_GAP = 1000;
 
 // One receipt covers all provider-sized chunks. Count script calls once at the first request, not memory indexing.
 // Caller owns consent/model choice; embedded reports chunk progress. Null receipt means no network and no log.
+// Vector responses stay out of the log: one batch can evict real replies.
 export async function embedTexts(
   deps: { credentials: Credentials; log: RequestLog; count(texts: string[]): Promise<number[]> },
   { connection, model }: Route,
@@ -47,60 +45,22 @@ export async function embedTexts(
   const route = embedRoute(connection.value, model);
   if (!route) return unsent('failed');
   const parts = embedRequests(route, model, texts, as);
-  const { credentials, log } = deps;
-  const picked = await credentials.pool.pick(connection.value);
-  if (!picked.ok) return unsent('failed');
-  const credential = await credentials.get(route, picked.account.secret, signal);
-  if (!credential.ok) return unsent('failed');
-  const at = Date.now();
-  const began = performance.now();
+  const call = await openPlain(deps, { connection, model }, route, { chat, purpose: 'embedding' }, signal);
+  if (!call) return unsent('failed');
   const vectors: number[][] = [];
   const spent: { usage: Usage; cost: Cost | null }[] = [];
-  const sent: HttpRequest[] = [];
-  const receipt = (made: Pick<Receipt, 'state' | 'cut' | 'error'>): Receipt => {
-    const kept: Receipt = {
-      id: crypto.randomUUID(),
-      connection: connection.id,
-      account: picked.account.id,
-      source: connection.value.label,
-      model: model.id,
-      modelName: model.name,
-      finishReason: null,
-      replyId: null,
-      firstTextMs: null,
-      totalMs: Math.round(performance.now() - began),
-      cache: null,
-      ...made,
-      ...summed(spent),
-    };
-    // Omit vector responses from logs: one batch can evict real replies. Log split request bodies as one call.
-    const request = sent.length === 1 ? sent[0]! : { url: sent[0]!.url, body: `[${sent.map(({ body }) => body).join(',')}]` };
-    log.record({ chat, purpose: 'embedding', at, picked: false, receipt: kept, request: redacted(request, connection.value), response: null });
-    return kept;
-  };
-  const failed = (error: Exclude<ReplyError, { kind: 'stopped' }>) => {
-    credentials.pool.stale(connection.value, picked.account);
-    return { answer: { ok: false as const, reason: 'failed' as const }, receipt: receipt({ state: 'failed', cut: null, error: receiptError(error) }) };
-  };
-  const stopped = () => ({ answer: { ok: false as const, reason: 'failed' as const }, receipt: receipt({ state: 'cut', cut: 'stopped', error: null }) });
+  const ended = ({ reason, receipt }: { reason: 'flood' | 'failed'; receipt: Receipt | null }) => ({ answer: { ok: false as const, reason }, receipt });
   for (const [index, { request, count }] of parts.entries()) {
-    if (index && !(await pause(PART_GAP, signal))) return stopped();
-    sent.push(request);
-    const answer = await relayJson(withCredential(route, request, credential.credential), signal, script && !index ? chat : undefined, callLabel(PULSE_ROLE.embedding, connection.value, model.id), route.type);
-    if (!answer.ok) {
-      const { failure } = answer;
-      // Refused by the server before the provider saw it: the chat's bot calls for this minute are spent.
-      if (failure.kind === 'app' && failure.code === 'too-many-bot-calls') return unsent('flood');
-      if (failure.kind === 'stopped') return stopped();
-      return failed(failure);
-    }
+    if (index && !(await pause(PART_GAP, signal))) return ended(call.stopped(summed(spent)));
+    const answer = await call.send(request, script && !index);
+    if (!answer.ok) return ended(call.refused(answer.failure, summed(spent)));
     const parsed = embedAnswer(route, model, answer.data, count);
-    if (!parsed) return failed({ kind: 'bad-event', detail: 'not an embedding answer' });
+    if (!parsed) return ended(call.failed({ kind: 'bad-event', detail: 'not an embedding answer' }, summed(spent)));
     vectors.push(...parsed.vectors);
     spent.push(parsed);
     embedded?.(count);
   }
-  return { answer: { ok: true, model: model.id, vectors }, receipt: receipt({ state: 'done', cut: null, error: null }) };
+  return { answer: { ok: true, model: model.id, vectors }, receipt: call.receipt({ state: 'done', cut: null, error: null }, summed(spent)) };
 }
 
 // A split call's usage and cost are its parts', unknown where any part's is.

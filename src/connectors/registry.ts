@@ -30,9 +30,10 @@ import { vercel } from './vercel';
 import { vertex } from './vertex';
 import { voyage } from './voyage';
 import { xai } from './xai';
+import type { Role } from './assignment';
 import { MODELS_DEV_LISTS } from './models-dev';
 import { priceCost } from './pricing';
-import { carriesPictures, ConnectorError, seesPictures, type Batches, type CacheWay, type ChatMessage, type ChatRequest, type Codec, type Connection, type ConnectionType, type Cost, type EmbedPurpose, type Endpoint, type Model, type Usage } from './types';
+import { carriesPictures, ConnectorError, seesPictures, type Batches, type CacheWay, type ChatMessage, type ChatRequest, type Codec, type Connection, type ConnectionType, type Cost, type DecideQuestion, type Decision, type EmbedPurpose, type Endpoint, type Model, type Usage } from './types';
 import type { HttpRequest } from '../contracts/http';
 
 // Adding a provider means adding its connection type here. Nothing else names one. The order is the screen's, 주요 too.
@@ -152,14 +153,35 @@ export function embedRequests(route: Route, model: Model, texts: string[], as: E
   return requests;
 }
 
+// A call that streams nothing: the provider's own figure, or the price list's over its usage.
+const answerCost = (route: Route, model: Model, usage: Usage, raw: Record<string, unknown>): Cost | null =>
+  route.type?.cost?.({ facts: { rawUsage: raw, finishReason: null, id: null, tier: null, calls: [] }, usage, model }) ?? (model.price ? priceCost(model.price, usage, costUnit(route.type)) : null);
+
 // null for a body that is not the format's embedding answer for this many texts.
 export function embedAnswer(route: Route, model: Model, payload: unknown, count: number): { vectors: number[][]; usage: Usage; cost: Cost | null } | null {
   const parsed = embedsOf(route)!.parse(payload, count);
-  if (!parsed) return null;
-  const { vectors, usage, raw } = parsed;
-  const cost = route.type?.cost?.({ facts: { rawUsage: raw, finishReason: null, id: null, tier: null, calls: [] }, usage, model }) ?? (model.price ? priceCost(model.price, usage, costUnit(route.type)) : null);
-  return { vectors, usage, cost };
+  return parsed && { vectors: parsed.vectors, usage: parsed.usage, cost: answerCost(route, model, parsed.usage, parsed.raw) };
 }
+
+// The route a model's decisions take; null where the connection's type serves none.
+export function decideRoute(connection: Connection, model: Model): Route | null {
+  const route = connectionRoute(connection, model);
+  return route?.type?.decides ? route : null;
+}
+
+export const decideRequest = (route: Route, model: Model, input: string, questions: Record<string, DecideQuestion>): HttpRequest =>
+  route.type!.decides!.request(route.endpoint, model, input, questions);
+
+// null for a body that does not answer every question asked.
+export function decideAnswer(route: Route, model: Model, payload: unknown, questions: Record<string, DecideQuestion>): { answers: Record<string, Decision>; usage: Usage; cost: Cost | null } | null {
+  const parsed = route.type!.decides!.parse(payload, questions);
+  return parsed && { answers: parsed.answers, usage: parsed.usage, cost: answerCost(route, model, parsed.usage, parsed.raw) };
+}
+
+const SERVED: Partial<Record<Role, (connection: Connection, model: Model) => Route | null>> = { embed: embedRoute, decide: decideRoute };
+
+// 임베딩 모델 and 결정 모델 run only where the connection's type serves them, whatever the model says (design §4).
+export const servesRole = (connection: Connection, model: Model, role: Role) => !SERVED[role] || SERVED[role](connection, model) !== null;
 
 const cacheWay = ({ type, codec }: Route, model: Model): CacheWay | null => codec.cache ?? type?.cachePoints?.(model) ?? null;
 
