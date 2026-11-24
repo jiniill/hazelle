@@ -90,3 +90,12 @@ it('rejects a directory located beyond the end record', async () => {
   new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).setUint32(16, bytes.length, true);
   await expect(indexZip(new Blob([bytes]), new AbortController().signal)).rejects.toThrow('ZIP ends early');
 });
+
+it('indexes a directory of many entries in one read past the end record', async () => {
+  const archive = new Blob([zipSync(Object.fromEntries(Array.from({ length: 50 }, (_, index) => [`files/${index}`, strToU8(String(index))])))]);
+  const slice = vi.fn((start?: number, end?: number) => archive.slice(start, end));
+  const entries = await indexZip({ size: archive.size, slice } as unknown as Blob, new AbortController().signal);
+  expect(entries.size).toBe(50);
+  expect(strFromU8(await readEntry(archive, entries.get('files/49')!, new AbortController().signal))).toBe('49');
+  expect(slice).toHaveBeenCalledTimes(2);
+});

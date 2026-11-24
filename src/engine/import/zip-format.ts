@@ -46,12 +46,21 @@ export class ZipDirectory {
     this.limit = offset + size;
   }
 
-  headerSize() {
+  // bytes: the archive from its position from on, the directory among them.
+  read(bytes: Uint8Array, from = 0) {
+    for (let i = 0; i < this.count; i++) {
+      const at = this.offset - from;
+      const header = bytes.subarray(at, at + this.headerSize());
+      this.add(header, bytes.subarray(at + 46, at + 46 + this.variableSize(header)));
+    }
+  }
+
+  private headerSize() {
     zipRange(this.offset, 46, this.limit);
     return 46;
   }
 
-  variableSize(header: Uint8Array) {
+  private variableSize(header: Uint8Array) {
     if (u32(header, 0) !== 0x02014b50 || u16(header, 34) !== 0) throw new Error('Bad ZIP entry');
     if (u16(header, 8) & 1) throw new ZipEncrypted('encrypted ZIP entry');
     const length = u16(header, 28) + u16(header, 30) + u16(header, 32);
@@ -59,7 +68,7 @@ export class ZipDirectory {
     return length;
   }
 
-  add(header: Uint8Array, variable: Uint8Array) {
+  private add(header: Uint8Array, variable: Uint8Array) {
     const method = u16(header, 10);
     if (method !== 0 && method !== 8) throw new Error('Unknown ZIP compression');
     const nameLength = u16(header, 28);

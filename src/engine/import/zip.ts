@@ -29,12 +29,7 @@ export function openZip(bytes: Uint8Array<ArrayBuffer>): Zip | null {
     if (start < 0) return null;
     const count = u16(bytes, record + 10);
     const directory = new ZipDirectory(count, directoryStart, directorySize, record, start);
-    for (let i = 0; i < count; i++) {
-      const at = directory.offset;
-      const header = bytes.subarray(at, at + directory.headerSize());
-      const length = directory.variableSize(header);
-      directory.add(header, bytes.subarray(at + 46, at + 46 + length));
-    }
+    directory.read(bytes);
     let unpacked = 0;
     for (const entry of directory.entries.values()) if (entry.method === DEFLATED) unpacked += entry.size;
     if (unpacked > expansionLimit(bytes.length)) throw new TooLarge('expands-too-far');
