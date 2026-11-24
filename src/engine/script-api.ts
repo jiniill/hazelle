@@ -30,7 +30,9 @@ export type Host = {
   background(html: string, from: PackOwner, signal?: AbortSignal): Promise<boolean>;
 };
 // A tool reaches the network too, which Lua never does, and says what it is doing to whoever waits on its run.
-export type ToolReach = Host & {
+export type ToolReach = Omit<Host, 'model'> & {
+  // role: one of its own models too (//@model), by id.
+  model(role: string, messages: ModelMessage[], spender: PackOwner, signal?: AbortSignal): Promise<ModelResult>;
   progress(text: string): void;
   // With the account's 결정 모델, under the same answer as model.
   decide(input: string, questions: Record<string, Hazelle.DecideQuestion>, spender: PackOwner, signal?: AbortSignal): Promise<DecideResult>;

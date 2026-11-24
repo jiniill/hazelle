@@ -9,6 +9,9 @@ export const TOOL_FILE_BYTES = 8 * 1024 * 1024;
 export const TOOL_ACTIONS = 3;
 export const TOOL_ACTION_CHARS = 16;
 const TOOL_COMPOSER_CHARS = 8;
+// A plugin's own models (//@model), each a row on its page.
+const TOOL_MODELS = 8;
+const ROLES = ['main', 'aux'];
 export type ImportedTool = { manifest: ToolManifest; bytes: Uint8Array<ArrayBuffer> };
 export type ToolRead = { ok: true; tool: ImportedTool } | { ok: false; failure: ImportFailure };
 const HEADER_KEYS = new Set(['api', 'name', 'author', 'display-name', 'version', 'description', 'page']);
@@ -98,10 +101,11 @@ export function readTool(bytes: Uint8Array<ArrayBuffer>): ToolRead {
   const text = toolText(bytes);
   if (!text.ok) return text;
   const header = new Map<string, string>();
-  const manifest: ToolManifest = { api: 1, name: '', author: '', displayName: '', version: '', description: '', uses: [], page: null, menu: [], settings: [], actions: [], inputs: [], composer: null, functions: [] };
+  const manifest: ToolManifest = { api: 1, name: '', author: '', displayName: '', version: '', description: '', uses: [], page: null, menu: [], settings: [], actions: [], inputs: [], composer: null, functions: [], models: [] };
   const actions = manifest.actions!;
   const inputs = manifest.inputs!;
   const functions = manifest.functions!;
+  const models = manifest.models!;
   let unknown: string | null = null;
   // The first line that shows in the composer button, which //@composer must name.
   let shown: string | null = null;
@@ -132,6 +136,10 @@ export function readTool(bytes: Uint8Array<ArrayBuffer>): ToolRead {
       const made = functionOf(json);
       if (!made || functions.some((each) => each.name === made.name)) return failed('tool-function', written);
       functions.push(made);
+    } else if (key === 'model') {
+      const item = /^(\S+)\s+(.+)$/.exec(value);
+      if (!item || !identity(item[1]!) || ROLES.includes(item[1]!) || [...item[2]!].length > TOOL_ACTION_CHARS || models.length === TOOL_MODELS || models.some((each) => each.id === item[1])) return failed('tool-model', written);
+      models.push({ id: item[1]!, label: item[2]! });
     } else if (key === 'composer') {
       if (!value || [...value].length > TOOL_COMPOSER_CHARS || manifest.composer) return failed('tool-composer', written);
       manifest.composer = { label: value };
@@ -142,6 +150,8 @@ export function readTool(bytes: Uint8Array<ArrayBuffer>): ToolRead {
     } else if (HEADER_KEYS.has(key)) header.set(key, value);
     else unknown ??= written;
   }
+  // A model of its own is a model call.
+  if (models.length > 0 && !manifest.uses.includes('model')) manifest.uses.push('model');
   if (!manifest.composer && shown) return failed('tool-composer-needed', shown);
   if (header.get('api') !== '1') return failed('tool-api');
   // After the api check, so a file for another app is told it is not a tool at all.

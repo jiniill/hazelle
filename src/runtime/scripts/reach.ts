@@ -1,4 +1,4 @@
-import type { ModelRef, Role } from '../../connectors/assignment';
+import type { ModelRef } from '../../connectors/assignment';
 import type { Cost, DecideQuestion, EmbedPurpose } from '../../connectors/types';
 import type { HttpRequest } from '../../contracts/http';
 import type { ChatScope } from '../../engine/render';
@@ -65,7 +65,7 @@ export class ScriptReach {
 
   // Only consented spenders may call the chat's role model. Keep receipts on the last shown message for usage.
   // Keep failure reasons structured for tools; Lua formats them at its binding.
-  private async model(chat: string, role: Role, messages: ModelMessage[], from: PackOwner, deadline: boolean, signal?: AbortSignal): Promise<ModelResult> {
+  private async model(chat: string, role: string, messages: ModelMessage[], from: PackOwner, deadline: boolean, signal?: AbortSignal): Promise<ModelResult> {
     const { store } = this.session;
     const refused = (reason: ModelRefusal, why: string): ModelResult => ({ success: false, reason, result: `Error: ${why}` });
     if (signal?.aborted || this.closing.aborted) return refused('failed', 'stopped');
@@ -74,12 +74,15 @@ export class ScriptReach {
     if (!(await this.interactions.allowed(chat, from, deadline, signal))) return refused('not-allowed', 'the user has not allowed this script to call models');
     if (signal?.aborted || !live(store.get(from.kind, from.id))) return refused('failed', 'stopped');
 
-    // A module's own model serves its 보조 calls alone: a call for the 대화 모델 is one for the chat's.
-    const own = role === 'aux' && from.kind === 'module' ? store.get('module', from.id)!.value.model : undefined;
-    const route = own ? taskModel(store, stored.value, own) : chatModel(store, stored.value, role);
+    // A module's own model serves its 보조 calls alone: a call for the 대화 모델 is one for the chat's. One of its
+    // plugin's own models (//@model) is a 보조 call on the model picked for it.
+    const asked = role === 'main' ? 'main' : 'aux';
+    const module = asked === 'aux' && from.kind === 'module' ? store.get('module', from.id)!.value : undefined;
+    const own = module?.models?.[role] ?? module?.model;
+    const route = own ? taskModel(store, stored.value, own) : chatModel(store, stored.value, asked);
     const writer = 'kind' in route ? route : writerOf(store, route);
     if ('kind' in writer) {
-      this.interactions.tell(chat, `no-model:${role}`, { kind: 'no-model', role, ...(own && { own: true }) }, from);
+      this.interactions.tell(chat, `no-model:${role}`, { kind: 'no-model', role: asked, ...(own && { own: true }) }, from);
       return refused('no-model', 'no model is set');
     }
     const text = gather();

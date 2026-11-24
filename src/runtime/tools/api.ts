@@ -442,7 +442,8 @@ export class ToolApi {
           if (!entry.tool.manifest.uses.includes('decide')) return { ok: false, reason: 'not-declared' };
           return context.host.decide(first, second, owner, context.signal);
         }
-        if (method === 'model' && (first === 'main' || first === 'aux') && isModelMessages(second)) {
+        if (method === 'model' && typeof first === 'string' && isModelMessages(second)) {
+          if (first !== 'main' && first !== 'aux' && !entry.tool.manifest.models?.some(({ id }) => id === first)) throw new Error(`No model named ${first}: declare it with //@model`);
           if (!entry.tool.manifest.uses.includes('model')) return { ok: false, reason: 'not-declared' };
           const result = await context.host.model(first, second.map(({ role, content }) => ({ role, content })), owner, context.signal);
           return result.success ? { ok: true, text: result.result } : { ok: false, reason: result.reason };

@@ -121,7 +121,10 @@ declare namespace Hazelle {
     edit(index: number, text: string): void;    // a new version, as Lua's setChat; throws in change and branch
     add(role: Role, text: string): void;        // as Lua's addChat; throws in change and branch
     remove(index: number): void;                // as Lua's removeChat; throws in change and branch
-    model(role: 'main' | 'aux', messages: ModelMessage[]): Promise<ModelAnswer>;   // needs //@uses model
+    // needs //@uses model. main: the chat's 대화 모델. aux: its 보조 모델, or the one the user picked for this plugin.
+    // Any other role is the id of a //@model line: the model the user picked for it on the plugin's page, and while
+    // none is picked, the same as aux. Throws on an id no line declares.
+    model(role: 'main' | 'aux' | (string & {}), messages: ModelMessage[]): Promise<ModelAnswer>;
     // needs //@uses embed. as: what the texts are for, which retrieval-tuned models embed differently.
     embed(texts: string[], as?: 'query' | 'document'): Promise<EmbedAnswer>;
     // needs //@uses decide. The account's 결정 모델 reads input once and answers every question in one call, far sooner

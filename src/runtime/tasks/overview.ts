@@ -61,7 +61,7 @@ export function overviewOf(store: ObjectStore, chat: Chat | null): Overview {
     ...tasks.flatMap((task) => ['route' in task.runs ? task.runs.route : task.runs, ...(task.feature === 'illustrate' ? [task.draws] : [])]),
   ].flatMap((runs) => ('connection' in runs ? [refOf(runs.connection.id, runs.model)] : []));
   const picked = prompts.flatMap((each) => (ofSort(each, 'conversation') ? Object.values(each.value.models) : ofSort(each, 'agent') && each.value.model ? [each.value.model] : []));
-  const modules = chat ? [] : store.list('module').filter(live).flatMap(({ value }) => (value.model ? [value.model] : []));
+  const modules = chat ? [] : store.list('module').filter(live).flatMap(({ value }) => [...(value.model ? [value.model] : []), ...Object.values(value.models ?? {})]);
   const used = [...reached, ...picked, ...modules].filter((ref, at, all) => all.findIndex((each) => sameModelRef(each, ref)) === at);
   return { roles, talk: { prompt, pins }, tasks, used };
 }

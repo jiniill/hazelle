@@ -30,6 +30,7 @@ const DETAIL_FAILURE: Record<string, string> = {
   'tool-input': '입력창 항목 줄을 읽지 못했어요.',
   'tool-composer': '입력창 줄을 읽지 못했어요.',
   'tool-function': '모델 도구 줄을 읽지 못했어요.',
+  'tool-model': '모델 줄을 읽지 못했어요.',
   'tool-composer-needed': '입력창 버튼을 쓰려면 //@composer도 있어야 해요.',
   'tool-uses': `//@uses에는 ${TOOL_USES.join(', ')}만 쓸 수 있어요.`,
   'tool-unknown': '알 수 없는 줄이에요.',

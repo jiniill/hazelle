@@ -4,7 +4,7 @@ import { setModels, setModuleModel, setNetwork, setTakesMemory } from '../../run
 import { sharedModel } from '../../runtime/models/assignment';
 import { writerOf } from '../../runtime/models/profiles';
 import { scriptsOf } from '../../runtime/scripts/selection';
-import { callsModels } from '../../tool-api/manifest';
+import { callsModels, type ToolModel } from '../../tool-api/manifest';
 import { describeModuleModelFailure } from '../common/failure';
 import { TaskModelRow } from '../common/TaskPrompt';
 import { ToolSetting } from '../common/ToolSetting';
@@ -33,21 +33,22 @@ function ModelsRow({ module, asker }: { module: Stored<'module'>; asker: Asker }
 }
 
 // What the module's 보조 calls run on outside a chat's own pick: the row cannot know which chat will call.
-function OwnModel({ module }: { module: Stored<'module'> }) {
+// of: one of its plugin's own models (//@model), which runs as a 보조 call while it has no pick.
+function OwnModel({ module, of }: { module: Stored<'module'>; of?: ToolModel }) {
   const { store } = useSession();
   const toast = useToast();
   // Subscribed for sharedModel, which reads the settings from the store.
   useSettings();
-  const own = module.value.model;
-  const route = sharedModel(store, 'aux', own ?? null);
+  const own = of ? module.value.models?.[of.id] : module.value.model;
+  const route = sharedModel(store, 'aux', own ?? module.value.model ?? null);
   const writer = 'kind' in route ? route : writerOf(store, route);
   return (
     <TaskModelRow
-      label={MODEL_ROLES.aux}
-      help={MODULE_MODEL_HELP}
+      label={of ? of.label : MODEL_ROLES.aux}
+      help={of ? undefined : MODULE_MODEL_HELP}
       own={own}
-      runs={'kind' in writer ? { why: describeModuleModelFailure(writer, own !== undefined) } : writer}
-      onPick={(ref) => toast.settled(setModuleModel(store, module.id, ref), SAVE_FAILED)}
+      runs={'kind' in writer ? { why: describeModuleModelFailure(writer, (own ?? module.value.model) !== undefined) } : writer}
+      onPick={(ref) => toast.settled(setModuleModel(store, module.id, ref, of?.id), SAVE_FAILED)}
     />
   );
 }
@@ -75,6 +76,7 @@ export function PluginSection({ module }: { module: Stored<'module'> }) {
         {(models || memory || network || manifest.settings.length > 0) && <SettingGroup label={`${TOOL} 설정`}>
           {models && <ModelsRow module={module} asker="plugin" />}
           {(hasLua(module) || manifest.uses.includes('model')) && <OwnModel module={module} />}
+          {manifest.models?.map((each) => <OwnModel key={each.id} module={module} of={each} />)}
           {network && (
             <FlagRow
               saveKey={`module-network:${module.id}`}

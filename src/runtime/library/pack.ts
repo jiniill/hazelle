@@ -128,8 +128,13 @@ export const setNetwork = (store: ObjectStore, module: string, network: boolean)
 export const setModels = (store: ObjectStore, { kind, id }: PackOwner, botModels: boolean): Promise<ApiResult<unknown>> =>
   store.update(kind, id, (current) => current.deleted === undefined ? { ...current, botModels } : null);
 
-export const setModuleModel = (store: ObjectStore, module: string, model: ModelRef | null): Promise<ApiResult<unknown>> =>
-  store.update('module', module, (current) => current.deleted === undefined ? { ...without(current, 'model'), ...(model && { model }) } : null);
+// of: one of its plugin's own models (//@model); without it, the model of the module's 보조 calls. null unpicks.
+export const setModuleModel = (store: ObjectStore, module: string, model: ModelRef | null, of?: string): Promise<ApiResult<unknown>> =>
+  store.update('module', module, (current) => {
+    if (current.deleted !== undefined) return null;
+    if (of === undefined) return { ...without(current, 'model'), ...(model && { model }) };
+    return { ...current, models: { ...without(current.models ?? {}, of), ...(model && { [of]: model }) } };
+  });
 
 // What a plugin's one card answers (design §6.10), each kept in its own field, which its switch edits alone.
 export const GRANTS = { network: 'network', model: 'botModels', memory: 'takesMemory' } as const;

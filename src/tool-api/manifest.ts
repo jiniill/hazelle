@@ -24,8 +24,10 @@ export type ToolField = { key: string; type: 'text' | 'number' | 'switch' | 'cho
 export type RisuScan = { verdict: 'all' | 'partial' | 'unread'; missing: string[]; hosts: string[] };
 // A //@tool line: a tool the chat model may call, answered by the 'tool' event. parameters: a JSON Schema object.
 export type ToolFunction = { name: string; description: string; parameters: { [key: string]: Json } };
-// Older tools omit actions/inputs/composer/functions and declare none; risu selects the v3 adapter.
+// A //@model line: a model of the plugin's own, called by its id (Chat.model) and picked by the user on the plugin's page.
+export type ToolModel = { id: string; label: string };
+// Older tools omit actions/inputs/composer/functions/models and declare none; risu selects the v3 adapter.
 export type ToolManifest = {
   api: 1; name: string; author: string; displayName: string; version: string; description: string; uses: ToolUse[]; page: { label: string } | null;
-  menu: { id: string; label: string }[]; settings: ToolField[]; actions?: { id: string; label: string }[]; inputs?: { id: string; label: string }[]; composer?: { label: string } | null; functions?: ToolFunction[]; risu?: RisuScan;
+  menu: { id: string; label: string }[]; settings: ToolField[]; actions?: { id: string; label: string }[]; inputs?: { id: string; label: string }[]; composer?: { label: string } | null; functions?: ToolFunction[]; models?: ToolModel[]; risu?: RisuScan;
 };

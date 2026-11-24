@@ -906,6 +906,40 @@ describe('tool events through Scripts', () => {
     }, binding);
   });
 
+  it("runs one of a plugin's own models on the model picked for it, as a 보조 call while it has none, and refuses once its pick is gone", async () => {
+    const answers: ModelResult[] = [];
+    const binding: Binding<ToolUnit> = { run: async (_chat, unit, _scope, _event, host) => {
+      answers.push(await (host as ToolReach).model('sorter', [{ role: 'user', content: 'x' }], { kind: 'module', id: unit.module }));
+      return noOutcome();
+    }, close: () => {} };
+    await server.withSession(async (session) => {
+      const f = await toolChat(session);
+      const connection = session.store.list('connection')[0]!.id;
+      const own = await addModel(session.store, connection, { ...bareModel('own'), name: 'own' });
+      const sorter = await addModel(session.store, connection, { ...bareModel('sorter'), name: 'sorter' });
+      if (!own.ok || !sorter.ok) throw new Error('fixture');
+      await setModels(session.store, { kind: 'module', id: f.module }, true);
+      const log = stubRelay(() => saying('ok'));
+      const called = () => log.map(({ sent }) => (JSON.parse(sent.body!) as { model: string }).model);
+      await session.scriptCommands.menu(f.chat, f.module, 'now');
+      await setModuleModel(session.store, f.module, { connection, model: own.data });
+      await session.scriptCommands.menu(f.chat, f.module, 'now');
+      await setModuleModel(session.store, f.module, { connection, model: sorter.data }, 'sorter');
+      await session.scriptCommands.menu(f.chat, f.module, 'now');
+      expect(called()).toEqual(['m', 'own', 'sorter']);
+
+      await removeModel(session.store, connection, sorter.data);
+      await session.scriptCommands.menu(f.chat, f.module, 'now');
+      expect(answers.at(-1)).toMatchObject({ success: false, reason: 'no-model' });
+      expect(session.scriptInteractions.snapshot().notes.filter(({ kind }) => kind === 'no-model')).toMatchObject([{ role: 'aux', own: true }]);
+
+      await setModuleModel(session.store, f.module, null, 'sorter');
+      expect(session.store.get('module', f.module)!.value.models).toEqual({});
+      await session.scriptCommands.menu(f.chat, f.module, 'now');
+      expect(called().slice(3)).toEqual(['own']);
+    }, binding);
+  });
+
   it('forgets forecast text when a tool leaves or a chat unloads', async () => {
     const binding: Binding<ToolUnit> = { run: async () => ({ ...noOutcome(), value: 'cached' }), close: () => {} };
     await server.withSession(async (session) => {
