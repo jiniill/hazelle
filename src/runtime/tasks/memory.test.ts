@@ -56,6 +56,26 @@ describe('Rememberer', () => {
       expect(covered.length).toBeGreaterThanOrEqual(before!.prompt.dropped);
     }));
 
+  it('builds the request a plan stands on once, for what it holds and for what it drops', () =>
+    server.withSession(async (session) => {
+      const connection = await session.store.create('connection', { ...testConnection, starred: [{ ...testModel, contextLength: 1500 }] });
+      if (!connection.ok) throw new Error(connection.error);
+      await setDefaultModel(session.store, 'main', { connection: connection.data.id, model: testModel.id });
+      await setDefaultMemory(session.store, { window: 100_000, batch: 300 });
+      const chat = crypto.randomUUID();
+      await server.hold(session.store, chat);
+      await startChat(session.store, chat, { title: null, character: null, models: {} }, null);
+      for (let index = 0; index < 40; index++) await appendUserMessage(session.store, chat, { id: crypto.randomUUID(), text: `${index} ${'word '.repeat(40)}` });
+      await vi.waitFor(() => expect(session.memory.snapshot().running.has(chat)).toBe(false));
+      const [plans, requests] = [vi.spyOn(session.store.evaluation, 'read'), vi.spyOn(session.store.evaluation, 'prompt')];
+      const log = stubRelay(() => saying(JSON.stringify({ records: [{ to: 1, when: null, where: null, who: [], what: 'They talk.', lines: [], outcome: '', state: [], opens: [], closes: [] }] })));
+      session.memory.check(chat);
+      await vi.waitFor(() => expect(log).toHaveLength(1), { timeout: 5000 });
+      const asked = (calls: [{ asker: string }, ...unknown[]][]) => calls.filter(([{ asker }]) => asker === 'memory').length;
+      expect(asked(requests.mock.calls)).toBeGreaterThan(0);
+      expect(asked(requests.mock.calls)).toBeLessThanOrEqual(asked(plans.mock.calls));
+    }));
+
   it('summarizes the messages past the window once a reply is saved, and drops a result whose messages changed while it was written, then summarizes them as they are now', () =>
     server.withSession(async (session) => {
       await answerable(session);

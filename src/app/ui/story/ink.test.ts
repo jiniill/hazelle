@@ -50,7 +50,15 @@ function story(setStart: () => void = () => {}) {
   const frames = new Map<number, FrameRequestCallback>();
   const flags = (on = new Set<string>()) => ({ on, toggleAttribute: (name: string, force: boolean) => void (force ? on.add(name) : on.delete(name)), removeAttribute: (name: string) => void on.delete(name) });
   const own = new Map<string, string>();
-  const parent = { localName: 'p', ...flags(), own, style: { getPropertyValue: (name: string) => own.get(name) ?? '', setProperty: (name: string, value: string) => void own.set(name, value), removeProperty: (name: string) => void own.delete(name) } };
+  // As a browser keeps it: once written, the style attribute stays, empty, when its last property is taken off.
+  const attributes = new Set<string>();
+  const marks = flags();
+  const parent = {
+    localName: 'p', ...marks, own, attributes,
+    getAttribute: (name: string) => (attributes.has(name) ? [...own].map(([key, value]) => `${key}: ${value};`).join(' ') : null),
+    removeAttribute: (name: string) => void (attributes.delete(name) || marks.on.delete(name)),
+    style: { getPropertyValue: (name: string) => own.get(name) ?? '', setProperty: (name: string, value: string) => void (own.set(name, value), attributes.add('style')), removeProperty: (name: string) => void own.delete(name) },
+  };
   const text = { data: '', parentElement: parent, parentNode: null as unknown, previousElementSibling: null };
   const blocks = [flags(), flags()];
   const shadow = { children: blocks };
@@ -93,7 +101,7 @@ it('marks what it holds back and what its gradient lights on the elements themse
   expect(parent.on.size + parent.own.size).toBe(2);
   ink.drawn(false);
   while (frames.size) frame((now += 50));
-  expect(host.on.size + parent.on.size + parent.own.size).toBe(0);
+  expect(host.on.size + parent.on.size + parent.own.size + parent.attributes.size).toBe(0);
   expect(blocks.every((block) => block.on.size === 0)).toBe(true);
   vi.unstubAllGlobals();
 });

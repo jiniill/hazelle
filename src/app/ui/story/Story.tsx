@@ -185,9 +185,11 @@ const styleRules = (rules: Iterable<object>): StyleRule[] =>
   [...rules].flatMap((rule) => [...('selectorText' in rule && 'style' in rule ? [rule as StyleRule] : []), ...('cssRules' in rule ? styleRules(rule.cssRules as Iterable<object>) : [])]);
 
 // Every value is read before any is changed: a rule that slides a drawer in may itself be fixed, and lose its offset.
-export function groundRules(rules: Iterable<object>) {
+// Answers whether it changed any rule.
+export function groundRules(rules: Iterable<object>): boolean {
   const all = styleRules(rules);
   const fixed = all.filter(({ style }) => style.getPropertyValue('position').trim() === 'fixed');
+  let changed = fixed.length > 0;
   const parked = fixed.flatMap((rule) => {
     const side = parkedSide(rule.style);
     return side ? [{ rule, side, compounds: lastCompounds(rule).filter(Boolean), display: rule.style.getPropertyValue('display') || 'block' }] : [];
@@ -220,9 +222,12 @@ export function groundRules(rules: Iterable<object>) {
     for (const property of WIDTHS) {
       const value = style.getPropertyValue(property);
       const read = value.replace(VW, '$1cqw');
-      if (read !== value) style.setProperty(property, read, style.getPropertyPriority(property));
+      if (read === value) continue;
+      style.setProperty(property, read, style.getPropertyPriority(property));
+      changed = true;
     }
   }
+  return changed;
 }
 
 // Made on first use, not on import, and shared by every root that adopts it.
@@ -356,13 +361,27 @@ function purify(html: string, keep: boolean): DocumentFragment {
   return fragment;
 }
 
+// The cleaned CSS of each inline style that grounding leaves alone, by the style a bot wrote: its templates write the
+// same one on every line.
+const plainStyles = new Map<string, string>();
+const PLAIN_STYLES = 512;
+
+export function groundStyle(element: HTMLElement | SVGElement, veiled: boolean) {
+  const written = element.getAttribute(SET_ASIDE)!;
+  element.removeAttribute(SET_ASIDE);
+  const key = `${veiled}:${written}`;
+  const plain = plainStyles.get(key);
+  if (plain !== undefined) return void (element.style.cssText = plain);
+  const css = cleanCss(written, veiled);
+  element.style.cssText = css;
+  if (groundRules([{ selectorText: '', style: element.style }])) return;
+  plainStyles.set(key, css);
+  if (plainStyles.size > PLAIN_STYLES) plainStyles.delete(plainStyles.keys().next().value!);
+}
+
 function sanitize(html: string, cursor: boolean, veil: Veil | null): DocumentFragment {
   const fragment = purify(html, !cursor);
-  for (const element of fragment.querySelectorAll<HTMLElement | SVGElement>(`[${SET_ASIDE}]`)) {
-    element.style.cssText = cleanCss(element.getAttribute(SET_ASIDE)!, veil !== null);
-    groundRules([{ selectorText: '', style: element.style }]);
-    element.removeAttribute(SET_ASIDE);
-  }
+  for (const element of fragment.querySelectorAll<HTMLElement | SVGElement>(`[${SET_ASIDE}]`)) groundStyle(element, veil !== null);
   for (const element of fragment.querySelectorAll('[class]')) element.setAttribute('class', element.getAttribute('class')!.replace(/(^|\s)x-risu-/g, '$1'));
   // Normalize HTML/SVG link addresses into href; existing href wins over xlink:href. Include area elements.
   for (const link of fragment.querySelectorAll('a, area')) {

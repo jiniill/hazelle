@@ -60,12 +60,16 @@ export function write(run: Run, name: string, value: unknown): boolean {
   const next = value === undefined || value === null ? unsetValue(defaultVariables(run.snapshot.scope), name) : text(value);
   if ((run.written.get(name) ?? run.variables.get(name)) === next) return false;
   run.written.set(name, next);
+  READ.delete(run);
   return true;
 }
 
 export const add = (run: Run, role: Working['role'], data: string) => void run.messages.push({ origin: null, role, data, time: Date.now(), first: '' });
 
 const CONTEXTS = new WeakMap<Snapshot, { triggerId: string; context: ReturnType<typeof contexts> }>();
+// The variables a run's CBS reads, its writes over the snapshot's. evaluate writes none for a text that is no message,
+// so one map serves until the run writes.
+const READ = new WeakMap<Run, Map<string, string>>();
 
 // Evaluate CBS against the original snapshot plus variable writes, not script-mutated messages.
 // No setvar writes; prompt-stage display tags stay literal until the resulting message is displayed.
@@ -76,9 +80,11 @@ export function cbs(run: Run, value: string): string {
     CONTEXTS.set(run.snapshot, (cached = { triggerId: run.triggerId, context }));
   }
   const { context } = cached;
+  let variables = READ.get(run);
+  if (!variables) READ.set(run, (variables = new Map([...run.variables, ...run.written])));
   run.ranAway = false;
   try {
-    return unescapeCbs(evaluate(value, context({ seed: crypto.randomUUID() }, new Map([...run.variables, ...run.written]))));
+    return unescapeCbs(evaluate(value, context({ seed: crypto.randomUUID() }, variables)));
   } catch (error) {
     run.ranAway = error instanceof Runaway;
     throw error;

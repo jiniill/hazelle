@@ -1,10 +1,19 @@
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
+import { resolveAssets } from '../../engine/assets';
 import type { Display } from '../../engine/display';
 import type { Receipt, Version } from '../../model/chat';
 import type { Shown } from '../../runtime/chat/talk';
 import { placeMark } from '../../model/illustration';
 import type { Stored } from '../../model/kinds';
-import { displayed, logDraft, resolveLog, untranslated, type LogText } from './exportLog';
+import { storyText } from '../ui';
+import { displayedRows, logDraft, resolveLog, untranslated, type LogText } from './exportLog';
+
+vi.mock('../../engine/assets', async (original) => {
+  const real = await original<typeof import('../../engine/assets')>();
+  return { ...real, resolveAssets: vi.fn(real.resolveAssets) };
+});
+// The node test run has no DOM for DOMPurify.
+vi.mock('../ui', async (original) => ({ ...await original<typeof import('../ui')>(), storyText: vi.fn((html: string) => html.replace(/<[^>]+>/g, '').trim()) }));
 
 const picture = '0f8fad5b-d9cb-469f-a165-70867728950e';
 const failed = { state: 'failed' } as Receipt;
@@ -66,9 +75,19 @@ it('offers to translate only what a translated log would show untranslated', () 
 });
 
 it('gives a message as the display has it, its boxes around its text, with no pictures, and the sheet only with the bot\'s style', () => {
-  const first = displayed(view, 0, true);
-  expect(first.stories.map((story) => story.replace(/<[^>]+>/g, '').trim())).toEqual(['Hello', 'HP 7']);
+  const first = displayedRows(view, true)(0);
+  expect(first.text).toBe('Hello\n\nHP 7');
   expect(first.css).not.toContain(picture);
-  expect(displayed(view, 3, true).stories).toEqual([]);
-  expect(displayed(view, 0, false).css).toBe('');
+  expect(displayedRows(view, true)(3)).toEqual({ html: '', css: first.css, text: '' });
+  expect(displayedRows(view, false)(0).css).toBe('');
+});
+
+it('draws each message of a display once and its sheet once for them all', () => {
+  const sheetReads = () => vi.mocked(resolveAssets).mock.calls.filter(([source]) => source === view.css).length;
+  const [sheets, texts] = [sheetReads(), vi.mocked(storyText).mock.calls.length];
+  const rows = displayedRows(view, true);
+  const first = rows(0);
+  rows(1);
+  expect(rows(0)).toBe(first);
+  expect([sheetReads() - sheets, vi.mocked(storyText).mock.calls.length - texts]).toEqual([1, 3]);
 });

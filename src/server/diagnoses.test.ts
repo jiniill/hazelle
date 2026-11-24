@@ -134,9 +134,11 @@ it('forgets a report after 30 days', async () => {
   expect((await stored()).results).toHaveLength(0);
 });
 
-it('pages the groups newest first, each once though several were last reported in one millisecond, and refuses a cursor it never gave', async () => {
-  vi.useFakeTimers({ now: Date.parse('2026-11-02T03:00:00Z'), toFake: ['Date'] });
+it('pages the groups newest first across days, each once though several were last reported in one millisecond, and refuses a cursor it never gave', async () => {
+  vi.useFakeTimers({ now: Date.parse('2026-10-30T03:00:00Z'), toFake: ['Date'] });
   const job: AutoJob = JOB;
+  await send({ ...REPORT, event: 'evaluation-stuck', detail: 'read', chat: null, job });
+  vi.setSystemTime(Date.parse('2026-11-02T03:00:00Z'));
   for (const detail of ['display', 'read']) await send({ ...REPORT, event: 'evaluation-stuck', detail, chat: null, job });
   vi.setSystemTime(Date.now() + 1000);
   await send();
@@ -150,6 +152,6 @@ it('pages the groups newest first, each once though several were last reported i
     if (page.next === null) break;
     query = `limit=1&after=${encodeURIComponent(page.next)}`;
   }
-  expect(seen).toEqual(['memory-gap ', 'evaluation-stuck read', 'evaluation-stuck display']);
+  expect(seen).toEqual(['memory-gap ', 'evaluation-stuck read', 'evaluation-stuck display', 'evaluation-stuck read']);
   for (const after of ['1', '[1,"a"]', '["1","a","b","c","d"]']) expect((await t.get(`admin/diagnoses?after=${encodeURIComponent(after)}`, admin.cookie)).status).toBe(400);
 });

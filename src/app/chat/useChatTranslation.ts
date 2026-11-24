@@ -5,7 +5,7 @@ import { translationInput } from '../../runtime/chat/chat-context';
 import type { Shown } from '../../runtime/chat/talk';
 import { translationShown, translatorOf, type TranslatorFailure } from '../../runtime/tasks/translate';
 import { languageLabel } from '../common/languages';
-import { useCaptured, useSession, useTranslating } from '../session';
+import { useCaptured, useSession } from '../session';
 import { useToast } from '../toast';
 
 export type TranslationActions = ReturnType<typeof useChatTranslation>['actions'];
@@ -14,16 +14,15 @@ export function useChatTranslation(chatId: string, chat: Chat, messages: Shown[]
   const session = useSession();
   const { store, translator } = session;
   const toast = useToast();
-  const translating = useTranslating();
   const translation = useCaptured((store) => translatorOf(store, chat), [chat]);
   const shownTranslation = useCaptured((store) => translationShown(store, chat), [chat]);
   const sendLanguage = languageLabel(translate.inputLanguage);
   const [flipped, setFlipped] = useState<ReadonlySet<string>>(new Set());
   const last = messages.at(-1);
   // 응답 번역 is shown awaited from the reply's first text; whether and when it starts is translateReceived's. Live
-  // until its turn ends, the translator's from its save (Translator.expect).
+  // until its turn ends, the translator's from its save (Translator.expect), which the row reads (useTranslatingVersion).
   const live = translate.replies && last?.live && texts.at(-1)!.trim() ? last.live : null;
-  const awaited = (version: string) => version === live || translating.awaited.has(version);
+  const awaited = (version: string) => version === live;
 
   // A batch (ChatExport) goes on across renders: each message in it reads the chat as it is by then, the
   // translations landed before it among its context.
@@ -58,7 +57,7 @@ export function useChatTranslation(chatId: string, chat: Chat, messages: Shown[]
   }
 
   return {
-    translation, shownTranslation, sendLanguage, translating, flipped, awaited,
+    translation, shownTranslation, sendLanguage, flipped, awaited,
     actions: {
       translate: translateMessage,
       flipTranslation,

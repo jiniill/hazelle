@@ -11,11 +11,13 @@ import type { api, ApiResult } from '../../runtime/api';
 import { serverBackend } from '../../runtime/store/backend';
 import { chatTranslate } from '../../runtime/tasks/features';
 import { ReadModels } from '../../runtime/store/read-model';
+import { Snapshot } from '../../runtime/store/snapshot';
+import type { Translating } from '../../runtime/tasks/translate';
 import type { Session } from '../../runtime/session';
 import { ObjectStore } from '../../runtime/store/store';
 import { forecastSend } from '../../runtime/chat/turn-context';
 import { randomBytes } from '../../vault/aead';
-import { SessionProvider } from '../session';
+import { SessionProvider, useTranslatingVersion } from '../session';
 import { probeRoot } from '../ui/probe';
 import { useChatIllustrations } from './useChatIllustrations';
 import { useChatSettings } from './useChatSettings';
@@ -31,13 +33,15 @@ const facts = new AccountFacts({ suspended: false, state: 'active', storage: { b
 const account = { admin: false, localProviders: [], proxy: false, facts, guest: null, onLock() {}, onLogout: async () => null };
 const chat: Chat = { title: null, character: null, models: {} };
 const VIEW: Display = { texts: [], css: '', picture: null, background: '', drawn: [[0]], boxes: [], pass: false, unfound: [], sized: false, stopped: null };
-const TRANSLATING = { awaited: new Set(), live: new Map(), failed: new Map() };
+const IDLE: Translating = { awaited: new Set(), live: new Map(), failed: new Map() };
+const translator = new Snapshot(IDLE);
 const DRAWINGS = new Map();
 const quiet = { snapshot: () => DRAWINGS, subscribe: () => () => true };
 const card: Card = { name: 'Bot', nickname: null, description: '', personality: '', scenario: '', greetings: [], exampleDialogue: '', additionalText: '', systemPrompt: '', postHistoryInstructions: '', creatorNotes: '', creator: '', version: '', tags: [], variables: [], toggles: [], utility: false, bias: [], regex: [], triggers: [], loreSettings: { scanDepth: null, tokenBudget: null, recursive: null, fullWordMatching: null } };
 const prompt = { name: '대화', blocks: [], toggles: [], authorNote: '', models: {} };
 
 afterEach(() => {
+  translator.set(IDLE);
   vi.clearAllMocks();
   vi.unstubAllGlobals();
 });
@@ -49,7 +53,7 @@ async function opened() {
     : { revs: [++rev], timeline: 't' }) as T });
   const store = await ObjectStore.open('test', randomBytes(32), serverBackend(request));
   const read = new ReadModels(store);
-  const session = { store, read, translator: { snapshot: () => TRANSLATING, subscribe: () => () => true }, illustrator: quiet, memory: quiet } as unknown as Session;
+  const session = { store, read, translator, illustrator: quiet, memory: quiet } as unknown as Session;
   const root = probeRoot();
   vi.stubGlobal('window', Object.assign(window, { setTimeout, clearTimeout }));
   vi.stubGlobal('IntersectionObserver', class { observe() {} unobserve() {} disconnect() {} });
@@ -91,6 +95,33 @@ it('renders the chat hooks for no unrelated write, while the forecast still runs
     expect(perWrite).toEqual([0, 0, 0]);
     await settled();
     expect(vi.mocked(forecastSend).mock.calls.length).toBeGreaterThan(forecasts);
+  } finally {
+    await close();
+  }
+});
+
+it('renders only the translating row, not the chat hooks, for each chunk of a translation', async () => {
+  const { store, render, close } = await opened();
+  const renders = { chat: 0, row: 0 };
+  const seen: (string | null)[] = [];
+  const translate = chatTranslate(store, chat);
+  function Row() {
+    renders.row += 1;
+    seen.push(useTranslatingVersion('v').text);
+    return null;
+  }
+  function Probe() {
+    renders.chat += 1;
+    useChatTranslation('chat', chat, [], [], translate);
+    return <Row />;
+  }
+  try {
+    await render(<Probe />);
+    const at = { ...renders };
+    for (const text of ['', '안', '안녕']) await act(() => translator.set({ ...IDLE, live: new Map([['v', text]]) }));
+    expect(renders.chat - at.chat).toBe(0);
+    expect(renders.row - at.row).toBe(3);
+    expect(seen.slice(-3)).toEqual(['', '안', '안녕']);
   } finally {
     await close();
   }

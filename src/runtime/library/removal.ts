@@ -2,7 +2,7 @@ import { without } from '../../model/fields';
 import type { Stored, Values } from '../../model/kinds';
 import { daysLeft, REMOVABLE, type Mark, type Removable } from '../../model/library';
 import { KINDS, parentKinds, type Kind, type Rule } from '../../model/kinds';
-import type { ApiResult } from '../api';
+import type { ApiFailure, ApiResult } from '../api';
 import type { Files } from '../files/files';
 import { SCOPED } from '../store/object-cache';
 import { cutShare } from '../export/share-link';
@@ -16,6 +16,8 @@ const depthOf = (kind: Kind): number => {
   return owners.length === 0 ? 0 : Math.max(...owners.map(depthOf)) + 1;
 };
 const DEPTHS = new Map(KIND_NAMES.map((kind) => [kind, depthOf(kind)]));
+// How many of an object's children are read at once: each is a server scan, and a character has one per chat.
+const AT_ONCE = 4;
 
 // Remove children before owners, in sequential depth rounds; parallelize only within a round.
 // Interrupted removal leaves owners retryable. Keep shared files until runtime/files/files sweeps them.
@@ -41,11 +43,17 @@ export async function planRemoval(store: ObjectStore, root: { kind: Kind; id: st
       if (!SCOPED.has(kind)) children.push(...store.list(kind).filter(({ value }) => owned(value)));
     }
     let round = 0;
-    for (const child of children) {
-      const result = await visit(child);
-      if (!result.ok) return result;
-      round = Math.max(round, result.data + 1);
-    }
+    let failure: ApiFailure | null = null;
+    const left = children.values();
+    await Promise.all(Array.from({ length: AT_ONCE }, async () => {
+      for (const child of left) {
+        if (failure) return;
+        const result = await visit(child);
+        if (result.ok) round = Math.max(round, result.data + 1);
+        else failure ??= result;
+      }
+    }));
+    if (failure) return failure;
     (rounds[round] ??= []).push(object);
     return { ok: true, data: round };
   };

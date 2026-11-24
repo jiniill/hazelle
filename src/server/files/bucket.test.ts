@@ -115,6 +115,18 @@ it('the r2 bucket lists a prefix’s sizes across pages without a HEAD, and a re
   await expect(r2Bucket({ ...s3.config, secretAccessKey: 'wrong' }).get(key('a'))).rejects.toThrow(`r2: get ${key('a')} answered 403`);
 });
 
+it('the r2 bucket and its cache sign a put with the SHA-256 they are handed, which the store checks the body against', async () => {
+  const bytes = new Uint8Array([1, 2, 3]);
+  dir = mkdtempSync(join(tmpdir(), 'hazelle-'));
+  for (const bucket of [r2Bucket(s3.config), cachedR2Bucket(r2Bucket(s3.config), dir, 1 << 20)]) {
+    await expect(bucket.put(key('a'), bytes, sha256Hex(new Uint8Array([4])))).rejects.toThrow(`r2: put ${key('a')} answered 403`);
+    expect(s3.objects.size).toBe(0);
+    await bucket.put(key('a'), bytes, sha256Hex(bytes));
+    expect(s3.objects.get(key('a'))).toEqual(bytes);
+    s3.objects.clear();
+  }
+});
+
 describe('the cache in front of R2', () => {
   const HOUR_MS = 60 * 60 * 1000;
   const NOW = 1_800_000_000_000;

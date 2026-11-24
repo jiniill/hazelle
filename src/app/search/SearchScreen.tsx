@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactN
 import { chatFolderOf, type ChatSummary } from '../../model/chat';
 import type { Shelf } from '../../model/library';
 import { foldTerm } from '../../model/search';
-import { liveChats, results, type Found } from '../../runtime/chat/chat-search';
+import { liveChats, results, titles, type Found } from '../../runtime/chat/chat-search';
 import { ACTS } from '../common/acts';
 import { describeFailure } from '../common/failure';
 import { useFolderIndex, whereIs } from '../common/folders/filing';
@@ -40,7 +40,8 @@ export function SearchScreen({ query, back, face, name }: Props) {
     if (typed.trim() !== query) navigate({ kind: 'search', query: typed.trim() }, { replace: true });
   }, [settled]);
   const finding = useSyncExternalStore(finder.subscribe, finder.snapshot);
-  const { found, read, unreadable } = useMemo(() => results(chats, term, finding), [chats, term, finding]);
+  const titled = useMemo(() => titles(chats, term), [chats, term]);
+  const { found, read, unreadable } = useMemo(() => results(titled, finding), [titled, finding]);
 
   const field = useRef<HTMLInputElement>(null);
   // Not on the way back from a chat it opened, where a phone's keyboard would cover the results.

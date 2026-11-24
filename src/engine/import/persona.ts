@@ -2,7 +2,7 @@ import { fromBase64, toBase64 } from '../../base64';
 import { text } from '../../connectors/values';
 import { isRecord } from '../../record';
 import type { Persona } from '../../model/persona';
-import { withText } from './png';
+import { withTexts } from './png';
 import type { ImportResult } from './types';
 
 // A Risu persona record, from a backup's list or a persona PNG.
@@ -25,5 +25,5 @@ export function readPersona(payload: string, image: Uint8Array<ArrayBuffer>): Im
 // Risu's exportUserPersona (export spec §4): png, already a PNG, with one tEXt chunk `persona`, base64 of the UTF-8 JSON
 // that risuPersonaFields reads. Risu refuses an empty description on import, so a caller never writes one.
 export function writePersonaPng(png: Uint8Array, { name, description, alias }: Pick<Persona, 'name' | 'description' | 'alias'>): Uint8Array<ArrayBuffer> {
-  return withText(png, 'persona', toBase64(new TextEncoder().encode(JSON.stringify({ name, personaPrompt: description, note: alias }))));
+  return withTexts(png, [['persona', toBase64(new TextEncoder().encode(JSON.stringify({ name, personaPrompt: description, note: alias })))]]);
 }

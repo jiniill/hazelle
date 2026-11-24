@@ -5,7 +5,7 @@ import { byParagraph, placeMark, translatedMarks, withoutMarks } from '../../mod
 import type { Stored } from '../../model/kinds';
 import type { Shown } from '../../runtime/chat/talk';
 import type { OpenChat } from './useChat';
-import { inlaid, type LogRow } from '../ui';
+import { inlaid, storyText, type LogRow } from '../ui';
 import { shownHtml, speaker } from './ChatMessage';
 
 export type LogText = 'translation' | 'original' | 'both';
@@ -33,11 +33,22 @@ const aroundBoxes = (boxes: Display['boxes'][number], own: string[], decor: { bo
   return [...boxes.filter(({ at }) => at === 'top').map(box), ...own, ...boxes.filter(({ at }) => at === 'bottom').map(box)];
 };
 
-// A message's stories as the display gives them, drawn or not, with no pictures, and the bot's sheet: chat.rendered's.
-export function displayed(view: Display, index: number, bot: boolean) {
+// A message by index as the display gives it, drawn or not, with no pictures, and the bot's sheet: chat.rendered's.
+// Each is drawn once for the display, the sheet once for all of them.
+export function displayedRows(view: Display, bot: boolean): (index: number) => Hazelle.Rendered {
   const decor = { bot, url: () => undefined };
-  const text = view.texts[index]!;
-  return { stories: aroundBoxes(view.boxes[index]!, text.trim() ? [shownHtml(text, decor)] : [], decor), css: bot ? resolveAssets(view.css, decor.url) : '' };
+  const rows = new Map<number, Hazelle.Rendered>();
+  let css: string | undefined;
+  return (index) => {
+    const held = rows.get(index);
+    if (held) return held;
+    const text = view.texts[index]!;
+    const stories = aroundBoxes(view.boxes[index]!, text.trim() ? [shownHtml(text, decor)] : [], decor);
+    css ??= bot ? resolveAssets(view.css, decor.url) : '';
+    const row = { html: stories.join(''), css, text: stories.map(storyText).filter(Boolean).join('\n\n') };
+    rows.set(index, row);
+    return row;
+  };
 }
 
 export function logDraft(messages: Shown[], view: Display, { placed, pictures: drawn }: Illustrated, flipped: ReadonlySet<string>, shownTranslation: (text: string) => string, bot: boolean, names: OpenChat['names'], { hideMe, text, from, to }: LogChoices): LogDraft {

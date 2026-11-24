@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { HistoryMessage } from '../history';
 import type { RegexScript } from '../import/types';
 import { onProgress } from '../progress';
@@ -119,6 +119,31 @@ describe('Scripts', () => {
     needle = 'b';
     expect(executor.apply('output', 'bb', { index: 1, cbs }).text).toBe('XX');
     expect([options, replacements]).toEqual([1, 1]);
+  });
+
+  it('tries a pattern led by a run of any character at the start of its search alone, and finds what one tried everywhere finds', () => {
+    const same = (text: string) => text;
+    const texts = ['', 'a', 'xa\nb<s>c</s>\n<s>', 'ab\nab', '<s>\n<s>a', 'b\nxb', 'aXbxb\n'];
+    const patterns: [find: string, flags: string, alone: boolean][] = [
+      ['[\\s\\S]*?<s>', 'g', true], ['([\\s\\S]*)<s>', 'g', true], ['(?<head>[^]*?)a', 'g', true], ['(?:[\\w\\W]*)b$', 'gm', true], ['[\\d\\D]*?(?<=\\n)b', 'g', true],
+      ['[\\S\\s]*', 'g', true], ['[\\s\\S]*?', 'g', true], ['(.*?)b', 'gs', true], ['.*x', 'is', true], ['([\\s\\S]*?)x', 'giu', true],
+      // An alternative, a backreference, a group that repeats, a dot that stops at a line's end, a lookbehind.
+      ['[\\s\\S]*?a|b', 'g', false], ['([\\s\\S]*)x\\1', 'g', false], ['([\\s\\S]*){0}b', 'g', false], ['.*?b', 'g', false], ['(?<=a[\\s\\S]*)b', 'g', false],
+    ];
+    const original = RegExp.prototype.exec;
+    for (const [find, flags, alone] of patterns) {
+      for (const text of texts) {
+        const tried = new Set<boolean>();
+        const found = text.replace(new RegExp(find, flags), '[$&]');
+        const exec = vi.spyOn(RegExp.prototype, 'exec').mockImplementation(function (this: RegExp, read: string) {
+          if (this.source === new RegExp(find).source) tried.add(this.sticky);
+          return original.call(this, read);
+        });
+        const { text: written } = apply([script(find, '[$&]', { flags })], text, { cbs: same });
+        exec.mockRestore();
+        expect([find, text, written, [...tried]]).toEqual([find, text, found, [alone]]);
+      }
+    }
   });
 
   it('moves only the first match to the top or the bottom on a line of its own, with $1 expanded', () => {

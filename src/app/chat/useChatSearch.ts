@@ -1,14 +1,13 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { shown } from '../../model/chat';
 import type { Shown } from '../../runtime/chat/talk';
-import type { Translating } from '../../runtime/tasks/translate';
 import { useFocusReturn, type Seek } from '../ui';
 import { finder, seenText } from './search';
 
 // What 채팅 검색 opened the chat with: its term, and the message it was found in.
 export type SearchSeed = { term: string; at: string };
 
-export function useChatSearch(messages: Shown[], texts: string[], translating: Translating, flipped: ReadonlySet<string>, shownTranslation: (text: string) => string, seekTo: (key: string, lands: Seek['lands']) => void, seed: SearchSeed | null) {
+export function useChatSearch(messages: Shown[], texts: string[], flipped: ReadonlySet<string>, shownTranslation: (text: string) => string, seekTo: (key: string, lands: Seek['lands']) => void, seed: SearchSeed | null) {
   const [found, setFound] = useState<{ ids: ReadonlySet<string>; at: number } | null>(null);
   // The search bar's term and current hit, by message id so rows coming and going keep it. focus asks the field to take
   // the focus again, as Ctrl+F does while the bar is open; 0, a bar opened with the chat, leaves the focus where it is,
@@ -23,12 +22,13 @@ export function useChatSearch(messages: Shown[], texts: string[], translating: T
     seekTo(seed!.at, 'center');
   }, [messages]);
   const [find] = useState(finder);
+  // A translation still coming in is searched once it is saved, as the message then changes.
   const readAs = (message: Shown, index: number) => {
     const version = shown(message);
-    return seenText(texts[index]!, version, translating.live.get(version.id) ?? null, flipped.has(version.id), shownTranslation);
+    return seenText(texts[index]!, version, null, flipped.has(version.id), shownTranslation);
   };
   const hitsFor = (term: string) => find(messages.map(readAs), term).map((index) => messages[index]!.id);
-  const hits = useMemo(() => (search ? hitsFor(search.term) : []), [search?.term, messages, texts, translating, flipped, shownTranslation]);
+  const hits = useMemo(() => (search ? hitsFor(search.term) : []), [search?.term, messages, texts, flipped, shownTranslation]);
   // null with no current hit, or when its message was deleted.
   const searchAt = search?.at != null && hits.includes(search.at) ? search.at : null;
 

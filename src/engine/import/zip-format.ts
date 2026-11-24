@@ -46,12 +46,21 @@ export class ZipDirectory {
     this.limit = offset + size;
   }
 
-  headerSize() {
+  // bytes: the archive from its position from on, the directory among them.
+  read(bytes: Uint8Array, from = 0) {
+    for (let i = 0; i < this.count; i++) {
+      const at = this.offset - from;
+      const header = bytes.subarray(at, at + this.headerSize());
+      this.add(header, bytes.subarray(at + 46, at + 46 + this.variableSize(header)));
+    }
+  }
+
+  private headerSize() {
     zipRange(this.offset, 46, this.limit);
     return 46;
   }
 
-  variableSize(header: Uint8Array) {
+  private variableSize(header: Uint8Array) {
     if (u32(header, 0) !== 0x02014b50 || u16(header, 34) !== 0) throw new Error('Bad ZIP entry');
     if (u16(header, 8) & 1) throw new ZipEncrypted('encrypted ZIP entry');
     const length = u16(header, 28) + u16(header, 30) + u16(header, 32);
@@ -59,7 +68,7 @@ export class ZipDirectory {
     return length;
   }
 
-  add(header: Uint8Array, variable: Uint8Array) {
+  private add(header: Uint8Array, variable: Uint8Array) {
     const method = u16(header, 10);
     if (method !== 0 && method !== 8) throw new Error('Unknown ZIP compression');
     const nameLength = u16(header, 28);
@@ -102,13 +111,24 @@ export function zipDataStart(header: Uint8Array, entry: ZipEntry, limit: number)
   return start;
 }
 
+// fflate's CRC-32, which only its zip streams expose.
+function checksum() {
+  const sum = new ZipPassThrough('');
+  sum.ondata = () => {};
+  return sum;
+}
+
+export function crc32(bytes: Uint8Array) {
+  const sum = checksum();
+  sum.push(bytes, true);
+  return sum.crc >>> 0;
+}
+
 export class ZipIntegrity {
-  private readonly checksum = new ZipPassThrough('');
+  private readonly checksum = checksum();
   private size = 0;
 
-  constructor(private readonly entry: Pick<ZipEntry, 'size' | 'crc'>) {
-    this.checksum.ondata = () => {};
-  }
+  constructor(private readonly entry: Pick<ZipEntry, 'size' | 'crc'>) {}
 
   push(chunk: Uint8Array) {
     this.size += chunk.length;

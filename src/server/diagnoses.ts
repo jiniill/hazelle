@@ -47,16 +47,23 @@ function placeOf(after: string): Place | null {
 
 // Newest-first keyset pages over the groups, as the operator's other lists page (admin.ts); null for an after this never gave.
 // The bare facts column follows MAX(at), so a group shows its latest report (SQLite's rule for a lone MAX).
+// A newer day's groups all stand before an older day's, so a page is read day by day, by the key's first column, until
+// it is full: grouping every row kept for each page held the one database for its whole length.
 export async function readDiagnoses(db: Db, after: string | undefined, limit: number): Promise<{ rows: AutoRow[]; next: string | null } | null> {
   const from = after === undefined ? [null, null, null, null, null] : placeOf(after);
   if (!from) return null;
-  const { results } = await db
-    .prepare(`SELECT * FROM (SELECT day, event, detail, version, place, COUNT(*) AS people, SUM(times) AS times, MAX(at) AS at, facts FROM auto_diagnoses GROUP BY day, event, detail, version, place)
-      WHERE ?1 IS NULL OR (at, event, detail, version, place) < (?1, ?2, ?3, ?4, ?5) ORDER BY at DESC, event DESC, detail DESC, version DESC, place DESC LIMIT ?6`)
-    .bind(...from, limit)
-    .all<AutoRow>();
-  const last = results.at(-1);
-  return { rows: results, next: last && results.length === limit ? JSON.stringify([last.at, last.event, last.detail, last.version, last.place] satisfies Place) : null };
+  const kept = (await db.prepare('SELECT (SELECT MIN(day) FROM auto_diagnoses) AS oldest, (SELECT MAX(day) FROM auto_diagnoses) AS newest').first<{ oldest: number | null; newest: number | null }>())!;
+  const rows: AutoRow[] = [];
+  for (let day = from[0] === null ? kept.newest : visitDay(from[0]); day !== null && kept.oldest !== null && day >= kept.oldest && rows.length < limit; day -= DAY_MS) {
+    const { results } = await db
+      .prepare(`SELECT * FROM (SELECT day, event, detail, version, place, COUNT(*) AS people, SUM(times) AS times, MAX(at) AS at, facts FROM auto_diagnoses WHERE day = ?7 GROUP BY event, detail, version, place)
+        WHERE ?1 IS NULL OR (at, event, detail, version, place) < (?1, ?2, ?3, ?4, ?5) ORDER BY at DESC, event DESC, detail DESC, version DESC, place DESC LIMIT ?6`)
+      .bind(...from, limit - rows.length, day)
+      .all<AutoRow>();
+    rows.push(...results);
+  }
+  const last = rows.at(-1);
+  return { rows, next: last && rows.length === limit ? JSON.stringify([last.at, last.event, last.detail, last.version, last.place] satisfies Place) : null };
 }
 
 export const forgetDiagnoses = (db: Db, now: number) => db.prepare('DELETE FROM auto_diagnoses WHERE day < ?').bind(visitDay(now) - AUTO_KEEP_DAYS * DAY_MS);

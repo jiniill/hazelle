@@ -31,7 +31,7 @@ export class MemoryCache implements DeviceCache {
     if (!sameGeneration(this.generation, generation)) throw new GenerationChanged();
     const { changes, feed, scopes } = structuredClone(write);
     for (const row of changes) if (cacheNewer(this.rows.get(row.id), row)) this.rows.set(row.id, row);
-    this.states.set('', feed);
+    if (feed) this.states.set('', feed);
     for (const scope of scopes ?? []) this.states.set(scope.chat, scope.state);
   }
 

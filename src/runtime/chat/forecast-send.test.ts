@@ -1,8 +1,10 @@
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 import { startChat } from './chat-log';
 import { greetingPreview } from './greetings';
 import { answerable, testServer } from '../testing';
-import { forecastSend, wouldSend } from './turn-context';
+import { forecastChanges, forecastSend, wouldSend } from './turn-context';
+import type { SummaryRead } from '../../model/chat';
+import type { StoreChange } from '../store/object-index';
 
 const server = testServer();
 
@@ -29,3 +31,20 @@ it('forecasts a new chat before its first save as the request it sends once save
   expect(unsaved.prompt.messages).toEqual(saved.prompt.messages);
   expect(unsaved.prompt.messages.map(({ content }) => content).join('\n')).toContain('어서 와요.');
 }));
+
+it('forecasts again on a change it reads or a verdict that came or went, never on remarks, pictures or summaries alone', () => {
+  let heard: (changes: readonly StoreChange[]) => void = () => {};
+  let verdict: SummaryRead[] | null = null;
+  const store = { subscribe: (listener: typeof heard) => { heard = listener; return () => true; }, projections: { verdict: () => verdict } };
+  const changed = vi.fn();
+  forecastChanges(store, 'c', changed);
+  const told = (...kinds: string[]) => heard(kinds.map((kind) => ({ kind, id: 'x', parent: 'c' })));
+  told('remark', 'illustration', 'projection', 'summary');
+  expect(changed).not.toHaveBeenCalled();
+  told('remark', 'entry');
+  expect(changed).toHaveBeenCalledTimes(1);
+  verdict = [];
+  told('projection');
+  told('summary');
+  expect(changed).toHaveBeenCalledTimes(2);
+});

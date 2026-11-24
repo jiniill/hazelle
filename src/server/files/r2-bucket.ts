@@ -24,11 +24,11 @@ export function r2Bucket(config: R2Config): R2Bucket {
   const base = new URL(config.endpoint);
 
   // Only the wait for the answer's headers is timed: a picture's body streams to a reader as slowly as it reads.
-  const send = async (method: string, path: string, query: Record<string, string> = {}, body?: Uint8Array<ArrayBuffer> | ReadableStream<Uint8Array>, length?: number) => {
+  const send = async (method: string, path: string, query: Record<string, string> = {}, body?: Uint8Array<ArrayBuffer> | ReadableStream<Uint8Array>, length?: number, sha256?: string) => {
     const url = new URL(`/${config.bucket}/${path}`, base);
     for (const [name, value] of Object.entries(query)) url.searchParams.set(name, value);
     const amzDate = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
-    const payload = length === undefined ? (body ? sha256Hex(body as Uint8Array<ArrayBuffer>) : EMPTY) : 'UNSIGNED-PAYLOAD';
+    const payload = length === undefined ? (body ? (sha256 ?? sha256Hex(body as Uint8Array<ArrayBuffer>)) : EMPTY) : 'UNSIGNED-PAYLOAD';
     // fetch sends the host itself.
     const headers = { 'x-amz-content-sha256': payload, 'x-amz-date': amzDate, ...(length === undefined ? {} : { 'content-length': String(length) }) };
     const signed = { host: url.host, ...headers };
@@ -90,9 +90,9 @@ export function r2Bucket(config: R2Config): R2Bucket {
         source.destroy();
       }
     },
-    put: async (key, body) => {
+    put: async (key, body, sha256) => {
       // A view of an ArrayBuffer is sent as it is; a Uint8Array, which may view a shared buffer, is copied.
-      const response = await send('PUT', checkedKey(key), {}, body instanceof ArrayBuffer ? new Uint8Array(body) : new Uint8Array(body));
+      const response = await send('PUT', checkedKey(key), {}, body instanceof ArrayBuffer ? new Uint8Array(body) : new Uint8Array(body), undefined, sha256);
       if (!response.ok) await refused(response, `put ${key}`);
       await response.body?.cancel();
     },

@@ -1,6 +1,7 @@
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { namedArchives } from './backup/generation';
+import { pass } from './backup/snapshots';
 import { BASE_IDS_DIR, RETENTION_MS } from './db/account-db';
 import type { Db } from './db/service-db';
 import { fileKey, filePrefix, type Bucket } from './files/bucket';
@@ -39,7 +40,13 @@ async function reconcileOnce(dataDir: string, db: Db, files: Bucket, now: number
     await rm(join(dataDir, relative), { recursive: true, force: true });
     removed.push(relative);
   };
-  const account = async (incarnation: string) => (await db.prepare('SELECT 1 FROM accounts WHERE incarnation = ?').bind(incarnation).first()) !== null;
+  // The service database answers inside the call, so a loop of lookups alone holds every request until its last one.
+  let looked = 0;
+  const known = async (sql: string, ...values: string[]) => {
+    if (++looked % 100 === 0) await pass();
+    return (await db.prepare(sql).bind(...values).first()) !== null;
+  };
+  const account = (incarnation: string) => known('SELECT 1 FROM accounts WHERE incarnation = ?', incarnation);
 
   // At any age: only a reservation, which needs the account's row, writes under a prefix, so what lands there once the
   // row is gone is an upload that outlived its account.
@@ -91,7 +98,7 @@ async function reconcileOnce(dataDir: string, db: Db, files: Bucket, now: number
     if (newest < settled && !(await account(incarnation))) for (const name of names) await remove(`accounts/${name}`);
   }
 
-  const catalogued = async (incarnation: string, id: string) => (await db.prepare('SELECT 1 FROM snapshots WHERE incarnation = ? AND id = ?').bind(incarnation, id).first()) !== null;
+  const catalogued = (incarnation: string, id: string) => known('SELECT 1 FROM snapshots WHERE incarnation = ? AND id = ?', incarnation, id);
   // Written before its snapshot's row, so one younger than SETTLE_MS may belong to a capture still publishing.
   for (const name of await entries(join(dataDir, BASE_IDS_DIR))) {
     if ((await mtime(join(dataDir, BASE_IDS_DIR, name))) >= settled) continue;

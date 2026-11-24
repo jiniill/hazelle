@@ -1,12 +1,13 @@
 export { BackdropPicture, SHADE, type Shade } from './BackdropPicture';
 export { ORIGINAL_MARK, READER_RESIZED, Story, StoryBackdrop, storySelection, storyText, type BotButton } from './Story';
-export { BubblesContext, Failure, Marker, StoryMessage, Switcher, TimePinContext, ToolsFollowContext, Usage, useSplitsReplies, useTimePin, Waiting, type UsagePart } from './StoryMessage';
+export { BubblesContext, Failure, Marker, StoryMessage, TimePinContext, ToolsFollowContext, Usage, useSplitsReplies, useTimePin, Waiting, type UsagePart } from './StoryMessage';
 export { ReadingPreview, type PreviewRow } from './ReadingPreview';
 export { MascotRemark } from './MascotRemark';
 export { StatusBox } from './StatusBox';
 export { Scrubber } from './Scrubber';
 export { StepButtons } from './StepButtons';
 export { StoryPicture } from './StoryPicture';
+export { Switcher } from './Switcher';
 export { SceneBoard } from './SceneBoard';
 export { SelectionButton, type SelectionEnd } from './SelectionButton';
 export { inlaid } from './inlay';

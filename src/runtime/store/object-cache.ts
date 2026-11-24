@@ -9,7 +9,8 @@ export type CacheState = {
   revisions: [string, number][];
 };
 export type CachedScope = { state: CacheState; changes: SealedChange[] };
-export type CacheWrite = { changes: SealedChange[]; feed: CacheState; scopes?: { chat: string; state: CacheState }[] };
+// feed is left out when it would put the state already there.
+export type CacheWrite = { changes: SealedChange[]; feed?: CacheState; scopes?: { chat: string; state: CacheState }[] };
 
 // The account's one cache generation, shared by every tab. id is new after every clear; timeline is the server's
 // token, set once by adopt, and every row of a generation is of its timeline.

@@ -1,6 +1,6 @@
 export type MemoryCheck = 'stale' | 'full';
 
-type Run = { check: MemoryCheck; pending: boolean };
+type Run = { check: MemoryCheck; planned: MemoryCheck; pending: boolean };
 type ChatWork = { run: Run | null; record: string | null };
 
 export class MemorySchedule {
@@ -18,7 +18,7 @@ export class MemorySchedule {
   begin(chat: string, check: MemoryCheck): boolean {
     const work = this.work(chat);
     if (work.run) return false;
-    work.run = { check, pending: false };
+    work.run = { check, planned: check, pending: false };
     return true;
   }
 
@@ -30,13 +30,16 @@ export class MemorySchedule {
     return true;
   }
 
-  // Only the next plan consumes a check: one arriving during that plan or indexing survives finish.
+  // Only the next plan consumes a check: one arriving during that plan or indexing survives finish. The plan keeps the
+  // check it began with, so a full one arriving mid-plan is planned once, after it.
   planning(chat: string) {
-    this.chats.get(chat)!.run!.pending = false;
+    const run = this.chats.get(chat)!.run!;
+    run.planned = run.check;
+    run.pending = false;
   }
 
   includesNew(chat: string): boolean {
-    return this.chats.get(chat)?.run?.check === 'full';
+    return this.chats.get(chat)?.run?.planned === 'full';
   }
 
   requested(chat: string): string | null {

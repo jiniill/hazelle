@@ -24,12 +24,39 @@ function getChat(id, index)
     return json.decode(getChatMain(id, index))
 end
 
+-- What a read of the chat decoded, under the stamp of messages that cannot change; only a quiet run has one. Each
+-- read gets rows of its own, so a bot that edits what it read never sees another read's edits.
+local held = { stamp = nil, reads = {} }
+
+local function kept(id, key, read)
+    local stamp = chatStampMain(id)
+    if stamp == nil then
+        return json.decode(read())
+    end
+    if held.stamp ~= stamp then
+        held = { stamp = stamp, reads = {} }
+    end
+    local chat = held.reads[key]
+    if chat == nil then
+        chat = json.decode(read())
+        held.reads[key] = chat
+    end
+    local rows = {}
+    for at, row in ipairs(chat) do
+        rows[at] = { role = row.role, data = row.data, time = row.time }
+    end
+    return rows
+end
+
 function getFullChat(id)
-    return json.decode(getFullChatMain(id))
+    return kept(id, 'full', function() return getFullChatMain(id) end)
 end
 
 function getRecentChats(id, count)
-    return json.decode(getRecentChatsMain(id, count))
+    if type(count) ~= 'number' then
+        return json.decode(getRecentChatsMain(id, count))
+    end
+    return kept(id, 'recent ' .. count, function() return getRecentChatsMain(id, count) end)
 end
 
 function setFullChat(id, value)
@@ -123,6 +150,11 @@ end
 simpleLLM = async(function(id, prompt)
     return json.decode(LLMMain(id, json.encode({ { role = 'user', content = prompt } })):await())
 end)
+
+-- Asked before callListenMain, which runs the listeners on the chat, so that a stage nobody listens at never reads it.
+function hearsMain(stage)
+    return #listeners[stage] > 0
+end
 
 callListenMain = async(function(stage, id, value, meta)
     -- With nobody listening nothing is answered and the value is never decoded: a request is its whole text.

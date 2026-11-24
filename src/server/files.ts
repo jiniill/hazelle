@@ -108,7 +108,7 @@ async function publish(c: Context<AppEnv>, id: string) {
   if (removing) return fail(c, 503, 'busy', { retryAfter: RETRY_SECONDS });
   if (!reserved) return fail(c, 413, 'files-full');
   // A reclaimed copy is already durable. Never demote it to a reservation a generation would omit.
-  if (!stored) await c.env.files.put(fileKey(incarnation, id), body);
+  if (!stored) await c.env.files.put(fileKey(incarnation, id), body, id);
   const fileBytes = await db
     .prepare(`UPDATE account_files SET stored = 1 WHERE incarnation = ?1 AND id = ?2 RETURNING (SELECT file_bytes FROM accounts WHERE incarnation = ?1) AS fileBytes`)
     .bind(incarnation, id)

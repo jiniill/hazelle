@@ -170,10 +170,10 @@ export function cachedR2Bucket(store: R2Bucket, dataDir: string, capBytes: numbe
       const body = await store.get(key);
       return body && fill(id, body);
     },
-    put: async (key, body) => {
-      if (checkedKey(key).startsWith('snapshots/')) return store.put(key, body);
+    put: async (key, body, sha256) => {
+      if (checkedKey(key).startsWith('snapshots/')) return store.put(key, body, sha256);
       const id = idOf(key);
-      await store.put(key, body);
+      await store.put(key, body, sha256);
       await place(id, body instanceof Uint8Array ? body : new Uint8Array(body));
     },
     trim,

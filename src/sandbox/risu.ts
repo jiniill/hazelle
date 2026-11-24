@@ -230,8 +230,8 @@ export function installRisu(api: Hazelle.Api, scope: Scope, layerOf: typeof page
     const chat = await current();
     if (!chat) return null;
     const messages = await chat.messages();
-    const [greeting, ...drawn] = await Promise.all([chat.rendered(null), ...messages.map(({ index, id, version }) => chat.rendered({ index, id, version }))]);
-    const all = [...(greeting ? [{ index: -1, id: '', drawn: greeting }] : []), ...messages.flatMap(({ index, id }, at) => (drawn[at] ? [{ index, id, drawn: drawn[at] }] : []))];
+    const { css, rows: [greeting, ...drawn] } = await frame.rendered(chat.id, [null, ...messages.map(({ index, id, version }) => ({ index, id, version }))]);
+    const all = [...(greeting ? [{ index: -1, id: '', drawn: { ...greeting, css } }] : []), ...messages.flatMap(({ index, id }, at) => (drawn[at] ? [{ index, id, drawn: { ...drawn[at], css } }] : []))];
     all.forEach(kept);
     return all;
   };

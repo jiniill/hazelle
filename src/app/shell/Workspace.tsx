@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { hearServedBuild } from '../../runtime/api';
 import { markSeen } from '../../runtime/chat/chat-context';
 import type { AccountFacts } from '../../runtime/account/account';
 import { Drafts } from '../../runtime/device/drafts';
 import { BUILT_VERSION, PAGE_BUILD, selfHost } from '../../runtime/installation';
 import { openGuestSession, openSession, type Session } from '../../runtime/session';
-import type { PullProgress } from '../../runtime/store/store';
+import type { ObjectStore, PullProgress } from '../../runtime/store/store';
 import type { Unlocked } from '../account/AccountFlow';
 import { UnreachableScreen } from '../account/UnreachableScreen';
 import { ARIN } from '../common/arin';
@@ -42,10 +42,8 @@ const SUSPENDED: Standing = {
 const FULL: Standing = { message: '저장 공간이 가득 찼어요', detail: `새로 만든 내용은 저장되지 않아요. ${PURGE_FREES}` };
 // Ahead of 연결이 불안정해요: calls wait out a restore as they wait out a dropped connection.
 const RESTORING: Standing = { message: '계정 복원 중', detail: '' };
-const subscribeNothing = () => () => {};
 const NOT_PULLED: PullProgress = { objects: 0, pages: 0, waiting: false };
 const FIRST_LOAD = '처음에만 오래 걸려요.';
-const notWaiting = () => false;
 const DEVICE: DeviceStorage = { read: (key) => readPersisted<string | null>(key, String, null), forget: forgetPersisted };
 
 // Said once in the session opened after the last one heard the account was restored, with the writes the restore
@@ -214,14 +212,6 @@ export function Workspace({ accountId, vaultKey, username, ...account }: Unlocke
     return () => { void drafts.close(); };
   }, [drafts, accountId, vaultKey]);
   const [progress, setProgress] = useState<PullProgress>(NOT_PULLED);
-  const waiting = useSyncExternalStore(session?.store.subscribeWaiting ?? subscribeNothing, session?.store.waiting ?? notWaiting, notWaiting);
-  // The notice alone, not the facts, so the counts every write brings render nothing here.
-  const { facts } = account;
-  const noticeOf = () => {
-    const { restoring, suspended, full } = facts.snapshot();
-    return restoring ? RESTORING : suspended ? SUSPENDED : full ? FULL : null;
-  };
-  const notice = useSyncExternalStore(facts.subscribe, noticeOf, noticeOf);
 
   useEffect(() => {
     const abandon = new AbortController();
@@ -270,7 +260,7 @@ export function Workspace({ accountId, vaultKey, username, ...account }: Unlocke
     <SessionProvider session={session} account={account}>
       {/* Around the toasts, which show a character's picture that 이미지 가리기 covers. */}
       <DisplayProvider>
-        <ToastProvider standing={notice !== RESTORING && waiting ? RECONNECTING : notice} onReport={() => navigate({ kind: 'board-write', operator: true })}>
+        <StandingToasts store={session.store} facts={account.facts}>
           <PlaceNote />
           {rewound !== null && <Restored dropped={rewound} />}
           <Unread facts={account.facts} kind="unreadNotices" />
@@ -288,9 +278,25 @@ export function Workspace({ accountId, vaultKey, username, ...account }: Unlocke
               <Layout />
             </ImportProvider>
           </TutorialProvider>
-        </ToastProvider>
+        </StandingToasts>
       </DisplayProvider>
     </SessionProvider>
+  );
+}
+
+// Apart, so a standing notice coming or going does not draw the whole workspace again.
+function StandingToasts({ store, facts, children }: { store: ObjectStore; facts: AccountFacts; children: ReactNode }) {
+  const waiting = useSyncExternalStore(store.subscribeWaiting, store.waiting);
+  // The notice alone, not the facts, so the counts every write brings render nothing here.
+  const noticeOf = () => {
+    const { restoring, suspended, full } = facts.snapshot();
+    return restoring ? RESTORING : suspended ? SUSPENDED : full ? FULL : null;
+  };
+  const notice = useSyncExternalStore(facts.subscribe, noticeOf, noticeOf);
+  return (
+    <ToastProvider standing={notice !== RESTORING && waiting ? RECONNECTING : notice} onReport={() => navigate({ kind: 'board-write', operator: true })}>
+      {children}
+    </ToastProvider>
   );
 }
 

@@ -45,6 +45,12 @@ function fakeApi({ open = true } = {}) {
   const model = vi.fn<Hazelle.Chat['model']>(async () => ({ ok: true, text: 'made' }));
   const send = vi.fn<Hazelle.Chat['send']>(async () => ({ ok: true }));
   const editCard = vi.fn<Hazelle.Chat['editCard']>(async () => ({ ok: true }));
+  const drawn = (at: Hazelle.At | null) => (at === null ? { html: '<i>welcome</i>', css: '.b { color: red; }', text: 'welcome' } : at.id === 'm1' ? { html: '<b>hi there</b>', css: '.b { color: red; }', text: 'hi there' } : null);
+  const rendered = vi.fn<Hazelle.Chat['rendered']>(async (at) => drawn(at));
+  const screen = vi.fn<Hazelle.Frame['rendered']>(async (_chat, at) => {
+    const rows = at.map(drawn);
+    return { css: rows.find((row) => row !== null)?.css ?? '', rows: rows.map((row) => row && { html: row.html, text: row.text }) };
+  });
   const chat = {
     id: 'chat-1', character: { name: 'Mira', description: 'A sailor' }, persona: null, length: messages.length,
     messages: async () => messages, greeting: async () => null, card: async () => card, lorebook: async () => lorebook, setup: async () => setup,
@@ -53,7 +59,7 @@ function fakeApi({ open = true } = {}) {
     writeLore: (entry: Omit<Hazelle.LoreEntry, 'owner'>) => { lore.push(entry); },
     variables: { set: (name: string, value: string) => { variables.push([name, value]); }, entries: async () => [...held], delete: (name: string) => { removed.push(name); } },
     model, send, editCard, say: (text: string, tone = 'normal') => { said.push(text); tones.push(tone); },
-    rendered: async (at: Hazelle.At | null) => (at === null ? { html: '<i>welcome</i>', css: '.b { color: red; }', text: 'welcome' } : at.id === 'm1' ? { html: '<b>hi there</b>', css: '.b { color: red; }', text: 'hi there' } : null),
+    rendered,
   } as unknown as Hazelle.Chat;
   const api = {
     api: 1, tool: { name: 'test', author: 'jin', displayName: 'Test', version: '1' }, context: 'frame',
@@ -63,7 +69,7 @@ function fakeApi({ open = true } = {}) {
       delete: async (key: string) => { storage.delete(key); }, keys: async () => [...storage.keys()], onChange: () => () => {},
     },
     settings: async () => settings, setSetting: async (key: string, value: string | number | boolean) => { settings[key] = value; }, account: async () => account, post: () => {}, page: null,
-    frame: { chat: async () => (open ? chat : null), show: vi.fn(), hide: vi.fn(), menu: (items: { id: string; label: string }[]) => { menus.push(items); }, missing: (name: string) => { missing.push(name); }, layer: vi.fn(), missed: vi.fn(), layered: (listener: typeof layer.word) => { layer.word = listener; } },
+    frame: { chat: async () => (open ? chat : null), show: vi.fn(), hide: vi.fn(), menu: (items: { id: string; label: string }[]) => { menus.push(items); }, missing: (name: string) => { missing.push(name); }, layer: vi.fn(), missed: vi.fn(), layered: (listener: typeof layer.word) => { layer.word = listener; }, rendered: screen },
   } as unknown as Hazelle.Api;
   // The plugin's layer with no page under it: body alone is in it, and what is made there is another stand-in.
   const layer = {
@@ -77,7 +83,7 @@ function fakeApi({ open = true } = {}) {
     })) as unknown as typeof pageLayer,
   };
   const fire = (event: string, ...args: unknown[]) => (handlers.get(event) as (...args: unknown[]) => unknown)(...args);
-  return { api, chat, card, layer, handlers, storage, menus, missing, edits, added, said, tones, lore, variables, held, removed, cut, data, model, send, editCard, settings, fire };
+  return { api, chat, card, layer, handlers, storage, menus, missing, edits, added, said, tones, lore, variables, held, removed, cut, data, model, send, editCard, rendered, screen, settings, fire };
 }
 const install = (fake: ReturnType<typeof fakeApi>, scope: Record<string, unknown> = {}) => {
   installRisu(fake.api, scope, fake.layer.of);
@@ -416,6 +422,17 @@ describe('the Risu adapter', () => {
     expect(await root.querySelector('.text-input-area')).toBeNull();
     expect(await (await root.querySelectorAll('.text-input-area button') as unknown as unknown[]).length).toBe(0);
     expect(fake.missing).toEqual([]);
+  });
+
+  it('asks the host for the chat screen\'s rows in one call, and for one row alone', async () => {
+    const fake = fakeApi();
+    const { Risuai } = install(fake);
+    const root = await Risuai.getRootDocument!() as { querySelector(selector: string): Promise<unknown>; querySelectorAll(selector: string): Promise<unknown> };
+    await root.querySelectorAll('.risu-chat[data-chat-index]');
+    await root.querySelector('.default-chat-screen');
+    expect([fake.screen.mock.calls, fake.rendered.mock.calls.length]).toEqual([[['chat-1', [null, { index: 0, id: 'm0', version: 'v0' }, { index: 1, id: 'm1', version: 'v1' }]], ['chat-1', [null, { index: 0, id: 'm0', version: 'v0' }, { index: 1, id: 'm1', version: 'v1' }]]], 0]);
+    await root.querySelector('[data-chat-index="1"]');
+    expect([fake.screen.mock.calls.length, fake.rendered.mock.calls.length]).toEqual([2, 1]);
   });
 
   it('tells 점검 of a member a chat row does not answer, which reads undefined: a row is read and its own layer written', async () => {

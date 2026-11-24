@@ -1,13 +1,18 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Card } from '../../engine/import/types';
 import type { Chat } from '../../model/chat';
-import { foldTerm } from '../../model/search';
-import { ChatFinder, liveChats, results } from './chat-search';
+import { foldTerm, litIn } from '../../model/search';
+import { ChatFinder, liveChats, results, titles } from './chat-search';
 import type { Write } from '../store/object-writes';
 import { ReadModels } from '../store/read-model';
 import type { ObjectStore } from '../store/store';
 import { testServer } from '../testing';
 import { MemoryCache } from '../testing/cache';
+
+vi.mock('../../model/search', async (actual) => {
+  const search = await actual<typeof import('../../model/search')>();
+  return { ...search, litIn: vi.fn(search.litIn) };
+});
 
 const server = testServer();
 
@@ -43,7 +48,7 @@ describe('채팅 검색', () => {
     const finder = new ChatFinder(store);
     const term = foldTerm('용');
     finder.find(term, chats);
-    const { found, read, unreadable } = results(chats, term, await finished(finder));
+    const { found, read, unreadable } = results(titles(chats, term), await finished(finder));
     expect(found.map(({ summary }) => summary.id)).toEqual([named, newer, older]);
     expect(found[0]!.title).toEqual({ text: '용의 둥지', from: 0, to: 1 });
     expect(found[0]!.hit).toBeNull();
@@ -61,11 +66,25 @@ describe('채팅 검색', () => {
     const chats = liveChats(new ReadModels(store).library.snapshot());
     const finder = new ChatFinder(store);
     finder.find('린', chats);
-    expect(results(chats, '린', await finished(finder)).found[0]!.hit).toMatchObject({ lit: { text: '린가 Luna를 불렀다', from: 0, to: 1 } });
+    expect(results(titles(chats, '린'), await finished(finder)).found[0]!.hit).toMatchObject({ lit: { text: '린가 Luna를 불렀다', from: 0, to: 1 } });
     expect((await store.update('character', luna, (current) => ({ ...current, card: card('Nova') }))).ok).toBe(true);
     const renamed = liveChats(new ReadModels(store).library.snapshot());
     finder.find('린', renamed);
-    expect(results(renamed, '린', await finished(finder)).found[0]!.hit).toMatchObject({ lit: { text: '린가 Nova를 불렀다' } });
+    expect(results(titles(renamed, '린'), await finished(finder)).found[0]!.hit).toMatchObject({ lit: { text: '린가 Nova를 불렀다' } });
+  });
+
+  it('matches titles and previews once per term, not again for each tell of the pass', async () => {
+    const { store } = await server.account();
+    await chat(store, { title: '용의 둥지' }, '용');
+    await chat(store, {}, '용');
+    const chats = liveChats(new ReadModels(store).library.snapshot());
+    const finder = new ChatFinder(store);
+    const titled = titles(chats, '용');
+    finder.find('용', chats);
+    vi.mocked(litIn).mockClear();
+    expect(results(titled, finder.snapshot()).found).toHaveLength(1);
+    expect(results(titled, await finished(finder)).found).toHaveLength(2);
+    expect(litIn).not.toHaveBeenCalled();
   });
 
   it('goes on from what a stopped pass read for the same term, and starts over for another', async () => {
@@ -78,14 +97,14 @@ describe('채팅 검색', () => {
     finder.stop();
     expect(finder.snapshot().running).toBe(false);
     await new Promise((resolve) => setTimeout(resolve, 20));
-    expect(results(chats, '용', finder.snapshot()).read).toBe(0);
+    expect(results(titles(chats, '용'), finder.snapshot()).read).toBe(0);
     finder.find('용', chats);
-    expect(results(chats, '용', await finished(finder)).found).toHaveLength(2);
+    expect(results(titles(chats, '용'), await finished(finder)).found).toHaveLength(2);
     expect(reads).toHaveBeenCalledTimes(3);
     finder.find('용', chats);
     expect(reads).toHaveBeenCalledTimes(3);
     finder.find('불', chats);
-    expect(results(chats, '불', await finished(finder)).found).toHaveLength(1);
+    expect(results(titles(chats, '불'), await finished(finder)).found).toHaveLength(1);
     expect(reads).toHaveBeenCalledTimes(6);
   });
 

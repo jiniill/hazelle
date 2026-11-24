@@ -118,26 +118,33 @@ export class ChatFinder {
   }
 }
 
-// title and preview: lit where the summary's own holds the term. hit: where its messages do, once read.
-export type Found = { summary: ChatSummary; title: Lit | null; preview: Lit | null; hit: MessageHit | null };
+// title and preview: lit where the summary's own holds the term.
+type Titled = { summary: ChatSummary; title: Lit | null; preview: Lit | null };
+// Apart from results, so a tick of the scan does not match every title and preview again.
+export type Titles = { term: string; chats: readonly Titled[] };
+
+export const titles = (chats: readonly ChatSummary[], term: string): Titles => ({
+  term,
+  chats: term ? chats.map((summary) => ({ summary, title: litIn(summary.title, term), preview: summary.preview === null ? null : litIn(summary.preview, term) })) : [],
+});
+
+// hit: where its messages hold the term, once read.
+export type Found = Titled & { hit: MessageHit | null };
 // read: the chats whose messages were read for the term, unreadable among them.
 export type Results = { found: Found[]; read: number; unreadable: number };
 
 // Chats whose title or preview holds the term first, then those whose messages alone do; each by latest activity.
-export function results(chats: readonly ChatSummary[], term: string, finding: Finding): Results {
-  if (!term) return { found: [], read: 0, unreadable: 0 };
+export function results({ term, chats }: Titles, finding: Finding): Results {
   const named: Found[] = [];
   const bodies: Found[] = [];
   let read = 0;
   let unreadable = 0;
-  for (const summary of chats) {
+  for (const { summary, title, preview } of chats) {
     const done = finding.term === term ? finding.read.get(summary.id) : undefined;
     const current = done?.order === summary.order ? done : undefined;
     if (current) read++;
     if (current && 'unreadable' in current) unreadable++;
     const hit = current && 'hit' in current ? current.hit : null;
-    const title = litIn(summary.title, term);
-    const preview = summary.preview === null ? null : litIn(summary.preview, term);
     if (title || preview) named.push({ summary, title, preview, hit });
     else if (hit) bodies.push({ summary, title, preview, hit });
   }

@@ -1,6 +1,6 @@
 import { deflateSync } from 'fflate';
 import { expansionLimit, inflate, TooLarge } from './inflate';
-import { u16, u32, ZipDirectory, ZipEncrypted, zipEnd, zipRange, zipDataStart, ZipIntegrity } from './zip-format';
+import { crc32, u16, u32, ZipDirectory, ZipEncrypted, zipEnd, zipRange, zipDataStart, ZipIntegrity } from './zip-format';
 
 const END_OF_DIRECTORY = 0x06054b50;
 const DIRECTORY_ENTRY = 0x02014b50;
@@ -29,12 +29,7 @@ export function openZip(bytes: Uint8Array<ArrayBuffer>): Zip | null {
     if (start < 0) return null;
     const count = u16(bytes, record + 10);
     const directory = new ZipDirectory(count, directoryStart, directorySize, record, start);
-    for (let i = 0; i < count; i++) {
-      const at = directory.offset;
-      const header = bytes.subarray(at, at + directory.headerSize());
-      const length = directory.variableSize(header);
-      directory.add(header, bytes.subarray(at + 46, at + 46 + length));
-    }
+    directory.read(bytes);
     let unpacked = 0;
     for (const entry of directory.entries.values()) if (entry.method === DEFLATED) unpacked += entry.size;
     if (unpacked > expansionLimit(bytes.length)) throw new TooLarge('expands-too-far');
@@ -66,12 +61,6 @@ export function openZip(bytes: Uint8Array<ArrayBuffer>): Zip | null {
   }
 }
 
-const CRC = Array.from({ length: 256 }, (_, n) => {
-  let c = n;
-  for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-  return c >>> 0;
-});
-export const crc32 = (bytes: Uint8Array) => (bytes.reduce((c, byte) => CRC[(c ^ byte) & 0xff]! ^ (c >>> 8), 0xffffffff) ^ 0xffffffff) >>> 0;
 const UTF8_NAMES = 0x800;
 const encoder = new TextEncoder();
 

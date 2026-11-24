@@ -28,7 +28,7 @@ import { cardAssets } from '../library/characters';
 import { toolLore } from '../library/lore';
 import { chatPersona } from '../library/personas';
 import { noOutcome, ToolStopped } from '../scripts/binding';
-import type { ScriptPages } from '../scripts/pages';
+import type { ScreenAt, ScriptPages } from '../scripts/pages';
 import type { ScriptJournal } from '../scripts/journal';
 import type { Session } from '../session';
 import type { MenuItem, ToolHosts } from './facade';
@@ -40,6 +40,8 @@ import { readToolAsset, saveToolAsset, setToolSettings, toolAssetId, toolChatDat
 // The sandbox refuses story changes in these too (sandbox/api.ts); a page that posts its own outcome is not trusted to.
 const STORY_LOCKED = new Set<ToolEvent['kind']>(['change', 'branch', 'replying', 'sending', 'requesting', 'calling', 'showing']);
 const isMenu = (value: unknown): value is MenuItem[] => Array.isArray(value) && value.every((item) => isRecord(item) && typeof item.id === 'string' && typeof item.label === 'string');
+// A message version as chat.rendered asks the chat screen for it; undefined for anything else.
+const screenAt = (value: unknown): ScreenAt | undefined => value === null ? null : isRecord(value) && typeof value.id === 'string' && typeof value.version === 'string' ? { id: value.id, version: value.version } : undefined;
 
 function isJson(value: unknown): value is Json {
   try { JSON.stringify(value); } catch { return false; }
@@ -316,6 +318,13 @@ export class ToolApi {
         this.services.journal.report(entry.chat ?? '', { errors: [], missing: RISU_DECLINED.has(first) ? [] : [first], trace: { entries: [log], omitted: 0 } }, from);
         return;
       }
+      case 'frame.rendered': {
+        const ats = Array.isArray(second) ? second.map(screenAt) : [undefined];
+        if (!own || typeof first !== 'string' || !ats.every((at) => at !== undefined)) break;
+        if (!this.runtime.allowed(first, entry.module)) throw new ToolStopped();
+        const drawn = ats.map((at) => this.services.pages.rendered(first, at));
+        return { css: drawn.find((row) => row !== null)?.css ?? '', rows: drawn.map((row) => row && { html: row.html, text: row.text }) };
+      }
       case 'storage.get': if (typeof first === 'string') return this.storage.read(holder(entry), first); break;
       case 'storage.keys': return toolKeys(this.session.store, entry.module);
       case 'storage.set': if (typeof first === 'string' && isJson(second)) return this.storage.write(entry.module, first, second); break;
@@ -355,7 +364,7 @@ export class ToolApi {
         return this.services.pages.editCard(first, second, { kind: 'module', id: entry.module }, AbortSignal.any([frame.closing.signal, cancel]));
       }
       case 'chat.rendered': {
-        const at = second === null ? null : isRecord(second) && typeof second.id === 'string' && typeof second.version === 'string' ? { id: second.id, version: second.version } : undefined;
+        const at = screenAt(second);
         if (typeof first !== 'string' || at === undefined) break;
         if (!this.runtime.allowed(first, entry.module)) throw new ToolStopped();
         return this.services.pages.rendered(first, at);
@@ -493,8 +502,22 @@ export class ToolApi {
   }
 
   private state(frame: Frame, context: Context): Promise<ToolState> {
-    context.state ??= this.read(frame, context, (lane) => this.session.store.evaluation.state(lane, context.scope, '', context.signal));
+    context.state ??= context.event === undefined ? this.outside(frame, context) : this.evaluate(frame, context);
     return context.state;
+  }
+
+  private outside(frame: Frame, context: Context): Promise<ToolState> {
+    const { messages } = this.session.store.foldedChat(context.chat);
+    const minute = Math.floor(context.scope.clock.now / 60_000);
+    if (frame.outside?.chat === context.chat && frame.outside.messages === messages && frame.outside.minute === minute) return frame.outside.state;
+    const kept = { chat: context.chat, messages, minute, state: this.evaluate(frame, context) };
+    frame.outside = kept;
+    kept.state.catch(() => { if (frame.outside === kept) frame.outside = null; });
+    return kept.state;
+  }
+
+  private evaluate(frame: Frame, context: Context): Promise<ToolState> {
+    return this.read(frame, context, (lane) => this.session.store.evaluation.state(lane, context.scope, '', context.signal));
   }
 
   // Concurrent events have immutable snapshots but one ordered changed-tail transport per frame.

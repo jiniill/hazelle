@@ -14,14 +14,12 @@ import { useChatTranslation } from './useChatTranslation';
 const session = { store: { get: () => null }, illustrator: { draw: vi.fn() } };
 const toast = { error: vi.fn(), show: vi.fn() };
 let drawings: ReadonlyMap<string, Drawing> = new Map();
-const translating = { live: new Map<string, string>(), failed: new Map() };
 const pictures: [] = [];
 vi.mock('../session', () => ({
   useSession: () => session,
   useCaptured: (read: (store: typeof session.store) => unknown) => read(session.store),
   useChildren: () => pictures,
   useIllustrating: () => drawings,
-  useTranslating: () => translating,
 }));
 vi.mock('../toast', () => ({ useToast: () => toast }));
 vi.mock('../../runtime/chat/message-acts', () => ({ pickVersion: vi.fn(async () => ({ ok: true })) }));
@@ -76,7 +74,7 @@ it('searches the original when translation is flipped and keeps the choice per r
   const chat: Chat = { title: null, character: null, models: {} };
   function Probe() {
     translation = useChatTranslation('chat', chat, messages, texts, translateSwitches(session.store, null));
-    search = useChatSearch(messages, texts, translation.translating, translation.flipped, translation.shownTranslation, () => {}, null);
+    search = useChatSearch(messages, texts, translation.flipped, translation.shownTranslation, () => {}, null);
     return null;
   }
   const root = probeRoot();

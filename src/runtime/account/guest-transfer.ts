@@ -169,14 +169,9 @@ export async function transferGuest(accountId: string, vaultKey: VaultKey, optio
     }
     for (let start = 0; start < writes.length;) {
       if (signal?.aborted) return failed('stopped');
-      const batch: SealedWrite[] = [];
-      let end = start;
-      while (end < writes.length && batch.length < BATCH_LIMITS.items) {
-        const candidate = [...batch, writes[end]!];
-        if (new TextEncoder().encode(JSON.stringify({ timeline: destination.data.timeline, writes: candidate, files: [] })).length > BATCH_LIMITS.bytes) break;
-        batch.push(writes[end++]!);
-      }
-      if (!batch.length) return failed('too-large');
+      const end = batchEnd(destination.data.timeline, writes, start);
+      if (end === start) return failed('too-large');
+      const batch = writes.slice(start, end);
       const sent = await target.batch(destination.data.timeline, batch, [], signal);
       if (!sent.ok) return sent;
       known = Math.max(known, ...sent.data.revs);
@@ -214,6 +209,20 @@ export async function transferGuest(accountId: string, vaultKey: VaultKey, optio
   await forgetLog(guest.accountId);
   await forgetGuestVault(guest.accountId);
   return { ok: true, data: null };
+}
+
+const utf8 = new TextEncoder();
+
+// Where the request that takes writes from start must end: within BATCH_LIMITS's items, and its bytes as the request's
+// JSON counts them, each write measured once with the comma before it.
+export function batchEnd(timeline: string, writes: readonly SealedWrite[], start: number) {
+  let bytes = utf8.encode(JSON.stringify({ timeline, writes: [], files: [] })).length;
+  let end = start;
+  for (; end < writes.length && end - start < BATCH_LIMITS.items; end++) {
+    bytes += (end > start ? 1 : 0) + utf8.encode(JSON.stringify(writes[end])).length;
+    if (bytes > BATCH_LIMITS.bytes) break;
+  }
+  return end;
 }
 
 async function copyOrder(target: Backend, accountId: string, vaultKey: VaultKey, timeline: string, ids: string[], signal?: AbortSignal): Promise<ApiResult<number>> {

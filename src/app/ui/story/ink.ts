@@ -118,6 +118,9 @@ export function inkOn(host: HTMLElement, shadow: ShadowRoot, fresh: boolean): St
       if (now.has(element)) continue;
       element.removeAttribute(LIT);
       (element as HTMLElement).style.removeProperty(OWN);
+      // An empty style attribute left behind tells the element apart from the one a draw brings (Story's morph), so
+      // every block the ink once lit is fitted again at each draw. Read as an attribute: Chromium empties it only then.
+      if (element.getAttribute('style') === '') element.removeAttribute('style');
     }
     for (const [element, colour] of now) {
       element.toggleAttribute(LIT, true);

@@ -240,6 +240,7 @@ export function connectApi(port: Port, execute: (code: string, api: Hazelle.Api)
           layer: (takes, shows) => fire('frame.layer', [takes, shows]),
           missed: (what) => fire('frame.missed', [what]),
           layered: (listener) => { layered = listener; },
+          rendered: (chat, at) => call('frame.rendered', [chat, at]),
         } : null,
       };
       void Promise.resolve().then(() => execute(data.code, api)).then(() => {

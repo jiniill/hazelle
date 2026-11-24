@@ -739,6 +739,39 @@ it('notifies a running tool after pulling a data change written on another devic
   } finally { host.close(); }
 });
 
+it('reads a page\'s chat state once while nothing changes, again once the chat does or the minute turns, and keeps no read that failed', () => withTools(async (session, connect) => {
+  const f = await fixture(session);
+  const transport = inProcessTools(() => {});
+  const host = connect(transport.open);
+  const close = host.page(f.module, page(f.chat));
+  const states = vi.spyOn(session.store.evaluation, 'state');
+  // From the top of the next minute, so none turns under the reads before the one that is stepped to.
+  let from = Math.ceil(Date.now() / 60_000) * 60_000;
+  const started = performance.now();
+  const clock = vi.spyOn(Date, 'now').mockImplementation(() => Math.floor(from + performance.now() - started));
+  try {
+    await vi.waitFor(() => expect(transport.frames[0]!.api).not.toBeNull());
+    const chat = transport.frames[0]!.api!.page!.chat!;
+    const texts = async () => (await chat.messages()).map(({ text }) => text);
+    expect(await texts()).toEqual(['hello']);
+    expect(await chat.variables.entries()).toEqual([]);
+    expect(await texts()).toEqual(['hello']);
+    expect(states).toHaveBeenCalledTimes(1);
+    await appendUserMessage(session.store, f.chat, { id: crypto.randomUUID(), text: 'again' });
+    states.mockResolvedValueOnce({ kind: 'runaway' });
+    await expect(chat.messages()).rejects.toThrow();
+    expect(await texts()).toEqual(['hello', 'again']);
+    expect(await texts()).toEqual(['hello', 'again']);
+    expect(states).toHaveBeenCalledTimes(3);
+    await setModels(session.store, { kind: 'module', id: f.module }, true);
+    expect(await texts()).toEqual(['hello', 'again']);
+    expect(states).toHaveBeenCalledTimes(4);
+    from += 60_000;
+    expect(await texts()).toEqual(['hello', 'again']);
+    expect(states).toHaveBeenCalledTimes(5);
+  } finally { clock.mockRestore(); close(); host.close(); }
+}));
+
 it('applies page chat writes through the page runtime, distinguishes null and deletion, and keeps the page alive while open', () => withTools(async (session, connect) => {
   const f = await fixture(session);
   const transport = inProcessTools(() => {});
@@ -934,7 +967,8 @@ it('runs a frame tool as one frame: its registered items, a press from the chat,
   } finally { host.close(); }
 }));
 
-it('lays a frame tool\'s layer: its boxes are drawn without telling it, its word of a missed pointer reaches the screen, and it is told when the screen takes it back', () => withTools(async (session, connect) => {
+// A frame tool that does nothing, on in a new chat, and its frame warmed there.
+async function idleFrame(session: Session, connect: (open: OpenFrame) => ToolHost) {
   await answerable(session);
   const parsed = source('1', '');
   const added = await importTool(session.store, session.files, { ...parsed, manifest: { ...parsed.manifest, page: null, menu: [], risu: { verdict: 'all', missing: [], hosts: [] } } });
@@ -946,10 +980,26 @@ it('lays a frame tool\'s layer: its boxes are drawn without telling it, its word
   const module = added.data.id;
   const transport = inProcessRisu(() => {});
   const host = connect(transport.open);
+  await host.warm(chat);
+  await vi.waitFor(() => expect(host.frames().get(module)).toBeDefined());
+  return { chat, module, host, frame: transport.frames[0]!.api!.frame! };
+}
+
+it('answers a frame tool the chat screen\'s rows in one call, each as the screen draws it and the sheet once', () => withTools(async (session, connect) => {
+  const { chat, host, frame } = await idleFrame(session, connect);
   try {
-    await host.warm(chat);
-    await vi.waitFor(() => expect(host.frames().get(module)).toBeDefined());
-    const frame = transport.frames[0]!.api!.frame!;
+    const welcome = { html: '<p>welcome</p>', css: '.b { color: red; }', text: 'welcome' };
+    expect(await frame.rendered(chat, [null])).toEqual({ css: '', rows: [null] });
+    const leave = session.scriptPages.screen(chat, { send: async () => null, rendered: (at) => (at === null ? welcome : null) });
+    expect(await frame.rendered(chat, [{ index: 0, id: 'm', version: 'v' }, null])).toEqual({ css: welcome.css, rows: [null, { html: welcome.html, text: welcome.text }] });
+    await expect(frame.rendered(chat, [{ index: 0 } as Hazelle.At])).rejects.toThrow('Invalid tool call');
+    leave();
+  } finally { host.close(); }
+}));
+
+it('lays a frame tool\'s layer: its boxes are drawn without telling it, its word of a missed pointer reaches the screen, and it is told when the screen takes it back', () => withTools(async (session, connect) => {
+  const { chat, module, host, frame } = await idleFrame(session, connect);
+  try {
     const told = vi.fn();
     frame.layered(told);
     const screen = { chat, theme: 'light' as const, draw: vi.fn(), missed: vi.fn() };

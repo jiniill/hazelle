@@ -177,11 +177,7 @@ export async function indexZip(file: Blob, signal: AbortSignal): Promise<Map<str
     offset = u64(record, 48);
   }
   const directory = new ZipDirectory(count, offset, size, directoryEnd);
-  for (let i = 0; i < count; i++) {
-    const header = await slice(file, directory.offset, directory.headerSize(), signal);
-    const variable = await slice(file, directory.offset + 46, directory.variableSize(header), signal);
-    directory.add(header, variable);
-  }
+  directory.read(await slice(file, offset, size, signal), offset);
   return directory.finish();
 }
 
