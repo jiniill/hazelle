@@ -67,12 +67,13 @@ it('applies through the importer, raising an unchanged version once per change, 
   expect(current()).toMatchObject({ module, applied: text });
   expect(await files.read(store.get('tool', toolId(module))!.value.file)).toEqual({ ok: true, data: new TextEncoder().encode(text) });
   await store.update('module', module, (value) => ({ ...value, botModels: true }));
-  await saveDraft(store, id, { body: `//@uses model\n\n${file.body}` });
-  expect(applyPreview(store, current())).toMatchObject({ ok: true, manifest: { version: '0.1.1' }, previous: { module, manifest: { version: '0.1.0' } }, added: ['model'] });
+  await saveDraft(store, id, { identity: { ...current().identity, displayName: '바꾼 이름', description: '바꾼 설명' }, body: `//@uses model\n\n${file.body}` });
+  expect(applyPreview(store, current())).toMatchObject({ ok: true, manifest: { version: '0.1.1', displayName: '바꾼 이름', description: '바꾼 설명' }, previous: { module, manifest: { version: '0.1.0' } }, added: ['model'] });
   const updated = await applyDraft(store, files, id);
   expect(updated).toMatchObject({ ok: true, data: { id: module, previous: { manifest: { version: '0.1.0' } } } });
+  expect(store.get('module', module)!.value).toMatchObject({ name: '바꾼 이름', description: '바꾼 설명' });
   expect(store.get('module', module)!.value.botModels).toBeUndefined();
-  expect(current()).toMatchObject({ identity: { version: '0.1.1' }, applied: toolSource({ ...file.identity, version: '0.1.1' }, `//@uses model\n\n${file.body}`) });
+  expect(current()).toMatchObject({ identity: { version: '0.1.1' }, applied: toolSource({ ...file.identity, displayName: '바꾼 이름', description: '바꾼 설명', version: '0.1.1' }, `//@uses model\n\n${file.body}`) });
   expect(draftState(current())).toBe('applied');
   expect(applyPreview(store, current())).toMatchObject({ ok: true, manifest: { version: '0.1.1' } });
   await saveDraft(store, id, { identity: { ...current().identity, version: '2.0.0' }, body: file.body });
@@ -117,8 +118,8 @@ it('opens the installed file once as identity and body, reuses its edited draft 
 
 it('carries a draft without edits along with an imported file, keeps one with edits, tells 적용 what it would replace, and asks every consent again of the file', async () => {
   const { store, files } = await server.account();
-  const written = (body: string) => { const read = readTool(new TextEncoder().encode(`//@version 1.0.0\n//@author jin\n\n//@api 1\n//@name notes\n\n\n${body}`)); if (!read.ok) throw new Error('fixture'); return read.tool; };
-  const first = await importFile(store, files, written('first();'));
+  const written = (body: string, meta = '') => { const read = readTool(new TextEncoder().encode(`//@version 1.0.0\n//@author jin\n\n//@api 1\n//@name notes\n${meta}\n\n${body}`)); if (!read.ok) throw new Error('fixture'); return read.tool; };
+  const first = await importFile(store, files, written('first();', '//@display-name 첫 메모\n//@description 처음 설명'));
   if (!first.ok) throw new Error(first.error);
   const opened = await draftOfTool(store, files, first.data.id);
   if (!opened.ok) throw new Error(opened.error);
@@ -127,14 +128,16 @@ it('carries a draft without edits along with an imported file, keeps one with ed
 
   const answers = () => store.get('module', first.data.id)!.value;
   await store.update('module', first.data.id, (current) => ({ ...current, botModels: false, takesMemory: true, network: true }));
-  const second = await importFile(store, files, written('second();'));
+  const second = await importFile(store, files, written('second();', '//@display-name 새 메모\n//@description 바뀐 설명'));
   if (!second.ok) throw new Error(second.error);
   for (const answer of ['botModels', 'takesMemory', 'network'] as const) expect(answers()[answer]).toBeUndefined();
+  expect(answers()).toMatchObject({ name: '새 메모', description: '바뀐 설명' });
   expect(draft()).toMatchObject({ body: 'second();' });
   expect(draftState(draft())).toBe('applied');
   expect(await installedDiffers(store, files, draft())).toBe(false);
 
   await undoFileImport(store, second.data, second.data.previous!);
+  expect(answers()).toMatchObject({ name: '첫 메모', description: '처음 설명' });
   expect(draft()).toMatchObject({ body: 'first();' });
   expect(await installedDiffers(store, files, draft())).toBe(false);
 

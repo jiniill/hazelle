@@ -6,7 +6,8 @@ import { assetType } from '../../engine/import/card';
 import { fieldValue, type ImportedTool } from '../../engine/import/tool';
 import { sha256Hex, sha256Id } from '../../hex';
 import { without } from '../../model/fields';
-import { live } from '../../model/library';
+import type { Stored } from '../../model/kinds';
+import { live, type Module } from '../../model/library';
 import { badgesOf, toolId, type Badges, type Tool } from '../../model/tool';
 import { callsModels, dataBytes, TOOL_KEY_CHARS, TOOL_ROW_BYTES, type Json, type Settings, type ToolManifest } from '../../tool-api/manifest';
 import type { ApiResult } from '../api';
@@ -55,6 +56,12 @@ export function toolSettings(manifest: ToolManifest, values: Settings): Settings
 export const sameTool = (store: Pick<ObjectStore, 'list'>, { name, author }: ToolManifest) =>
   store.list('tool').find(({ value }) => value.manifest.name === name && value.manifest.author === author);
 
+// Carry manifest name and description onto the module only where the user has not edited them away.
+const manifestCopy = (current: Pick<Module, 'name' | 'description'>, from: ToolManifest, to: ToolManifest): Partial<Pick<Module, 'name' | 'description'>> => ({
+  ...(current.name === from.displayName && to.displayName !== from.displayName && { name: to.displayName }),
+  ...(current.description === from.description && to.description !== from.description && { description: to.description }),
+});
+
 export async function importTool(store: ObjectStore, files: Files, { manifest, bytes }: ImportedTool): Promise<ApiResult<ToolImport>> {
   const existing = sameTool(store, manifest);
   // Reimport never revives a binned identity or leaves a second live copy beside it.
@@ -72,10 +79,16 @@ export async function importTool(store: ObjectStore, files: Files, { manifest, b
     const added = manifest.uses.filter((use) => !existing.value.manifest.uses.includes(use));
     const answers = [...(callsModels(added) ? ['botModels' as const] : []), ...(added.includes('memory') ? ['takesMemory' as const] : []), ...(added.includes('network') ? ['network' as const] : [])];
     // A pick for a model the new version no longer declares goes with it.
-    const dropped = Object.keys(store.get('module', id)!.value.models ?? {}).filter((picked) => !manifest.models?.some((each) => each.id === picked));
-    if (answers.length || dropped.length) {
+    const held = store.get('module', id)!.value;
+    const dropped = Object.keys(held.models ?? {}).filter((picked) => !manifest.models?.some((each) => each.id === picked));
+    const copy = manifestCopy(held, existing.value.manifest, manifest);
+    if (answers.length || dropped.length || Object.keys(copy).length) {
       const reset = await store.update('module', id, (current) =>
-        current.deleted === undefined ? { ...answers.reduce((module, answer) => without(module, answer), current), ...(current.models && { models: dropped.reduce((models, picked) => without(models, picked), current.models) }) } : null);
+        current.deleted === undefined ? {
+          ...answers.reduce((module, answer) => without(module, answer), current),
+          ...(current.models && { models: dropped.reduce((models, picked) => without(models, picked), current.models) }),
+          ...copy,
+        } : null);
       if (!reset.ok) return reset;
     }
     const saved = await store.update('tool', existing.id, (current) => live(store.get('module', id)) ? { ...value, settings: toolSettings(manifest, current.settings) } : null);
@@ -97,8 +110,17 @@ export async function exportTool(store: ObjectStore, files: Files, module: strin
   return read;
 }
 
-export const undoToolImport = (store: ObjectStore, module: string, previous: Tool) =>
-  store.update('tool', toolId(module), (current) => live(store.get('module', module)) ? { ...previous, settings: toolSettings(previous.manifest, current.settings) } : null);
+export async function undoToolImport(store: ObjectStore, module: string, previous: Tool): Promise<ApiResult<Stored<'tool'>>> {
+  // The toast outlives the plugin: by the time it is pressed the module may be binned or gone.
+  const held = live(store.get('module', module));
+  const from = store.get('tool', toolId(module))?.value.manifest;
+  const copy = held && from ? manifestCopy(held.value, from, previous.manifest) : {};
+  if (Object.keys(copy).length) {
+    const restored = await store.update('module', module, (current) => current.deleted === undefined ? { ...current, ...copy } : null);
+    if (!restored.ok) return restored;
+  }
+  return store.update('tool', toolId(module), (current) => live(store.get('module', module)) ? { ...previous, settings: toolSettings(previous.manifest, current.settings) } : null);
+}
 
 export async function setToolSettings({ store }: Pick<Session, 'store'>, module: string, change: Settings): Promise<ApiResult<unknown>> {
   return store.update('tool', toolId(module), (current) => live(store.get('module', module)) ? { ...current, settings: { ...current.settings, ...Object.fromEntries(current.manifest.settings.flatMap((field) => Object.hasOwn(change, field.key) && fieldValue(field, change[field.key]) ? [[field.key, change[field.key]!]] : [])) } } : null);
