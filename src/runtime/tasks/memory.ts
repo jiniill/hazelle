@@ -432,10 +432,12 @@ export class Rememberer {
     if (!member) this.schedule.rebuild(chat, null);
     // Without a 장기 기억 slot in the request, a new record would only take its messages out of it, and a stale one
     // summarized again would be paid for and never read. What the user asked for is made whatever the prompt holds.
-    let slot: boolean | null = null;
-    const reaches = async () => (slot ??= (await wouldSend(this.session, chat, { kind: 'answer' }, undefined, 'memory'))?.prompt.memory?.slot === true);
+    // One request stands for the whole plan, in what it holds and in what it drops.
+    let sending: ReturnType<typeof wouldSend> | null = null;
+    const would = () => (sending ??= wouldSend(this.session, chat, { kind: 'answer' }, undefined, 'memory'));
+    const reaches = async () => (await would())?.prompt.memory?.slot === true;
     const again = member ?? asked ?? (stale.length && await reaches() ? stale[0] : undefined);
-    const span = !again && this.schedule.includesNew(chat) && await reaches() ? await this.span(chat, sent.tokens, coveredBy(memory, places), setup) : null;
+    const span = !again && this.schedule.includesNew(chat) && await reaches() ? await this.span(sent.tokens, coveredBy(memory, places), setup, would) : null;
     const tools = memoryWriter(this.session.store, sent.chat);
     const readCap = async (writer: Tools) => {
       const snapshot = await this.session.tokens.snapshot(writer.route, writer.settings, tokenLimits(writer.route.model, sentSettings(store, writer.route)), 'memory', chat, new AbortController().signal);
@@ -479,9 +481,9 @@ export class Rememberer {
   }
 
   // Earlier than batch when the next request drops messages for want of room.
-  private async span(chat: string, tokens: number[], covered: number, setup: MemorySettings) {
+  private async span(tokens: number[], covered: number, setup: MemorySettings, would: () => ReturnType<typeof wouldSend>) {
     const { waiting } = rawParts(tokens, covered, setup.window);
-    const dropped = waiting < setup.batch ? ((await wouldSend(this.session, chat, { kind: 'answer' }, undefined, 'memory'))?.prompt.dropped ?? 0) : 0;
+    const dropped = waiting < setup.batch ? ((await would())?.prompt.dropped ?? 0) : 0;
     const span = nextSpan(tokens, covered, setup, dropped);
     return span && { ...span, waiting };
   }
