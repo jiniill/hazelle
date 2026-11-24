@@ -299,7 +299,8 @@ class Logged extends Map<string, string> {
     this.log?.push([name, value]);
     if (this.changed && this.get(name) !== value) {
       this.changed.add(name);
-      for (const char of `${name}\0${value}\0`) this.stamp = Math.imul(this.stamp ^ char.charCodeAt(0), 16777619);
+      const written = `${name}\0${value}\0`;
+      for (let at = 0; at < written.length; at++) this.stamp = Math.imul(this.stamp ^ written.charCodeAt(at), 16777619);
     }
     return super.set(name, value);
   }
