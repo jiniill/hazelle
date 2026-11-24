@@ -4,6 +4,7 @@ import { EvaluationStuck } from '../evaluation/evaluation';
 import type { ObjectStore } from './store';
 import type { Write } from './object-writes';
 import { saveSummaries, summaryId } from './summary';
+import { memoryId } from '../../model/memory';
 import { testServer } from '../testing';
 
 const server = testServer();
@@ -134,4 +135,25 @@ describe('a chat whose bot does not end', () => {
     expect(store.get('summary', summaryId(a))).toBeNull();
     expect(store.get('summary', summaryId(b))!.value).toMatchObject({ preview: 'two' });
   });
+});
+
+it('displays a held chat again only for a write that changes what its display was made from', async () => {
+  const { store } = await server.account();
+  const a = crypto.randomUUID();
+  expect((await store.batch([root(a), message(a, 'one')], undefined, { unheld: true })).ok).toBe(true);
+  const lease = store.retainChat(a);
+  expect(await lease.ready).toBeNull();
+  const before = store.projections.get(a)!;
+  const displayed = vi.spyOn(store.evaluation, 'display');
+  expect((await store.create('memory', { records: [], chapters: [], state: [], threads: [] }, { id: memoryId(a), parent: a })).ok).toBe(true);
+  const after = (await store.projections.evaluate(a))!;
+  expect(displayed).not.toHaveBeenCalled();
+  expect(after.shown).not.toBe(before.shown);
+  expect(after.model.display).toBe(before.model.display);
+  // An entry is displayed as it is shown, and not again when the server takes it as shown.
+  expect((await store.batch([message(a, 'two')])).ok).toBe(true);
+  await vi.waitFor(() => expect(store.get('summary', summaryId(a))!.value.preview).toBe('two'));
+  expect((await store.projections.evaluate(a))!.model.display.texts).toEqual(['one', 'two']);
+  expect(displayed).toHaveBeenCalledTimes(1);
+  lease.release();
 });

@@ -1,4 +1,5 @@
 import type { Display } from '../../engine/display';
+import type { ChatScope } from '../../engine/render';
 import { chatTitle, previewLine, recentIn, shown, type Chat, type ChatItem, type Message, type Summary, type SummaryRead } from '../../model/chat';
 import { live } from '../../model/library';
 import type { ApiFailure } from '../api';
@@ -12,7 +13,8 @@ import { pause } from '../pause';
 const VERSION = 1;
 export type ChatModel = ChatItem & { display: Display };
 // shown tracks the folded overlay, never persisted in Summary: unconfirmed writes must not reach the server through it.
-export type Projection = { model: ChatModel; summary: Summary; shown: number };
+// from: what its display was made of. Its clock is the one thing a display that stands does not answer for.
+export type Projection = { model: ChatModel; summary: Summary; shown: number; from: { scope: ChatScope; take: ReadonlySet<number> } };
 
 // Like memoryId, a summary has one id under its chat, independent of which device builds it.
 export const summaryId = (chat: string) => chat.replace(/[0-9a-f]/, (digit) => (parseInt(digit, 16) ^ 8).toString(16));
@@ -22,6 +24,15 @@ export function summaryStale(store: Pick<ObjectStore, 'get' | 'entryHead' | 'rev
 }
 
 const readsCurrent = (store: Pick<ObjectStore, 'revision'>, reads: SummaryRead[]) => reads.every((read) => store.revision(read) === read.rev);
+// Plain values, arrays, Maps and Sets, by what they hold.
+function alike(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) return false;
+  if (a instanceof Map || a instanceof Set) return b instanceof (a instanceof Map ? Map : Set) && alike([...a], [...b]);
+  if (Array.isArray(a)) return Array.isArray(b) && a.length === b.length && a.every((item, index) => alike(item, b[index]));
+  const keys = Object.keys(a);
+  return !Array.isArray(b) && keys.length === Object.keys(b).length && keys.every((key) => alike((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key]));
+}
 const revised = (store: Pick<ObjectStore, 'revision'>, reads: StoreRead[]): SummaryRead[] => [...new Map(reads.map((read) => [JSON.stringify(read), { ...read, rev: store.revision(read) }])).values()];
 
 type Source = Pick<ObjectStore, 'get' | 'children' | 'scopeState' | 'capture' | 'revision' | 'foldedChat' | 'entryHead' | 'loadedHead' | 'shownMark'>;
@@ -114,14 +125,15 @@ export class ChatProjections {
     if (previous && previous.shown === this.source.shownMark(chat) && !summaryStale(this.source, chat, previous.summary, this.source.loadedHead(chat)) && (previous.summary.stuck !== undefined) === (this.verdict(chat) !== null)) return previous;
     const scope = this.life.scope(chat)!;
     const work = (async () => {
+      let last = previous ?? null;
       for (;;) {
-        const next = await this.project(chat, AbortSignal.any([scope.signal, this.life.closing])).catch((error: unknown) => {
+        const next: Projection | null = await this.project(chat, last, AbortSignal.any([scope.signal, this.life.closing])).catch((error: unknown) => {
           this.life.fail(chat, scope.signal, error);
           throw error;
         });
         if (this.closed || this.life.scope(chat)?.signal !== scope.signal || this.life.scope(chat)?.state !== 'loaded' || this.life.closing.aborted) return null;
         if (this.life.scope(chat)?.loading) return this.projections.get(chat) ?? null;
-        if (next && (next.shown !== this.source.shownMark(chat) || summaryStale(this.source, chat, next.summary, this.source.loadedHead(chat)))) continue;
+        if (next && (next.shown !== this.source.shownMark(chat) || summaryStale(this.source, chat, next.summary, this.source.loadedHead(chat)))) { last = next; continue; }
         if (next) this.projections.set(chat, next);
         else this.projections.delete(chat);
         this.life.publish(chat);
@@ -210,7 +222,7 @@ export class ChatProjections {
     if (!projection || this.life.showing(chat) || projection.shown !== this.source.shownMark(chat)) return null;
     const id = summaryId(chat);
     const current = this.source.get('summary', id);
-    if (current && !summaryStale(this.source, chat, current.value) && current.value.title === projection.summary.title && current.value.preview === projection.summary.preview && JSON.stringify(current.value.stuck) === JSON.stringify(projection.summary.stuck)) return null;
+    if (current && !summaryStale(this.source, chat, current.value) && current.value.title === projection.summary.title && current.value.preview === projection.summary.preview && alike(current.value.stuck, projection.summary.stuck)) return null;
     // The projection's source versions travel with it. A concurrent edit can never make an old summary look current.
     return { type: 'restore', id, kind: 'summary', parent: chat, value: projection.summary };
   }
@@ -229,20 +241,24 @@ export class ChatProjections {
     void lease.ready.then((failure) => failure ?? this.save(chat)).finally(lease.release);
   }
 
-  private async project(id: string, signal?: AbortSignal): Promise<Projection | null> {
+  // before: the projection made before this one, whose display stands when a write changed nothing it was made of (a
+  // memory record, a remark, an entry the server took as it was shown). Its clock stays the one it was rendered at.
+  private async project(id: string, before: Projection | null, signal?: AbortSignal): Promise<Projection | null> {
     const store = this.source;
     const stored = live(store.get('chat', id));
     if (!stored) return null;
     const { messages, at } = store.foldedChat(id);
     const head = store.loadedHead(id);
     const marks = store.shownMark(id);
-    const rendered = { now: Date.now(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone };
     const { scope, take, dependencies } = this.basis(id, stored.value, messages);
+    const standing = before && (before.summary.stuck !== undefined) === (this.verdict(id) !== null) && alike(before.from.take, take) && alike({ ...before.from.scope, clock: scope.clock }, scope);
+    const rendered = standing ? before.summary.rendered : { now: Date.now(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone };
     const lane = { asker: 'projection', chat: id } as const;
     // A run that stuck with the bot's regex judged the chat, so it is run once more without; one that stuck without it
     // fails the chat.
     let display: Display;
-    try { ({ display } = await this.evaluation.display(lane, { ...scope, clock: rendered }, take, signal)); }
+    if (standing) display = before.model.display;
+    else try { ({ display } = await this.evaluation.display(lane, { ...scope, clock: rendered }, take, signal)); }
     catch (error) {
       if (!(error instanceof EvaluationStuck && error.regex)) throw error;
       ({ display } = await this.evaluation.display(lane, { ...scope, clock: rendered }, take, signal));
@@ -260,7 +276,7 @@ export class ChatProjections {
       preview: last === undefined ? '' : previewLine(texts.at(-1)!, shown(last).translation?.text ?? shown(last).text).slice(0, 256),
       at, order: head || stored.rev, recent: recentIn(messages),
     };
-    return { summary, model: { ...summary, id, chat: stored.value, messages, display }, shown: marks };
+    return { summary, model: { ...summary, id, chat: stored.value, messages, display }, shown: marks, from: { scope, take } };
   }
 
   // What a chat's display stands on besides its messages, with the reads it was taken from.
