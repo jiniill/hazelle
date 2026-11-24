@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync }
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { migrate } from './db/migrate';
 import { serviceDb } from './db/service-db';
 import { diskBucket } from './files/disk-bucket';
@@ -83,6 +83,30 @@ describe('reconcile', () => {
     expect(await reconcile(dir, db, files, NOW)).toEqual({ removed: [`files/${LIVE}/${ID}`] });
     expect([existsSync(join(dir, `files/${LIVE}/${ID}`)), existsSync(join(dir, `files/${LIVE}/${LATER}`))]).toEqual([false, true]);
     expect((await db.prepare('SELECT id FROM file_removals').all()).results).toEqual([{ id: LATER }]);
+  });
+
+  it('lets other requests in between the lookups of a long sweep', async () => {
+    const db = setup();
+    const ids = Array.from({ length: 300 }, (_, index) => `2-${index}`);
+    for (const id of ids) await db.prepare("INSERT INTO snapshots (id, incarnation, kind, taken_at, rev, bytes, expanded, sha256) VALUES (?, ?, 'k', 1, 0, 1, 1, 's')").bind(id, LIVE).run();
+    const files = { ...diskBucket(dir), archives: async () => ids.map((id) => ({ key: `snapshots/${LIVE}/${id}.sqlite.gz`, modified: OLD * 1000 })) };
+    const prepare = db.prepare.bind(db);
+    let looked = 0;
+    vi.spyOn(db, 'prepare').mockImplementation((sql) => {
+      if (sql.startsWith('SELECT 1 FROM snapshots')) looked++;
+      return prepare(sql);
+    });
+    const seen = new Set<number>();
+    let watching = true;
+    const watch = () => {
+      seen.add(looked);
+      if (watching) setImmediate(watch);
+    };
+    watch();
+    await reconcile(dir, db, files, NOW);
+    watching = false;
+    expect(looked).toBe(ids.length);
+    expect([...seen].some((count) => count > 0 && count < ids.length)).toBe(true);
   });
 
   it('answers nothing on a fresh install', async () => {
