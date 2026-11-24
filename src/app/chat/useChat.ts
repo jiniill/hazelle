@@ -285,7 +285,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
         // A send that threw after its message was saved has nothing to give back: the message is in the chat.
         if (saved) drafts.release(taken.attachments);
         else putBack();
-        toast.error(saved ? '메시지는 저장됐지만 응답을 받는 중 오류가 생겼어요.' : '보내는 중 오류가 생겼어요. 입력창에 내용을 돌려놓았어요.', { report: true });
+        toast.error(saved ? '응답을 받는 중 오류가 생겼어요. 보낸 메시지는 그대로 남아 있어요.' : '보내는 중 오류가 생겼어요. 입력창에 내용을 돌려놓았어요.', { report: true });
         throw error;
       }
     } finally {
