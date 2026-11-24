@@ -1,3 +1,4 @@
+import { autoDiagnose, noteStep } from '../diagnostics/auto-diagnosis';
 import { ChangeSignal } from '../../change-signal';
 import type { Role } from '../../connectors/assignment';
 import { Runaway } from '../../engine/cbs/evaluate';
@@ -72,7 +73,12 @@ export class ScriptInteractions {
   report(chat: string, result: Pick<Outcome, 'errors' | 'missing'> | unknown, from: PackOwner | null = null) {
     if (result instanceof ToolStopped) return;
     if (result instanceof ToolLate) return this.tell(chat, 'late', { kind: 'late' }, from);
-    if (result instanceof ToolStuck) return result.disabled ? this.tell(chat, 'disabled', { kind: 'stuck', disabled: true }, from) : this.note(chat, { kind: 'stuck' }, from);
+    if (result instanceof ToolStuck) {
+      const detail = result.disabled ? 'tool-disabled' : 'tool';
+      noteStep(`script-stuck:${detail}`);
+      autoDiagnose({ event: 'script-stuck', detail, id: chat });
+      return result.disabled ? this.tell(chat, 'disabled', { kind: 'stuck', disabled: true }, from) : this.note(chat, { kind: 'stuck' }, from);
+    }
     if (result instanceof LuaStuck || result instanceof EvaluationStuck) return this.note(chat, { kind: 'stuck' }, from);
     if (result instanceof Runaway) return this.tell(chat, 'runaway', { kind: 'runaway' }, from);
     if (result instanceof Error) return this.tell(chat, `failed:${result.message}`, { kind: 'failed', message: result.message }, from);

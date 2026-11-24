@@ -115,9 +115,20 @@ export function presenceMemory(): PresenceMemory {
 
 // The page as runtime code reads it: its visibility, and events such as resume (runtime/worker).
 export function stubPage(visibilityState: DocumentVisibilityState) {
-  const page = Object.assign(new EventTarget(), { visibilityState });
+  const page = Object.assign(new EventTarget(), { visibilityState, querySelectorAll: () => [] });
   vi.stubGlobal('document', page);
   return page;
+}
+
+// The window a 자동 진단 report reads (runtime/diagnostics/auto-diagnosis pageFacts): a visible page of that browser.
+export function stubBrowser(userAgent: string) {
+  vi.stubGlobal('navigator', { userAgent, onLine: true, language: 'ko-KR', hardwareConcurrency: 8 });
+  vi.stubGlobal('matchMedia', () => ({ matches: false }));
+  vi.stubGlobal('innerWidth', 1280);
+  vi.stubGlobal('innerHeight', 800);
+  vi.stubGlobal('devicePixelRatio', 2);
+  vi.stubGlobal('location', { origin: 'https://hazelle.app' });
+  return stubPage('visible');
 }
 
 export const testModel: Model = { ...bareModel('m'), name: 'M' };

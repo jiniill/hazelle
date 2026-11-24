@@ -68,6 +68,7 @@ export class ScriptTurns {
     again: (answer: boolean) => Promise<TurnContext | Blocked | { kind: 'unsent'; failure: ApiFailure } | null>,
     signal: AbortSignal,
     running: ToolWait,
+    saved: () => void,
   ): Promise<Started> {
     const scripts = triggersOf(packsOf(this.session.store, first.chat));
     const units = first.said ? this.execution.listening(first.chat, 'sending') : [];
@@ -98,6 +99,7 @@ export class ScriptTurns {
         changed: regather,
         send: async (text, before) => {
           const sent = await appendUserMessage(this.session.store, chat, { ...said!, text, ...(before.length > 0 && { before }) });
+          if (sent.ok) saved();
           return sent.ok ? null : ({ kind: 'unsent', failure: sent } as const);
         },
         aborted: () => signal.aborted,

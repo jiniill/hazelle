@@ -1,5 +1,6 @@
 import { act } from 'react';
 import { afterEach, expect, it, vi } from 'vitest';
+import { recentProblems } from '../../runtime/diagnostics/diagnostics';
 import { probeRoot } from '../ui/probe';
 import { ScreenLoad, screenChunk } from './ScreenLoad';
 
@@ -33,6 +34,8 @@ it('keeps a screen that failed to its place, and draws the next place anew', asy
   const root = probeRoot();
   await act(() => root.render(<ScreenLoad at="/a"><Broken /></ScreenLoad>));
   expect(failures).toBeGreaterThan(0);
+  // The error that took the screen down reaches 문제 진단, which no window error event tells of.
+  expect(recentProblems().some(({ text }) => text.startsWith('화면 오류 · Error: broken'))).toBe(true);
   await act(() => root.render(<ScreenLoad at="/a"><Fine /></ScreenLoad>));
   expect(drawn).toBe(0);
   await act(() => root.render(<ScreenLoad at="/b"><Fine /></ScreenLoad>));

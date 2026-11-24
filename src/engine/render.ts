@@ -174,7 +174,7 @@ export function renderChat(
   };
   const texts = scope.messages.map(({ id, message, role, text, staged, before = [], after = [], byHand = [] }, index) => {
     states?.begin();
-    progressed();
+    progressed('message', index, null, text.length);
     const cbs = (read: Map<string, string>) => (part: string) => evaluate(part, context({ message: index }, read));
     // Neither the user nor the model wrote the greeting, so it skips their stages, as does a text already past them; its
     // CBS still writes. Risu reads a greeting afresh with the chat's state, so it reads what its buttons wrote: a bot's
@@ -226,7 +226,7 @@ export function renderChat(
 }
 
 function renderStage(stage: Stage, scripts: Scripts, context: ReturnType<typeof contexts>, { inlays, textfiles, messages, keepsThoughts }: Pick<ChatScope, 'inlays' | 'textfiles' | 'messages' | 'keepsThoughts'>, index: number, text: string, variables: ReadonlyMap<string, string>, take: ReadonlySet<number>) {
-  progressed();
+  progressed('show', index, null, text.length);
   const read = new Map(variables);
   let stopped: Runaway | null = null;
   let result: { text: string; drawn: number[]; boxes: Box[] };

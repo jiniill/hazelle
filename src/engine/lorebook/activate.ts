@@ -177,7 +177,7 @@ function activate(shelf: (Book | string)[], books: Book[], { scanDepth, recursiv
     const read = recursed.length;
     waiting = [];
     for (const pending of waited) {
-      progressed();
+      progressed('lore');
       const { book, evidence } = pending;
       const why = triggered(book, afterMatch, () => {
         if (first) consume(book.matchers, evidence, window(history, book.rules.scanDepth ?? scanDepth));

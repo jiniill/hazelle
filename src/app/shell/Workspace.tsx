@@ -24,7 +24,7 @@ import { BOARD, inSettings, NOTICES, LOADING_TITLE, OPEN_STEPS, PURGE_FREES, SEE
 import { ImportProvider } from '../library/ImportFlow';
 import { PasteReader } from './PasteReader';
 import { SessionProvider, useHeldLeave, useSaves, useSession, useSettings, useStore } from '../session';
-import { notePlace } from '../../runtime/diagnostics/auto-diagnosis';
+import { notePlace, noteStep } from '../../runtime/diagnostics/auto-diagnosis';
 import { ToastProvider, useToast, type Standing } from '../toast';
 import { Brand, Progress, Screen, Text } from '../ui';
 import { Arrivals } from './Arrivals';
@@ -298,5 +298,6 @@ export function Workspace({ accountId, vaultKey, username, ...account }: Unlocke
 function PlaceNote() {
   const route = useRoute();
   useEffect(() => notePlace(reportedPlace(route)), [route]);
+  useEffect(() => noteStep(`screen:${route.kind}`), [route.kind]);
   return null;
 }

@@ -6,10 +6,12 @@ import { holdDiagnosis } from '../diagnostics/auto-diagnosis';
 import { Evaluation, EvaluationFailed, EvaluationRefused, EvaluationStopped, EvaluationStuck, type Verdicts } from './evaluation';
 import { Evaluator, type EvaluationDown, type EvaluationUp } from './evaluation-core';
 import { changedTail, sameHistory } from './history-delta';
-import { stubPage } from '../testing';
+import { stubBrowser, stubPage } from '../testing';
 
 const scope: ChatScope = { card: null, cast: [], packs: [], persona: null, prompt: null, promptOut: false, note: null, status: { definitions: [], state: {} }, lore: [], loreFolders: {}, loreScan: { scanDepth: 5, tokenBudget: 800, recursive: true, fullWordMatching: false }, messages: [], variables: [], greeting: null, toggles: new Map(), model: null, axModel: null, clock: { now: 0, timeZone: 'UTC' }, assets: [], inlays: [], textfiles: [], modules: [], faces: { char: null, user: null }, screen: null, pick: '' };
 const message = (id: string, text: string) => ({ id, message: id, seed: id, role: 'user' as const, text, time: 0 });
+const SIGN = { unit: { kind: 'regex', stage: 'display', message: 0, script: 0, chars: 10 }, ended: 1, slow: null } as const;
+const SLOW = { ...SIGN.unit, script: 7, ms: 400 };
 const none: Verdicts = { verdict: () => false, judged: () => {} };
 const screen = (chat = 'c') => ({ asker: 'screen', chat }) as const;
 
@@ -155,7 +157,7 @@ it('keeps a started job alive while it gives signs of life, and through a beat t
   worker.receive({ started: id });
   for (let second = 0; second < 6; second++) {
     await vi.advanceTimersByTimeAsync(1_000);
-    worker.receive({ progress: true });
+    worker.receive({ progress: SIGN });
   }
   await vi.advanceTimersByTimeAsync(1_000);
   // The page held for five seconds: the answer to the ping it sent waits behind that, so it pings again, not judges.
@@ -255,11 +257,7 @@ it('reports a job that went silent by closed words and sizes, once with the rege
   vi.useFakeTimers();
   const sent = vi.fn<(path: string, init: RequestInit) => Promise<Response>>(async () => new Response(null, { status: 204 }));
   vi.stubGlobal('fetch', sent);
-  vi.stubGlobal('navigator', { userAgent: 'Mozilla/5.0 (Linux; Android 14) Chrome/141.0.0.0 Mobile', onLine: true, language: 'ko-KR', hardwareConcurrency: 8 });
-  stubPage('visible');
-  vi.stubGlobal('matchMedia', () => ({ matches: false }));
-  vi.stubGlobal('innerWidth', 400);
-  vi.stubGlobal('innerHeight', 800);
+  stubBrowser('Mozilla/5.0 (Linux; Android 14) Chrome/141.0.0.0 Mobile');
   holdDiagnosis(true);
   const { workers, jobs } = fakeWorkers();
   const judged = new Set<string>();
@@ -274,7 +272,7 @@ it('reports a job that went silent by closed words and sizes, once with the rege
     const running = expect(evaluation.display(lane, chat, new Set())).rejects.toBeInstanceOf(EvaluationStuck);
     const worker = workers.at(-1)!;
     worker.receive({ started: jobs(worker).at(-1)!.id });
-    worker.receive({ progress: true });
+    worker.receive({ progress: { ...SIGN, slow: SLOW } });
     await vi.advanceTimersByTimeAsync(5_000);
     await running;
   };
@@ -283,13 +281,14 @@ it('reports a job that went silent by closed words and sizes, once with the rege
   await silence();
   expect(workers).toHaveLength(3);
   await expect(evaluation.read({ asker: 'memory', chat: 'reported-chat' }, chat, null)).rejects.toBeInstanceOf(EvaluationRefused);
-  const reports = sent.mock.calls.map(([, init]) => JSON.parse(init.body as string) as { job: { ran: number } });
+  const reports = sent.mock.calls.map(([, init]) => JSON.parse(init.body as string) as { job: { ran: number; quiet: number } });
   expect(reports).toMatchObject([
-    { event: 'evaluation-stuck', detail: 'display', chat: null, job: { asker: 'projection', regex: true, scope: { regex: 1, messages: 2, chars: 9, lore: 0 }, jobs: 1, signs: 1 } },
+    { event: 'evaluation-stuck', detail: 'display', chat: null, job: { asker: 'projection', regex: true, scope: { regex: 1, messages: 2, chars: 9, longest: 6, lore: 0, packs: 1 }, waiting: 0, jobs: 1, signs: 1, units: 1, unit: SIGN.unit, slow: [SLOW] } },
     { event: 'evaluation-stuck', detail: 'display', chat: null, job: { asker: 'projection', regex: false, scope: { regex: 0, messages: 2, chars: 9, lore: 0 }, jobs: 0 } },
   ]);
   expect(reports).toHaveLength(2);
   expect(reports[0]!.job.ran).toBeGreaterThanOrEqual(3_000);
+  expect(reports[0]!.job.quiet).toBeGreaterThanOrEqual(3_000);
   expect(JSON.stringify(reports)).not.toMatch(/SECRET|reported-chat/);
   evaluation.close();
 });
@@ -368,5 +367,29 @@ it('runs diagnosis on one disposable worker lane and aborts it with the forecast
   controller.abort();
   await expect(diagnosis).rejects.toBeInstanceOf(EvaluationStopped);
   expect(workers[0]!.posted.some((message) => 'forget' in message)).toBe(true);
+  evaluation.close();
+});
+
+it('reports a job that ran long and ended, as it does one that went silent', async () => {
+  vi.useFakeTimers();
+  const sent = vi.fn<(path: string, init: RequestInit) => Promise<Response>>(async () => new Response(null, { status: 204 }));
+  vi.stubGlobal('fetch', sent);
+  stubBrowser('Mozilla/5.0 (Linux; Android 14) Chrome/141.0.0.0 Mobile');
+  holdDiagnosis(true);
+  const { workers, jobs } = fakeWorkers();
+  const evaluation = new Evaluation(none);
+  const running = evaluation.display({ asker: 'screen', chat: 'slow-chat' }, { ...scope, messages: [message('a', 'SECRET')] }, new Set());
+  const { id } = jobs(workers[0]!)[0]!;
+  workers[0]!.receive({ started: id });
+  for (let beat = 0; beat < 5; beat++) {
+    await vi.advanceTimersByTimeAsync(500);
+    workers[0]!.receive({ progress: SIGN });
+  }
+  workers[0]!.receive({ id, result: null });
+  await running;
+  const reports = sent.mock.calls.map(([, init]) => JSON.parse(init.body as string) as { job: { ran: number } });
+  expect(reports).toMatchObject([{ event: 'evaluation-slow', detail: 'display', job: { asker: 'screen', signs: 5, units: 5, unit: SIGN.unit, slow: [] } }]);
+  expect(reports[0]!.job.ran).toBeGreaterThanOrEqual(2_500);
+  expect(JSON.stringify(reports)).not.toMatch(/SECRET|slow-chat/);
   evaluation.close();
 });

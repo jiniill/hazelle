@@ -5,7 +5,7 @@ import { holdsPersona, unused } from '../../engine/pipeline';
 import { activeOnboarding } from '../../engine/import/onboarding';
 import { calls, keepsPromptOut, shown, type ChatItem, type ChatSummary } from '../../model/chat';
 import type { CharacterShelf } from '../../model/library';
-import { autoDiagnose } from '../../runtime/diagnostics/auto-diagnosis';
+import { autoDiagnose, noteChat } from '../../runtime/diagnostics/auto-diagnosis';
 import { autoChat, turnFacts } from '../../runtime/diagnostics/diagnostic-state';
 import { chatTranslate, featuresOf } from '../../runtime/tasks/features';
 import { replyMessage, restoreRaw } from '../../runtime/chat/chat-log';
@@ -79,6 +79,11 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   const stored = useChatTools(id);
   const { chat, route, prompt, persona, actions: settingActions } = useChatSettings(id, item?.chat ?? null, shelf?.id ?? null);
   const tools = useMemo(() => id === null ? session.tools.menusOf(chat) : stored, [id, chat, stored]);
+  useEffect(() => {
+    if (id === null) return;
+    noteChat({ id, read: () => autoChat(session, id, null, session.memory.snapshot()) });
+    return () => noteChat(null);
+  }, [id]);
   useEffect(() => {
     if (!id) return session.tools.draft(chatId, chat);
     void session.tools.warm(id);
@@ -252,6 +257,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
       const taken = drafts.take(draft.key);
       // Wherever the chat's draft is by now: a new chat may have been saved meanwhile, or not at all.
       const putBack = () => drafts.putBack(store.get('chat', chatId) ? chatId : draft.key, taken);
+      let saved = false;
       try {
         const text = taken.text.trim();
         const pictures = settled.flatMap((state) => (state.kind === 'saved' ? [state.value] : []));
@@ -265,7 +271,10 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
             return;
           }
         }
-        const failure = await say(withAttachments({ pictures: pictures.map(({ name }) => name), files: files.map(({ name }) => name) }, text), skip, () => drafts.sent(taken));
+        const failure = await say(withAttachments({ pictures: pictures.map(({ name }) => name), files: files.map(({ name }) => name) }, text), skip, () => {
+          saved = true;
+          drafts.sent(taken);
+        });
         // An unsaved reply or a kept failure means the user's message was saved.
         if (failure && failure.kind !== 'unsaved' && !failure.kept) putBack();
         else {
@@ -273,9 +282,10 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
           drafts.release(taken.attachments);
         }
       } catch (error) {
-        // A rejected send may already be saved; restoring a duplicate is safer than losing the draft.
-        putBack();
-        toast.error('보내는 중 오류가 생겼어요. 입력창에 내용을 돌려놓았어요.', { report: true });
+        // A send that threw after its message was saved has nothing to give back: the message is in the chat.
+        if (saved) drafts.release(taken.attachments);
+        else putBack();
+        toast.error(saved ? '메시지는 저장됐지만 응답을 받는 중 오류가 생겼어요.' : '보내는 중 오류가 생겼어요. 입력창에 내용을 돌려놓았어요.', { report: true });
         throw error;
       }
     } finally {

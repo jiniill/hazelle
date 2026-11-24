@@ -5,16 +5,24 @@ import { postProgress } from '../worker';
 
 const evaluator = new Evaluator();
 const scope = self as unknown as { postMessage(message: EvaluationUp): void };
-postProgress(() => scope.postMessage({ progress: true }));
+const job = postProgress((progress) => scope.postMessage({ progress }));
+// The job's last sign goes before its answer, which ends the page's count of it.
+const answer = (up: EvaluationUp) => {
+  job.ends();
+  scope.postMessage(up);
+};
 addEventListener('message', ({ data }: MessageEvent<EvaluationDown>) => {
   if ('ping' in data) return scope.postMessage({ pong: true });
   // A job that counts says only that the tokenizer failed (Counted); the warm-up, the first to load it, says why.
   if ('warm' in data) return void tokenizer().catch((error: unknown) => scope.postMessage({ trouble: `토크나이저를 불러오지 못했어요: ${errorText(error)}` }));
   if ('probe' in data) return void probe().then((probed) => scope.postMessage({ probed }));
   if ('forget' in data) return evaluator.forget(data.forget);
-  void evaluator.run(data.input, () => scope.postMessage({ started: data.id })).then(
-    (result) => scope.postMessage({ id: data.id, result }),
-    (error: unknown) => scope.postMessage({ id: data.id, error: String(error) }),
+  void evaluator.run(data.input, () => {
+    job.begins();
+    scope.postMessage({ started: data.id });
+  }).then(
+    (result) => answer({ id: data.id, result }),
+    (error: unknown) => answer({ id: data.id, error: String(error) }),
   );
 });
 

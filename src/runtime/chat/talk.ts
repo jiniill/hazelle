@@ -17,6 +17,7 @@ import type { Stored } from '../../model/kinds';
 import type { Stream } from '../../model/stream';
 import type { ApiFailure } from '../api';
 import type { Route, RouteFailure } from '../models/assignment';
+import { noteStep } from '../diagnostics/auto-diagnosis';
 import { cacheKept, prefixKept, wireOf, wireTextOf, writePrint } from '../diagnostics/cache';
 import { appendReply, appendUserMessage, replyMessage, savedElsewhere, type Said, type Written } from './chat-log';
 import { refuseTools, routeFields } from '../models/connections';
@@ -126,7 +127,8 @@ const toolsNamed = ({ error }: Reply) => error?.kind === 'provider' && /tool|fun
 const answeredWithout = (answer: Reply) => answer.state !== 'failed';
 
 // preparing: shows a call the reply waits for running, until the prompt is ready.
-type Prepare<F> = (signal: AbortSignal, preparing: (step: Preparing | null) => void) => Promise<Ask | F>;
+// said: told when prepare saves the user's message itself (a bot's Lua), at the save.
+type Prepare<F> = (signal: AbortSignal, preparing: (step: Preparing | null) => void, said: () => void) => Promise<Ask | F>;
 
 // abort: stops the turn's reading. cancel: 멈추기, which cancels a batch, still read until it ends (GenerateInput batching).
 type Held = { turn: Turn; abort: AbortController; cancel: AbortController; calling: string | null };
@@ -262,10 +264,16 @@ export class Talk {
     if (this.turns.has(chat)) return { kind: 'busy' };
     const lease = this.store.retainChat(chat);
     const held = this.seat(chat, said, asked);
+    noteStep('turn:start');
     try {
       // A turn is one workflow: begun on one timeline, none of its writes lands on the next (store pinned).
       const ran = await this.store.pinned(() => this.turnOn(held, said, asked, lease, prepare, onSaid));
-      return ran !== null && 'ok' in ran ? { kind: 'unsent', failure: ran } : ran;
+      const failure = ran !== null && 'ok' in ran ? { kind: 'unsent' as const, failure: ran } : ran;
+      noteStep(`turn:${failure?.kind ?? 'done'}`);
+      return failure;
+    } catch (error) {
+      noteStep('turn:threw');
+      throw error;
     } finally {
       this.unseat(held);
       lease.release();
@@ -277,14 +285,13 @@ export class Talk {
     const { abort } = held;
     const failure = await lease.ready;
     if (failure) return { kind: 'unsent', failure };
-    const ready = await prepare(abort.signal, (step) => this.prepares(held, step));
+    const ready = await prepare(abort.signal, (step) => this.prepares(held, step), () => onSaid?.());
     if ('kind' in ready) return ready;
     const { route, settings } = ready;
     let prompt = ready.prompt;
     const reply = ready.before ? { ...asked, before: ready.before } : asked;
     // A message sent translated or changed by the bot shows as it is saved from the moment it is made so.
     this.change(held, { ...without(held.turn, 'preparing'), reply, said: ready.said ?? said, ...(settings.streaming === false && { whole: true as const }) });
-    if (said && !ready.said) onSaid?.();
     const sending = ready.said && appendUserMessage(this.store, chat, ready.said).then((sent) => {
       if (sent.ok) onSaid?.();
       return sent;
@@ -322,6 +329,7 @@ export class Talk {
         call.retrying = this.retrying(held);
         this.reading.add(call.id);
         held.calling = call.id;
+        noteStep('turn:call');
         this.change(held, { ...held.turn, reading: { at: Date.now(), text: held.turn.text.length, reasoning: held.turn.reasoning.length } });
         // A batched reply answers whole and later, so no round could follow a call: a turn that offers tools goes unbatched.
         const replying = generate({ credentials: this.credentials, log: this.log, ...routeFields(this.store, route, settings), messages: [...prompt.messages, ...exchange], ...(tools && { tools }), call, signal: abort.signal, onText, keep: this.keeps(held), ...(!tools && { batching }) });
@@ -424,7 +432,10 @@ export class Talk {
     if (cutsStatus(this.store, held.turn.chat)) this.change(held, { ...held.turn, status: true });
     return {
       text: (phase, chunk) => {
-        if (started && phase === 'text' && held.turn.text === '' && !held.turn.whole) this.cues.emit('reply-started', held.turn.chat);
+        if (started && phase === 'text' && held.turn.text === '' && !held.turn.whole) {
+          this.cues.emit('reply-started', held.turn.chat);
+          noteStep('turn:text');
+        }
         this.change(held, { ...held.turn, [phase]: held.turn[phase] + chunk });
       },
       takeBack: (phase, chars) => this.change(held, { ...held.turn, [phase]: held.turn[phase].slice(0, held.turn[phase].length - chars) }),

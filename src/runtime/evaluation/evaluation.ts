@@ -7,10 +7,10 @@ import type { AgentInput, assembleAgent, assembleIllustration, assembleMascot, a
 import type { ChatScope, VariableInspection } from '../../engine/render';
 import type { ApiFailure } from '../api';
 import type { ChatTexts, Counted, DisplayEvaluation, EvaluatedPrompt, EvaluationDown, EvaluationInput, EvaluationJob, EvaluationResult, EvaluationUp, LuaResult, OnboardingPage, ToolState, TrialRead } from './evaluation-core';
-import { autoDiagnose } from '../diagnostics/auto-diagnosis';
+import { autoDiagnose, noteStep } from '../diagnostics/auto-diagnosis';
 import { noteProblem } from '../diagnostics/diagnostics';
 import { changedTail, sameHistory } from './history-delta';
-import { Heartbeat, moduleWorker } from '../worker';
+import { Heartbeat, moduleWorker, type Sign } from '../worker';
 import workerUrl from './evaluation-worker?worker&url';
 
 export class EvaluationStopped extends Error {}
@@ -48,6 +48,9 @@ const STUCK_MS = 3_000;
 const LOAD_MS = 20_000;
 // Give the completed screen a paint before prefetching; a requested count loads immediately, without this delay.
 const WARM_MS = 250;
+// A job that ran this long and ended is told to 자동 진단, as one that went silent is.
+const SLOW_MS = 2_000;
+const SLOWEST = 3;
 
 // What a verdict on a job's chat (ChatProjections.verdict) does to it: a display runs without the bot's regex, a
 // passive job is refused before it is posted, and a press runs as asked.
@@ -90,23 +93,40 @@ type Work = { key: string; on: Lane | null; scope: ChatScope | null; regex: bool
 
 const keyOf = ({ asker, chat, tool }: Lane) => `${asker}:${chat}${tool === undefined ? '' : `:${tool}`}`;
 const bare = (scope: ChatScope): ChatScope => ({ ...scope, packs: scope.packs.map((pack) => ({ ...pack, regex: [] })) });
-// 자동 진단's read of a job that went silent: its sizes and closed words, nothing a chat or a bot wrote or is named.
-const jobFacts = ({ on, scope, regex }: Work, jobs: number, ran: number, signs: number): AutoJob => ({
+// started: when its pass began, null before. signs: the signs of life it has posted, signed: when the last came, and
+// what they told (worker Sign): the units begun, the last one named, the slowest that ended.
+type Active = { id: number; work: Work; started: number | null; signs: number; signed: number; units: number; unit: AutoJob['unit']; slow: AutoJob['slow'] };
+
+// 자동 진단's read of a job that went silent or ran long: its sizes and closed words, nothing a chat or a bot wrote or is named.
+const jobFacts = ({ work: { on, scope, regex }, started, signs, signed, units, unit, slow }: Active, jobs: number, waiting: number, now: number): AutoJob => ({
   asker: on?.asker ?? null,
   regex,
-  scope: scope && { regex: scope.packs.reduce((sum, pack) => sum + pack.regex.length, 0), messages: scope.messages.length, chars: scope.messages.reduce((sum, { text }) => sum + text.length, 0), lore: scope.lore.length },
+  scope: scope && {
+    regex: scope.packs.reduce((sum, pack) => sum + pack.regex.length, 0),
+    messages: scope.messages.length,
+    chars: scope.messages.reduce((sum, { text }) => sum + text.length, 0),
+    longest: scope.messages.reduce((most, { text }) => Math.max(most, text.length), 0),
+    lore: scope.lore.length,
+    packs: scope.packs.length,
+    assets: scope.assets.length,
+    variables: scope.variables.length,
+  },
+  waiting,
   jobs,
-  ran,
+  ran: now - started!,
   signs,
+  units,
+  unit,
+  quiet: now - signed,
+  slow,
 });
 
 export class Evaluation {
   private worker: Worker | null = null;
   private warming: ReturnType<typeof setTimeout> | null = null;
   private warmed: Worker | null = null;
-  // started: when its pass began, null before. signs: the signs of life it has posted. answered: the jobs this worker
-  // has answered.
-  private active: { id: number; work: Work; started: number | null; signs: number } | null = null;
+  // answered: the jobs this worker has answered.
+  private active: Active | null = null;
   private answered = 0;
   private readonly waiting = new Map<string, Work>();
   private readonly histories = new Map<string, ChatScope['messages']>();
@@ -286,7 +306,7 @@ export class Evaluation {
     const work = this.next();
     if (!work) return this.heart.rest();
     const id = ++this.ids;
-    this.active = { id, work, started: null, signs: 0 };
+    this.active = { id, work, started: null, signs: 0, signed: 0, units: 0, unit: null, slow: [] };
     try {
       const worker = this.open();
       let input: EvaluationInput;
@@ -321,9 +341,10 @@ export class Evaluation {
   }
 
   private receive(data: EvaluationUp) {
-    if ('progress' in data && this.active) this.active.signs++;
+    if ('progress' in data && this.active) this.signed(this.active, data.progress);
     if ('pong' in data || 'progress' in data) return this.heart.answered();
     if ('trouble' in data) {
+      noteStep('worker-trouble');
       autoDiagnose({ event: 'worker-trouble' });
       return noteProblem(data.trouble);
     }
@@ -331,7 +352,7 @@ export class Evaluation {
     const active = this.active;
     if ('started' in data) {
       if (active?.id !== data.started) return;
-      active.started = Date.now();
+      active.started = active.signed = Date.now();
       this.heart.answered();
       this.heart.start(STUCK_MS);
       return;
@@ -340,6 +361,7 @@ export class Evaluation {
     this.active = null;
     this.answered++;
     active.work.stop();
+    if (active.started !== null && Date.now() - active.started >= SLOW_MS) this.report('evaluation-slow', active);
     if ('error' in data) active.work.reject(new EvaluationFailed(data.error));
     else {
       // Structured cloning preserves Error but not a custom prototype; callers classify the engine's Runaway.
@@ -352,12 +374,27 @@ export class Evaluation {
 
   // A started job held the worker: only it fails, its chat is judged before anything else is posted, and the jobs
   // waiting go on in a new worker, which holds no history.
+  private signed(active: Active, { unit, ended, slow }: Sign) {
+    active.signs++;
+    active.signed = Date.now();
+    active.units += ended;
+    active.unit = unit;
+    if (slow) active.slow = [...active.slow, slow].sort((a, b) => b.ms - a.ms).slice(0, SLOWEST);
+  }
+
+  // One report for a chat's asker with the regex and one without it, so a verdict's rerun that stalls too is seen.
+  private report(event: 'evaluation-stuck' | 'evaluation-slow', active: Active) {
+    const { on, job, regex } = active.work;
+    const facts = jobFacts(active, this.answered, this.waiting.size, Date.now());
+    noteStep(event, facts.ran);
+    autoDiagnose({ event, detail: job.kind, job: { id: [on?.chat, on?.asker, regex].join(':'), facts } });
+  }
+
   private silent() {
     const active = this.active;
     if (!active || active.started === null) return this.end(new EvaluationFailed('Evaluation worker stuck'));
-    const { on, job, regex } = active.work;
-    // One report for a chat's asker with the regex and one without it, so a verdict's rerun that stalls too is seen.
-    autoDiagnose({ event: 'evaluation-stuck', detail: job.kind, job: { id: [on?.chat, on?.asker, regex].join(':'), facts: jobFacts(active.work, this.answered, Date.now() - active.started, active.signs) } });
+    const { on, regex } = active.work;
+    this.report('evaluation-stuck', active);
     this.worker?.terminate();
     this.worker = null;
     this.cancelWarm();

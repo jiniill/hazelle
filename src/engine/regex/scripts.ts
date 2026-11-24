@@ -67,7 +67,7 @@ export class Scripts {
     const boxes: Box[] = [];
     let result = cbs(text);
     for (const { source, place, flags, dynamic, plain, directive, kind: planned, argument, pattern: fixed } of this.plans[stage]) {
-      progressed();
+      progressed('regex', index, place, result.length, stage);
       const pattern = dynamic ? compile(cbs(source), flags) : fixed;
       if (!pattern) continue;
       const regex = () => reset(pattern.regex);
@@ -140,7 +140,7 @@ function latestMatches(messages: readonly HistoryMessage[]): (pattern: RegExp, i
         for (let at = index - 1; at >= 0; at--) {
           const message = messages[at]!;
           if (message.role !== role) continue;
-          progressed();
+          progressed('repeat', at, null, message.text.length);
           const match = reset(pattern).exec(message.text);
           if (match) { state.last = { index: at, text: match[0] }; break; }
         }
@@ -149,7 +149,7 @@ function latestMatches(messages: readonly HistoryMessage[]): (pattern: RegExp, i
     for (; state.through < index; state.through++) {
       const message = messages[state.through]!;
       if (message.role !== role) continue;
-      progressed();
+      progressed('repeat', state.through, null, message.text.length);
       const match = reset(pattern).exec(message.text);
       if (match) state.last = { index: state.through, text: match[0] };
     }

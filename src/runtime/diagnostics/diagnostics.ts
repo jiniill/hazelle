@@ -1,5 +1,6 @@
 import { MAX_DIAGNOSTICS_LENGTH } from '../../contracts/board';
-import { autoDiagnose, errorFacts, type AutoOrigin } from './auto-diagnosis';
+import { autoDiagnose, errorFacts, lastPlace, noteStep, type AutoOrigin } from './auto-diagnosis';
+import { watchFrames } from './frames';
 import { errorText } from '../evaluation/error-text';
 import type { EvaluationDown, EvaluationUp } from '../evaluation/evaluation-core';
 import type { Facts } from './diagnostic-state';
@@ -24,22 +25,31 @@ export function noteProblem(text: string, at = Date.now()) {
 
 export const recentProblems = (): readonly Problem[] => problems;
 
+const THROWN: Record<AutoOrigin, string> = { error: '오류', rejection: '처리되지 않은 오류', screen: '화면 오류' };
+
+// An error no code caught, or one that took a screen down (app/common/ScreenLoad). said: the browser's own words for an
+// error event that carries no error.
+export function noteThrown(error: unknown, origin: AutoOrigin, said?: string) {
+  noteProblem(`${THROWN[origin]} · ${said !== undefined && (error === undefined || error === null) ? said : errorText(error)}`);
+  // Without an object thrown there is nothing more to say: a browser's own note, or a script of another origin.
+  if (typeof error !== 'object' || error === null) return;
+  const facts = errorFacts(error);
+  // Where it went off, for a press: the positions name no input, as the words before them can.
+  if (facts.frames) noteProblem(`코드 위치 · ${facts.frames}`);
+  noteStep(`thrown:${origin}`);
+  autoDiagnose({ event: 'app-error', origin, ...facts });
+}
+
 export function watchProblems() {
-  // Without an object thrown there is nothing to say: a browser's own note, or a script of another origin.
-  const thrown = (error: unknown, origin: AutoOrigin) => {
-    if (typeof error !== 'object' || error === null) return;
-    const facts = errorFacts(error);
-    // Where it went off, for a press: the positions name no input, as the words before them can.
-    if (facts.frames) noteProblem(`코드 위치 · ${facts.frames}`);
-    autoDiagnose({ event: 'app-error', origin, ...facts });
-  };
-  addEventListener('error', (event) => {
-    noteProblem(`오류 · ${event.error === undefined || event.error === null ? event.message : errorText(event.error)}`);
-    thrown(event.error, 'error');
-  });
-  addEventListener('unhandledrejection', (event) => {
-    noteProblem(`처리되지 않은 오류 · ${errorText(event.reason)}`);
-    thrown(event.reason, 'rejection');
+  addEventListener('error', (event) => noteThrown(event.error, 'error', event.message));
+  addEventListener('unhandledrejection', (event) => noteThrown(event.reason, 'rejection'));
+  addEventListener('online', () => noteStep('online'));
+  addEventListener('offline', () => noteStep('offline'));
+  document.addEventListener('visibilitychange', () => noteStep(document.visibilityState === 'visible' ? 'visible' : 'hidden'));
+  watchFrames({
+    long: (ms) => noteStep('frame', ms),
+    // One report a page for each place it went slow at, which the place's id tells apart and is not sent.
+    slow: (detail, frame) => autoDiagnose({ event: 'page-slow', detail, frame, id: JSON.stringify(lastPlace()) }),
   });
 }
 

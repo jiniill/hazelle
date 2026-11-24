@@ -147,26 +147,26 @@ export function takeTurn(session: Session, chat: string, target: Target, start: 
   if (start) {
     const { greeting } = start;
     const said = target.kind === 'send' ? { id: ids.said, text: target.text, follows: greeting } : null;
-    return unhalted(session.talk.run({ chat, said, reply: { id: ids.reply, message: null, replaces: null, follows: said ? said.id : greeting, continues: null } }, async (signal, preparing) => {
+    return unhalted(session.talk.run({ chat, said, reply: { id: ids.reply, message: null, replaces: null, follows: said ? said.id : greeting, continues: null } }, async (signal, preparing, saved) => {
       const unstarted = await start.saved;
       if (unstarted) return { kind: 'unstarted', failure: unstarted };
       // The chat was just saved and a new chat's target names no message, so it is there.
       const turn = (await gatheredTurn(session, chat, target, ids))!;
-      return 'kind' in turn ? turn : prepare(session, chat, turn, signal, again, preparing, skip);
+      return 'kind' in turn ? turn : prepare(session, chat, turn, signal, again, preparing, skip, saved);
     }, onSaid));
   }
   const lease = session.store.retainChat(chat);
   const send = (): Promise<TurnFailure | null> => {
     const showing = gatherTurn(session, chat, target, ids);
     if (showing === null || 'kind' in showing) return Promise.resolve(showing);
-    return unhalted(session.talk.run({ chat, said: showing.said, reply: showing.reply }, async (signal, preparing) => {
+    return unhalted(session.talk.run({ chat, said: showing.said, reply: showing.reply }, async (signal, preparing, saved) => {
       // Another device may have written to this chat while this page stood open without focus or a timer's pull, so the
       // prompt is gathered again after a pull. A turn it cannot pull does not send on what may be stale.
       const unpulled = await session.store.pull();
       if (unpulled) return { kind: 'unpulled', failure: unpulled };
       const turn = await gatheredTurn(session, chat, target, ids);
       if (turn === null) return { kind: 'gone' };
-      return 'kind' in turn ? turn : prepare(session, chat, turn, signal, again, preparing, skip);
+      return 'kind' in turn ? turn : prepare(session, chat, turn, signal, again, preparing, skip, saved);
     }, onSaid));
   };
   const sending = lease.ready.then((failure): Promise<TurnFailure | null> => failure ? Promise.resolve({ kind: 'unpulled', failure }) : send());
@@ -189,14 +189,16 @@ async function gatheredTurn(session: Pick<Session, 'store' | 'read'>, chat: stri
   return evaluated && 'kind' in evaluated ? evaluated : gatherTurn(session, chat, target, ids);
 }
 
-async function prepare(session: Session, chat: string, gathered: TurnContext, signal: AbortSignal, again: (answer: boolean) => Promise<TurnContext | Blocked | Unevaluated | null>, preparing: (step: Preparing | null) => void, skip: Skip): Promise<Ask | Halted | TurnFailure> {
+async function prepare(session: Session, chat: string, gathered: TurnContext, signal: AbortSignal, again: (answer: boolean) => Promise<TurnContext | Blocked | Unevaluated | null>, preparing: (step: Preparing | null) => void, skip: Skip, saved: () => void): Promise<Ask | Halted | TurnFailure> {
   const translated = gathered.said && chatTranslate(session.store, gathered.chat).input ? await sendTranslated(session, chat, gathered, signal) : gathered;
   if ('kind' in translated) return translated;
   const toolRunning = toolWait(preparing);
-  const started = await session.scriptTurns.starting(chat, translated, again, signal, toolRunning);
+  const started = await session.scriptTurns.starting(chat, translated, again, signal, toolRunning, saved);
   if ('kind' in started) return started;
-  const prompted = await session.scriptTurns.prompting(chat, started.turn, () => again(translated.said !== null && started.turn.said === null), signal, toolRunning);
-  if ('kind' in prompted) return prompted;
+  // The bot's Lua saved the user's message: whatever ends the turn from here, the composer does not get it back.
+  const kept = translated.said !== null && started.turn.said === null ? { kept: true as const } : {};
+  const prompted = await session.scriptTurns.prompting(chat, started.turn, () => again('kept' in kept), signal, toolRunning);
+  if ('kind' in prompted) return { ...prompted, ...kept };
   if (signal.aborted) return { kind: 'halted' };
   const { turn, tools } = prompted;
   const { route, settings, scope, budget, said, reply, memory: asked } = turn;
@@ -204,7 +206,6 @@ async function prepare(session: Session, chat: string, gathered: TurnContext, si
     asked?.kind === 'built-in' ? findRecords(session, chat, scope.messages, signal).then((found) => ({ ...asked, found })) : asked,
     turn.chat.character === null ? [] : findAdditional(session, chat, turn.chat.character, scope, signal),
   ]);
-  const kept = translated.said !== null && said === null ? { kept: true as const } : {};
   if (signal.aborted) return { kind: 'halted' };
   if ('kind' in additional) return { ...additional, ...kept };
   const agents = !skip.agents && reply.continues === null && agentsOf(session.store, turn.chat).pre.length > 0 ? await runPre(session, chat, turn, signal, preparing, skip) : { runs: [], notes: '' };

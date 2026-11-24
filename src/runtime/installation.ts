@@ -15,4 +15,11 @@ export function markSelfHost(marked: boolean) {
   own = marked;
 }
 
+// What follows the app's own bundle in a script's address; null for an address anywhere else (an extension's, a
+// plugin frame's, another site's), whose file names are not the app's to tell.
+export function ownScript(url: string): string | null {
+  const bundle = `${location.origin}/assets/`;
+  return url.startsWith(bundle) ? url.slice(bundle.length) : null;
+}
+
 export const readRelease = () => api<Release>('GET', 'release');

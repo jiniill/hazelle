@@ -140,7 +140,10 @@ describe("a turn with the bot's Lua", () => {
     server.withSession(async (session) => {
       const { chat, messages } = await chatWith(session, `function onStart(id) setChatVar(id, 'handled', getChat(id, -1).data) stopChat(id) end`);
       const log = stubRelay(() => saying('never'));
-      expect(await takeTurn(session, chat, { kind: 'send', text: '/roll' })).toBeNull();
+      // The save is told where it is made: this turn ends inside its preparing, and its text must not go back to the composer.
+      const said = vi.fn();
+      expect(await takeTurn(session, chat, { kind: 'send', text: '/roll' }, null, {}, said)).toBeNull();
+      expect(said).toHaveBeenCalledOnce();
       expect(log).toHaveLength(0);
       expect(shown(messages()[1]!)).toMatchObject({ text: '/roll', after: [['handled', '/roll']] });
       expect(session.scriptInteractions.snapshot().notes).toEqual([]);

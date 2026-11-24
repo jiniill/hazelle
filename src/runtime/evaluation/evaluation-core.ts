@@ -11,6 +11,7 @@ import { inspectVariables, renderChat, type VariableInspection, type ChatBasis, 
 import type { Memory, Source } from '../../model/memory';
 import { applyTail, type Tail } from './history-delta';
 import { tokenizer } from './tokenizer';
+import type { Sign } from '../worker';
 
 type LuaText = { text: string; stamp: string; shown: string };
 const stamped = (generation: number, stamp: string) => `${generation}/${stamp}`;
@@ -63,7 +64,7 @@ export type EvaluationResult =
 export type EvaluationDown = { id: number; input: EvaluationInput } | { forget: string } | { warm: true } | { ping: true } | { probe: true };
 // started: the job's pass over the chat began, past loading the tokenizer. progress: the pass is still moving
 // (engine/progress). trouble: why the tokenizer did not load, for 문제 진단's recent problems (runtime/diagnostics/diagnostics).
-export type EvaluationUp = { id: number; result: EvaluationResult } | { id: number; error: string } | { pong: true } | { started: number } | { progress: true } | { trouble: string } | { probed: string };
+export type EvaluationUp = { id: number; result: EvaluationResult } | { id: number; error: string } | { pong: true } | { started: number } | { progress: Sign } | { trouble: string } | { probed: string };
 
 export class Evaluator {
   private readonly displays = new Map<string, { revision: number; pass: DisplayPass }>();

@@ -32,7 +32,7 @@ function drain(stream: Inflate | Gunzip, packed: Uint8Array, size: number, limit
   };
   for (let at = 0; at < packed.length; at += STEP) {
     stream.push(packed.subarray(at, at + STEP), at + STEP >= packed.length);
-    progressed();
+    progressed('inflate');
   }
   if (total !== size) throw new RangeError('less data than declared');
   return concat(chunks);

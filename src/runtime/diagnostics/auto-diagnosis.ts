@@ -1,9 +1,10 @@
-import { AUTO_BROWSER_MESSAGES, AUTO_ERROR_NAMES, AUTO_OPEN_FAILURES, readAutoReport, type AutoChat, type AutoDetail, type AutoErrorCause, type AutoErrorName, type AutoEvent, type AutoJob, type AutoReport } from '../../contracts/auto-diagnosis';
+import { AUTO_BROWSER_MESSAGES, AUTO_ERROR_NAMES, AUTO_OPEN_FAILURES, closedWord, readAutoReport, type AutoChat, type AutoDetail, type AutoErrorCause, type AutoErrorName, type AutoEvent, type AutoFrame, type AutoJob, type AutoReport, type AutoScript } from '../../contracts/auto-diagnosis';
+import { stalls } from './frames';
 import type { Place } from './diagnostic-state';
 import { without } from '../../model/fields';
 import type { Settings } from '../../model/settings';
 import { fetchApi } from '../api';
-import { BUILT_VERSION, selfHost } from '../installation';
+import { BUILT_VERSION, ownScript, selfHost } from '../installation';
 import type { ObjectStore } from '../store/store';
 import { changeSettings } from '../account-settings';
 
@@ -20,7 +21,37 @@ export function notePlace(next: Place | null) {
 }
 export const lastPlace = () => place;
 
+type ChatRead = { id: string; read: () => AutoChat | null };
+// The chat on screen (app/chat/useChat), which a report about no chat reads.
+let open: ChatRead | null = null;
+export function noteChat(next: ChatRead | null) {
+  open = next;
+}
+// A read that fails leaves the report without a chat: the problem told is not this chat's.
+function onScreen(): AutoChat | null {
+  try {
+    return open?.read() ?? null;
+  } catch {
+    return null;
+  }
+}
+
+const TRAIL = 40;
+const trail: { word: string; at: number; n: number | null }[] = [];
+// What the page just did, kept for the next report's trail. word: a closed word of the app's own, never a name or a
+// text; n: a number of its own, such as how long it took.
+export function noteStep(word: string, n: number | null = null) {
+  trail.push({ word: closedWord(word), at: performance.now(), n: n === null ? null : Math.round(n) });
+  if (trail.length > TRAIL) trail.shift();
+}
+
+let errors = 0;
+const NETS = ['slow-2g', '2g', '3g', '4g'] as const;
+const ENTERED = ['navigate', 'reload', 'back_forward', 'prerender'] as const;
+const MB = 1024 * 1024;
+
 const FRAMES = 12;
+const PLACE = /^[\w.-]{1,100}\.js:\d{1,9}:\d{1,9}$/;
 
 let armed = false;
 // For the page's life: a problem that repeats, as a failure does on each try, is one report per chat or job.
@@ -47,9 +78,19 @@ export function deviceFacts(agent: string): Pick<AutoReport, 'browser' | 'major'
   };
 }
 
+// The elements inside the open shadow roots under a root, each story being one, and inside the roots in those.
+function shadowed(root: Document | ShadowRoot): number {
+  let count = 0;
+  for (const { shadowRoot } of root.querySelectorAll('*')) if (shadowRoot) count += shadowRoot.querySelectorAll('*').length + shadowed(shadowRoot);
+  return count;
+}
+
 // What a report says of the page and the machine, whatever the problem.
-function pageFacts(): Pick<AutoReport, 'screen' | 'page' | 'online' | 'visible' | 'standalone' | 'cores' | 'memoryGb' | 'width' | 'height' | 'language'> {
-  const nav = navigator as Navigator & { deviceMemory?: number; standalone?: boolean };
+function pageFacts(): Pick<AutoReport, 'screen' | 'page' | 'online' | 'visible' | 'standalone' | 'cores' | 'memoryGb' | 'width' | 'height' | 'language' | 'dpr' | 'touch' | 'reducedMotion' | 'heapMb' | 'heapLimitMb' | 'net' | 'saveData' | 'discarded' | 'entered' | 'dom' | 'shadow' | 'errors' | 'stalls' | 'trail'> {
+  const nav = navigator as Navigator & { deviceMemory?: number; standalone?: boolean; connection?: { effectiveType?: string; saveData?: boolean } };
+  const heap = (performance as Performance & { memory?: { usedJSHeapSize: number; jsHeapSizeLimit: number } }).memory;
+  const entry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+  const now = performance.now();
   return {
     screen: place?.kind ?? null,
     page: Math.round(performance.now() / 1000),
@@ -61,13 +102,27 @@ function pageFacts(): Pick<AutoReport, 'screen' | 'page' | 'online' | 'visible' 
     width: innerWidth,
     height: innerHeight,
     language: /^[A-Za-z-]{2,20}$/.test(nav.language) ? nav.language : null,
+    dpr: devicePixelRatio,
+    touch: nav.maxTouchPoints > 0,
+    reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
+    heapMb: heap ? Math.round(heap.usedJSHeapSize / MB) : null,
+    heapLimitMb: heap ? Math.round(heap.jsHeapSizeLimit / MB) : null,
+    net: NETS.find((known) => known === nav.connection?.effectiveType) ?? null,
+    saveData: nav.connection?.saveData ?? null,
+    discarded: (document as Document & { wasDiscarded?: boolean }).wasDiscarded === true,
+    entered: ENTERED.find((known) => known === entry?.type) ?? null,
+    dom: document.querySelectorAll('*').length,
+    shadow: shadowed(document),
+    errors,
+    stalls: stalls(),
+    trail: trail.map(({ word, at, n }) => ({ word, ago: Math.round(now - at), n })),
   };
 }
 
 // A thrown error's name and where in the app's bundle it went off. Its message and its stack's function names stay out.
 export function errorFacts(error: object): { detail: AutoErrorName; cause: AutoErrorCause; place: string | null; frames: string | null } {
   const { name, message, stack } = error as { name?: unknown; message?: unknown; stack?: unknown };
-  const frames = typeof stack === 'string' ? [...stack.matchAll(/\/assets\/([\w.-]{1,100}\.js:\d{1,9}:\d{1,9})/g)].slice(0, FRAMES).map((match) => match[1]!) : [];
+  const frames = typeof stack === 'string' ? [...stack.matchAll(/https?:\/\/[^\s()@]+/g)].flatMap(([url]) => ownScript(url) ?? []).filter((at) => PLACE.test(at)).slice(0, FRAMES) : [];
   const cause = AUTO_BROWSER_MESSAGES.find((known) => known.message === message)?.cause ?? 'other';
   return { detail: AUTO_ERROR_NAMES.find((known) => known === name) ?? 'other', cause, place: frames[0] ?? null, frames: frames.join(' ') || null };
 }
@@ -76,16 +131,19 @@ export const openFailure = (error: string): AutoDetail => AUTO_OPEN_FAILURES.fin
 
 export type AutoOrigin = NonNullable<AutoReport['origin']>;
 
-type Problem = { event: AutoEvent; detail?: AutoDetail | null; cause?: AutoErrorCause | null; place?: string | null; frames?: string | null; origin?: AutoReport['origin']; chat?: { id: string; read: () => AutoChat | null }; job?: { id: string; facts: AutoJob } };
+// id: what else a problem with neither a chat nor a job is one report a page for, never reported itself.
+type Problem = { event: AutoEvent; detail?: AutoDetail | null; cause?: AutoErrorCause | null; place?: string | null; frames?: string | null; origin?: AutoReport['origin']; chat?: ChatRead; job?: { id: string; facts: AutoJob }; script?: AutoScript | null; frame?: AutoFrame | null; id?: string | null };
 
 // Never fails its caller, and a report that goes wrong tells no one: this is the app's own note about a problem.
-export function autoDiagnose({ event, detail = null, cause = null, place: thrown = null, frames = null, origin = null, chat, job }: Problem) {
+export function autoDiagnose({ event, detail = null, cause = null, place: thrown = null, frames = null, origin = null, chat, job, script = null, frame = null, id = null }: Problem) {
+  if (event === 'app-error') errors++;
   if (!armed) return;
-  const key = JSON.stringify([event, detail, cause, thrown, (chat ?? job)?.id ?? null]);
+  // The origin counts: an error a frame threw and the same one taking the screen down are two things to know.
+  const key = JSON.stringify([event, detail, cause, thrown, origin, (chat ?? job)?.id ?? id]);
   if (said.has(key)) return;
   said.add(key);
   try {
-    const report = readAutoReport({ event, detail, cause, version: BUILT_VERSION, place: thrown, frames, origin, ...deviceFacts(navigator.userAgent), ...pageFacts(), chat: chat?.read() ?? null, job: job?.facts ?? null });
+    const report = readAutoReport({ event, detail, cause, version: BUILT_VERSION, place: thrown, frames, origin, ...deviceFacts(navigator.userAgent), ...pageFacts(), chat: chat ? chat.read() : onScreen(), job: job?.facts ?? null, script, frame });
     if (report) void fetchApi('diagnoses', { anonymous: true, method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(report), keepalive: true }).catch(() => {
       // Reporting must not create another report, and a failed report is never queued or retried.
     });

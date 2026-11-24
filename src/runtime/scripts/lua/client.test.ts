@@ -2,7 +2,9 @@ import { afterEach, expect, it, vi } from 'vitest';
 import type { ChatScope } from '../../../engine/render';
 import type { Snapshot } from '../../../engine/lua/state';
 import type { Host } from '../../../engine/script-api';
+import { holdDiagnosis } from '../../diagnostics/auto-diagnosis';
 import { applyTail } from '../../evaluation/history-delta';
+import { stubBrowser } from '../../testing';
 import { LuaWorker, type Down, type Up } from './client';
 import { luaStanding } from './snapshot';
 
@@ -14,7 +16,10 @@ const snapshot: Snapshot = {
   ] },
 };
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  holdDiagnosis(false);
+  vi.unstubAllGlobals();
+});
 
 it('installs history deltas once per revision and sends only revision/size for stretches', async () => {
   const sent: Down[] = [];
@@ -113,6 +118,29 @@ it('keeps each pending host until completion and ignores old replies after a cra
     next.receive({ kind: 'failed', id: 3, message: 'new failure' });
     await expect(restarted).rejects.toThrow('new failure');
   } finally { runner.close(); }
+});
+
+it('tells 자동 진단 of a worker that went, by the job last posted in sizes and closed words', async () => {
+  const sent = vi.fn<(path: string, init: RequestInit) => Promise<Response>>(async () => new Response(null, { status: 204 }));
+  vi.stubGlobal('fetch', sent);
+  stubBrowser('Mozilla/5.0 (X11; Linux x86_64) Chrome/141.0.0.0');
+  holdDiagnosis(true);
+  let crash: () => void;
+  vi.stubGlobal('Worker', class {
+    onerror: (() => void) | null = null;
+    constructor() { crash = () => this.onerror?.(); }
+    postMessage() {}
+    terminate() {}
+  });
+  const runner = new LuaWorker();
+  const host: Host = { say() {}, ask: async () => null, model: async () => ({ success: true, result: '' }), embed: async () => ({ ok: false, reason: 'no-model' }), tokens: async () => 0, lore: async () => [], background: async () => false };
+  const scope: ChatScope = { ...snapshot.scope, cast: [], packs: [], toggles: new Map(), status: { definitions: [], state: {} } };
+  const running = runner.run('secret-chat', [], scope, { kind: 'button', data: 'SECRET' }, host, 'event');
+  crash!();
+  await expect(running).rejects.toThrow('crashed');
+  const body = JSON.parse(sent.mock.calls[0]![1].body as string) as Record<string, unknown>;
+  expect(body).toMatchObject({ event: 'script-stuck', detail: 'lua-crashed', script: { job: 'run', event: 'button', preview: false, triggers: 0, messages: 2, chars: 9, pending: 1 } });
+  expect(JSON.stringify(body)).not.toMatch(/SECRET|secret-chat/);
 });
 
 it("names a chat's missing persona 'User', as Risu does", () => {

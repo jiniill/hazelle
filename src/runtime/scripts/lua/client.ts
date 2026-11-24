@@ -4,6 +4,8 @@ import type { DisplayBatch, DisplayItem, RunLane, Script, SyntaxProblem } from '
 import type { LuaMessage, Snapshot } from '../../../engine/lua/state';
 import type { ChatBasis, ChatScope } from '../../../engine/render';
 import type { ScriptOutcome } from './event';
+import { SCRIPT_EVENTS, type AutoScript, type StuckScript } from '../../../contracts/auto-diagnosis';
+import { autoDiagnose, noteStep } from '../../diagnostics/auto-diagnosis';
 import { changedTail, sameHistory, type Tail } from '../../evaluation/history-delta';
 import { PendingRequests } from '../../pending-requests';
 import { Heartbeat, moduleWorker } from '../../worker';
@@ -40,6 +42,8 @@ const STUCK_MS = 8000;
 
 export class LuaStuck extends Error {}
 
+type Job = Extract<Down, { kind: 'run' | 'install-display' | 'display' | 'check' }>;
+
 type Result = ScriptOutcome | DisplayBatch | SyntaxProblem | null;
 
 export class LuaWorker implements LuaRunner {
@@ -48,7 +52,9 @@ export class LuaWorker implements LuaRunner {
   private readonly displays = new Map<string, { revision: number; snapshot: Snapshot }>();
   // One ordered event transport, not a cache per chat; the receiver applies each tail before awaiting Lua.
   private history: ChatScope['messages'] = [];
-  private readonly heart = new Heartbeat(() => this.worker?.postMessage({ kind: 'ping' } satisfies Down), () => this.end(new LuaStuck('stuck')));
+  private readonly heart = new Heartbeat(() => this.worker?.postMessage({ kind: 'ping' } satisfies Down), () => this.gone('lua'));
+  // Each unanswered job's sizes and closed words, oldest first, for 자동 진단: never the job, whose texts would stay held.
+  private readonly posted = new Map<number, { owner: string | null; at: number; facts: Omit<AutoScript, 'pending' | 'waited'> }>();
 
   run(owner: string, triggers: ScriptUnit[], scope: ChatScope, event: Event, host: Host, lane: RunLane, signal?: AbortSignal): Promise<ScriptOutcome> {
     const { messages, ...fixed } = scope;
@@ -87,10 +93,12 @@ export class LuaWorker implements LuaRunner {
     this.end(new LuaStuck('closed'));
   }
 
-  private send(message: (id: number) => Down, host: Host | null, signal?: AbortSignal): Promise<Result> {
+  private send(message: (id: number) => Job, host: Host | null, signal?: AbortSignal): Promise<Result> {
     const { id, promise } = this.pending.add(host);
     try {
-      this.open().postMessage(message(id));
+      const job = message(id);
+      this.open().postMessage(job);
+      this.posted.set(id, { owner: job.kind === 'check' ? null : job.owner, at: Date.now(), facts: this.sizes(job) });
       this.heart.start(STUCK_MS);
     } catch (error) { this.end(new LuaStuck(String(error))); }
     if (!signal) return promise;
@@ -106,7 +114,7 @@ export class LuaWorker implements LuaRunner {
     if (this.worker) return this.worker;
     const worker = moduleWorker(workerUrl);
     worker.onmessage = ({ data }: MessageEvent<Up>) => this.receive(data);
-    worker.onerror = () => this.end(new LuaStuck('crashed'));
+    worker.onerror = () => this.gone('lua-crashed');
     this.worker = worker;
     return worker;
   }
@@ -115,6 +123,7 @@ export class LuaWorker implements LuaRunner {
     if (message.kind === 'pong') return this.heart.answered();
     if (message.kind === 'done' || message.kind === 'failed') {
       const run = this.pending.take(message.id);
+      this.posted.delete(message.id);
       if (!run) return;
       if (this.pending.size === 0) this.heart.rest();
       if (message.kind === 'done') run.resolve(message.result);
@@ -131,11 +140,33 @@ export class LuaWorker implements LuaRunner {
     void answering.then(answer, () => answer(null));
   }
 
+  private sizes(job: Job): Omit<AutoScript, 'pending' | 'waited'> {
+    const run = job.kind === 'run' ? job : null;
+    const messages = run ? this.history : job.kind === 'check' ? [] : (this.displays.get(job.owner)?.snapshot.scope.messages ?? []);
+    return {
+      job: job.kind,
+      event: SCRIPT_EVENTS.find((known) => known === run?.event.kind) ?? null,
+      preview: run?.lane === 'preview',
+      triggers: run ? run.triggers.length : job.kind === 'install-display' ? job.install.scripts.length : 0,
+      messages: messages.length,
+      chars: messages.reduce((sum, { text }) => sum + text.length, 0),
+    };
+  }
+
+  // Told of the oldest job unanswered, which with several waiting need not be the one that was running.
+  private gone(detail: Extract<StuckScript, 'lua' | 'lua-crashed'>) {
+    noteStep(`script-stuck:${detail}`);
+    const [oldest] = this.posted.values();
+    autoDiagnose({ event: 'script-stuck', detail, id: oldest?.owner ?? null, script: oldest ? { ...oldest.facts, pending: this.pending.size, waited: Date.now() - oldest.at } : null });
+    this.end(new LuaStuck(detail === 'lua' ? 'stuck' : 'crashed'));
+  }
+
   private end(error: Error) {
     this.worker?.terminate();
     this.worker = null;
     this.displays.clear();
     this.history = [];
+    this.posted.clear();
     this.heart.rest();
     this.pending.rejectAll(() => error);
   }

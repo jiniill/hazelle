@@ -246,6 +246,22 @@ function placeFacts(session: Reader, { kind, id }: Place): Facts | Promise<Facts
 }
 
 // 자동 진단's read of a chat: store reads and a request already built, so a report never makes a worker build another.
+// Counted over every pack on the chat and the chat's own lorebook; a 등장인물's are not.
+function botFacts(store: Reader['store'], id: string, chat: Chat): AutoChat['bot'] {
+  const packs = packsOf(store, chat);
+  const triggers = packs.flatMap(({ pack }) => pack.triggers);
+  const held = (kind: 'lore' | 'asset') => packs.reduce((sum, { id: owner }) => sum + store.children(kind, owner).length, 0);
+  return {
+    regex: packs.reduce((sum, { pack }) => sum + pack.regex.length, 0),
+    triggers: triggers.length,
+    lua: triggers.filter(({ kind }) => kind === 'lua').length,
+    lore: held('lore') + store.children('lore', id).length,
+    assets: held('asset'),
+    modules: packs.filter(({ module }) => module).length,
+    background: packs.some(({ pack }) => pack.background !== undefined),
+  };
+}
+
 export function autoChat({ store, read }: Pick<Session, 'store' | 'read'>, id: string, sending: Sending | null, { running, failed, chapterFailed, indexFailed }: Remembering, more: Partial<Pick<AutoChat, 'gap' | 'turn' | 'cache'>> = {}): AutoChat | null {
   const chat = live(store.get('chat', id))?.value;
   if (!chat) return null;
@@ -253,7 +269,8 @@ export function autoChat({ store, read }: Pick<Session, 'store' | 'read'>, id: s
   const { context, reply } = limitsOf(store, chat);
   const { on, own, budget, window, batch } = memorySetup(store, chat);
   const memory = store.scopeState(id) === 'loaded' ? chatMemory(store, id) : null;
-  const messages = read.chat(id).snapshot()?.messages;
+  const screen = read.chat(id).snapshot();
+  const messages = screen?.messages;
   const latest = messages?.at(-1);
   const receipt = latest && shown(latest).receipt;
   return {
@@ -265,6 +282,10 @@ export function autoChat({ store, read }: Pick<Session, 'store' | 'read'>, id: s
     reply,
     messages: messages?.length ?? null,
     character: chat.character !== null,
+    bot: botFacts(store, id, chat),
+    shown: screen
+      ? { texts: screen.display.texts.length, chars: screen.display.texts.reduce((sum, text) => sum + text.length, 0), longest: screen.display.texts.reduce((most, text) => Math.max(most, text.length), 0), css: screen.display.css.length, boxes: screen.display.boxes.flat().length, stuck: store.projections.verdict(id) !== null }
+      : null,
     memory: { on, own, budget, clamped: memoryBudget(budget, promptBudget(store, chat)), window, batch },
     aux: auxFacts(store, chat),
     stored: memory && { records: memory.records.length, chapters: memory.chapters.length, facts: memory.state.length, threads: memory.threads.length },

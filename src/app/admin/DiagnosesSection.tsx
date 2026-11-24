@@ -11,8 +11,11 @@ import { TURN_FAILED, FEATURE_NAMES, MEMORY_GAP, CACHE_BROKEN } from '../common/
 export const DIAGNOSES = '자동 진단';
 const EVENTS: Record<AutoEvent, string> = {
   'app-error': '앱 오류',
+  'page-slow': '화면 끊김',
   'worker-trouble': '워커 오류',
   'evaluation-stuck': '봇 스크립트 멈춤',
+  'evaluation-slow': '봇 스크립트 느림',
+  'script-stuck': '루아·플러그인 멈춤',
   'turn-failed': TURN_FAILED,
   'memory-failed': `${FEATURE_NAMES.memory} 실패`,
   'memory-gap': MEMORY_GAP,

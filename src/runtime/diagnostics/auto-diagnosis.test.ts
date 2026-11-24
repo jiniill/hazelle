@@ -1,19 +1,15 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { EMPTY_SETTINGS } from '../../model/settings';
 import { holdAccount } from '../api';
-import { autoDiagnose, deviceFacts, errorFacts, holdDiagnosis, openFailure, sharesDiagnosis } from './auto-diagnosis';
+import { autoDiagnose, deviceFacts, errorFacts, holdDiagnosis, noteChat, noteStep, openFailure, sharesDiagnosis } from './auto-diagnosis';
 import { markSelfHost } from '../installation';
-import { stubPage } from '../testing';
+import { stubBrowser } from '../testing';
 
 const sent = vi.fn<(path: string, init: RequestInit) => Promise<Response>>(async () => new Response(null, { status: 204 }));
 beforeEach(() => {
   sent.mockClear();
   vi.stubGlobal('fetch', sent);
-  vi.stubGlobal('navigator', { userAgent: 'Mozilla/5.0 (X11; Linux x86_64) Chrome/141.0.0.0', onLine: true, language: 'ko-KR', hardwareConcurrency: 8 });
-  stubPage('visible');
-  vi.stubGlobal('matchMedia', () => ({ matches: false }));
-  vi.stubGlobal('innerWidth', 1280);
-  vi.stubGlobal('innerHeight', 800);
+  stubBrowser('Mozilla/5.0 (X11; Linux x86_64) Chrome/141.0.0.0');
 });
 afterEach(() => {
   holdDiagnosis(false);
@@ -29,6 +25,21 @@ it('sends nothing unless armed, once a page per problem and chat', () => {
   autoDiagnose({ event: 'worker-trouble' });
   autoDiagnose({ event: 'worker-trouble' });
   expect(sent).toHaveBeenCalledTimes(1);
+});
+
+it('tells what the page did before, in closed words, and reads the chat on screen for a problem that names none', () => {
+  holdDiagnosis(true);
+  noteStep('turn:start');
+  noteStep('비밀 메시지', 12.6);
+  const read = vi.fn(() => null);
+  noteChat({ id: 'on-screen', read });
+  autoDiagnose({ event: 'app-error', detail: 'TypeError' });
+  noteChat(null);
+  const body = JSON.parse(sent.mock.calls[0]![1].body as string) as { trail: { word: string; n: number | null }[]; errors: number; dpr: number };
+  expect(body.trail.slice(-2)).toMatchObject([{ word: 'turn:start', n: null }, { word: 'other', n: 13 }]);
+  expect(body).toMatchObject({ errors: 1, dpr: 2, dom: 0, shadow: 0, stalls: null, heapMb: null });
+  expect(read).toHaveBeenCalledOnce();
+  expect(JSON.stringify(body)).not.toContain('on-screen');
 });
 
 it('says nothing of the account: no cookie, no account header', () => {
@@ -52,7 +63,7 @@ it('takes an error\'s name and bundle position, never its message or a function 
   const error = new TypeError('비밀 메시지');
   error.stack = 'TypeError: 비밀 메시지\n    at secretFn (https://hazelle.app/assets/index-AbC123.js:1:2345)';
   expect(errorFacts(error)).toEqual({ detail: 'TypeError', cause: 'other', place: 'index-AbC123.js:1:2345', frames: 'index-AbC123.js:1:2345' });
-  error.stack += '\n    at caller (https://hazelle.app/assets/Workspace-x.js:8:9)';
+  error.stack += '\n    at theirs (chrome-extension://abc/assets/secret-name.js:3:4)\n    at caller (https://hazelle.app/assets/Workspace-x.js:8:9)';
   expect(errorFacts(error).frames).toBe('index-AbC123.js:1:2345 Workspace-x.js:8:9');
   expect(errorFacts(Object.assign(new Error('x'), { name: 'PluginBoom', stack: 'no frames' }))).toEqual({ detail: 'other', cause: 'other', place: null, frames: null });
 });

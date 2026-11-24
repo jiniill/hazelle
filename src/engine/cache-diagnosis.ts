@@ -70,7 +70,7 @@ export function cacheDiagnosis({ forecast, before, after }: CacheComparison, sco
   let variables: ReadonlyMap<string, string> | undefined;
   const readVariables = () => variables ??= renderChat('prompt', scope).variables;
   const parts = rows.map((row): CacheDiagnosis['parts'][number] => {
-    progressed();
+    progressed('cache');
     const oldWire = row.before === null ? null : before?.wire?.[row.before];
     const nextWire = row.after === null ? null : after.wire[row.after];
     const oldPart = oldWire ? before?.prompt?.parts[oldWire.index] : undefined;

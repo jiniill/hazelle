@@ -6,7 +6,7 @@ import { MODEL_MOST, TYPE } from './pulse';
 
 export const AUTO_KEEP_DAYS = 30;
 
-const AUTO_EVENTS = ['app-error', 'worker-trouble', 'evaluation-stuck', 'turn-failed', 'memory-failed', 'memory-gap', 'memory-gap-ended', 'chat-unopened', 'cache-broken'] as const;
+const AUTO_EVENTS = ['app-error', 'page-slow', 'worker-trouble', 'evaluation-stuck', 'evaluation-slow', 'script-stuck', 'turn-failed', 'memory-failed', 'memory-gap', 'memory-gap-ended', 'chat-unopened', 'cache-broken'] as const;
 export type AutoEvent = (typeof AUTO_EVENTS)[number];
 
 // An error's name, or the kind of a failure. Never an error's message, which can quote what it failed on.
@@ -35,8 +35,15 @@ export type CacheCauseWord = (typeof CACHE_CAUSES)[number];
 // jobs to these, so a word neither list has cannot be reported.
 const EVALUATION_ASKERS = ['projection', 'screen', 'headless', 'forecast', 'cache-diagnosis', 'memory', 'view', 'auto-translation', 'auto-illustration', 'mascot', 'status', 'rewrite', 'polish', 'agent', 'send', 'translation', 'illustration', 'lore', 'tool', 'export', 'trial', 'onboarding'] as const;
 export type EvaluationAsker = (typeof EVALUATION_ASKERS)[number];
+// How a page went slow (runtime/diagnostics/frames): one frame that held it, or many that added up.
+const SLOW_PAGES = ['frozen', 'janky'] as const;
+export type SlowPage = (typeof SLOW_PAGES)[number];
+// What stopped answering outside the evaluation worker: the Lua worker (silent, or gone by an error of its own) and a
+// plugin's frame (runtime/scripts/interactions).
+const STUCK_SCRIPTS = ['lua', 'lua-crashed', 'tool', 'tool-disabled'] as const;
+export type StuckScript = (typeof STUCK_SCRIPTS)[number];
 const EVALUATION_JOBS = ['cache-diagnosis', 'display', 'prompt', 'rewrite', 'translation', 'memory', 'illustration', 'mascot', 'preread', 'agent', 'status', 'read', 'lore', 'state', 'variables', 'text', 'onboarding', 'patch', 'count', 'sample'] as const;
-const DETAILS = [...AUTO_ERROR_NAMES, ...AUTO_OPEN_FAILURES, ...FAILURES, ...GAP_CAUSES, ...CACHE_CAUSES, ...EVALUATION_JOBS] as const;
+const DETAILS = [...AUTO_ERROR_NAMES, ...AUTO_OPEN_FAILURES, ...FAILURES, ...GAP_CAUSES, ...CACHE_CAUSES, ...EVALUATION_JOBS, ...SLOW_PAGES, ...STUCK_SCRIPTS] as const;
 
 const BROWSERS = ['chrome', 'edge', 'firefox', 'safari', 'samsung', 'other'] as const;
 const SYSTEMS = ['windows', 'mac', 'linux', 'android', 'ios', 'other'] as const;
@@ -46,6 +53,7 @@ const BOUNDS = ['hard-upper', 'hard-centre', 'user-centre', 'refusal'] as const;
 const CALLS = ['server', 'browser', 'proxy'] as const;
 
 const orNull = <S extends Spec>(spec: S) => ({ orNull: spec });
+const listOf = <S extends Spec>(spec: S) => ({ listOf: spec });
 
 // A word a closed list in the app gave, or a provider's or the server's code. Spaces and sentences cannot pass.
 const WORD = /^[\w:.-]{1,60}$/;
@@ -104,6 +112,12 @@ const CHAT = {
   reply: orNull('number'),
   messages: orNull('number'),
   character: 'flag',
+  // How much its bot holds, over every pack on it: regex scripts, triggers and those of them that are Lua, lore entries,
+  // assets, modules, and whether any pack draws a background.
+  bot: { regex: 'number', triggers: 'number', lua: 'number', lore: 'number', assets: 'number', modules: 'number', background: 'flag' },
+  // What its display last made, null while it has none: the messages' texts past it, their characters, the longest of
+  // them, the CSS, the boxes taken out, and whether its bot was judged stuck.
+  shown: orNull({ texts: 'number', chars: 'number', longest: 'number', css: 'number', boxes: 'number', stuck: 'flag' }),
   memory: { on: 'flag', own: 'flag', budget: 'number', clamped: orNull('number'), window: 'number', batch: 'number' },
   // The model that writes this chat's summaries; the server treats its id as it does model's.
   aux: { type: orNull(TYPE), model: orNull(new RegExp(`^.{1,${MODEL_MOST}}$`, 's')) },
@@ -143,14 +157,23 @@ const CHAT = {
   }),
 } as const;
 
-// On evaluation-stuck, whose detail is the job's kind: the job that went silent, in closed words and sizes.
+// What a worker says it is about to begin (engine/progress): the kind of unit, the stage a regex script runs at, the
+// message's place, the script's place among the packs' and the characters it reads. Never a pattern or a text.
+export const UNIT_KINDS = ['message', 'show', 'regex', 'repeat', 'lore', 'cache', 'inflate', 'count'] as const;
+const UNIT = { kind: UNIT_KINDS, stage: orNull(['input', 'output', 'process', 'display', 'translation']), message: orNull('number'), script: orNull('number'), chars: orNull('number') } as const;
+
+// On evaluation-stuck and evaluation-slow, whose detail is the job's kind: the job that went silent or ran long, in
+// closed words and sizes.
 const JOB = {
   // null: a job no chat's lane asked for.
   asker: orNull(EVALUATION_ASKERS),
   // false: a verdict had already taken the bot's regex out of it.
   regex: 'flag',
   // What the job read, null for one that reads no chat: regex scripts as it ran, messages and their characters, lore entries.
-  scope: orNull({ regex: 'number', messages: 'number', chars: 'number', lore: 'number' }),
+  // longest: its longest message. packs, assets, variables: how many it holds.
+  scope: orNull({ regex: 'number', messages: 'number', chars: 'number', longest: 'number', lore: 'number', packs: 'number', assets: 'number', variables: 'number' }),
+  // The jobs waiting behind it.
+  waiting: 'number',
   // The jobs its worker had answered before it, 0 on a worker just opened.
   jobs: 'number',
   // Milliseconds from its start to the silence that ended it.
@@ -158,6 +181,45 @@ const JOB = {
   // The signs of life it posted before that (engine/progress, at most one every 250 ms): 0 for a job whose first unit
   // never ended.
   signs: 'number',
+  // The units it began, the last one it named, and how long ago in milliseconds: the silent unit is that one or one
+  // begun in the PROGRESS_MS after it. Null for a job that named none.
+  units: 'number',
+  unit: orNull(UNIT),
+  quiet: 'number',
+  // Its slowest units that ended, slowest first, each with how long it took.
+  slow: listOf({ ...UNIT, ms: 'number' }),
+} as const;
+
+// On script-stuck from the Lua worker: the job last posted to it, what waited on it and for how long. Null from a
+// plugin's frame.
+export const SCRIPT_EVENTS = ['input', 'start', 'output', 'button', 'form', 'call', 'edit', 'reply', 'replying', 'sending', 'requesting', 'calling', 'showing', 'prompt'] as const;
+const SCRIPT = {
+  job: ['run', 'install-display', 'display', 'check'],
+  event: orNull(SCRIPT_EVENTS),
+  preview: 'flag',
+  triggers: 'number',
+  messages: 'number',
+  chars: 'number',
+  pending: 'number',
+  waited: 'number',
+} as const;
+
+export const FRAME_INVOKERS = ['user-callback', 'event-listener', 'resolve-promise', 'reject-promise', 'classic-script', 'module-script'] as const;
+// A frame that held the page (the browser's long animation frame), in milliseconds: its length, what of it blocked
+// input, its scripts' time and the layout they forced, the rendering after them, how many scripts ran, and the longest
+// of them: whether it is the app's own, where in the bundle it starts and what called it. recent: the blocking of the
+// last WINDOW_MS, this frame's with it.
+const FRAME = {
+  ms: 'number',
+  blocked: 'number',
+  script: 'number',
+  forced: 'number',
+  render: 'number',
+  scripts: 'number',
+  own: orNull('flag'),
+  place: orNull(/^[\w.-]{1,100}\.js:\d{1,9}$/),
+  invoker: orNull(FRAME_INVOKERS),
+  recent: 'number',
 } as const;
 
 const REPORT = {
@@ -173,7 +235,8 @@ const REPORT = {
   place: orNull(/^[\w.-]{1,100}\.js:\d{1,9}:\d{1,9}$/),
   // The stack's positions in the bundle, outermost last: place is the first of them, where it was thrown.
   frames: orNull(/^[\w.-]{1,100}\.js:\d{1,9}:\d{1,9}(?: [\w.-]{1,100}\.js:\d{1,9}:\d{1,9}){0,11}$/),
-  origin: orNull(['error', 'rejection']),
+  // screen: a screen's error boundary caught it, and the screen went down (app/common/ScreenLoad).
+  origin: orNull(['error', 'rejection', 'screen']),
   // The kind of screen last open (shell/routes), never what is on it.
   screen: orNull(/^[a-z-]{1,30}$/),
   // Seconds since the page opened, which tells a device just switched to.
@@ -186,16 +249,45 @@ const REPORT = {
   width: 'number',
   height: 'number',
   language: orNull(/^[A-Za-z-]{2,20}$/),
+  dpr: 'number',
+  touch: 'flag',
+  reducedMotion: 'flag',
+  // The page's script memory and its limit in MB, where the browser tells.
+  heapMb: orNull('number'),
+  heapLimitMb: orNull('number'),
+  net: orNull(['slow-2g', '2g', '3g', '4g']),
+  saveData: orNull('flag'),
+  // The browser had thrown the tab away and loaded it again.
+  discarded: 'flag',
+  entered: orNull(['navigate', 'reload', 'back_forward', 'prerender']),
+  // The page's elements outside the stories' own roots.
+  dom: 'number',
+  shadow: 'number',
+  // The errors thrown on this page so far.
+  errors: 'number',
+  // The frames over 50 ms since the page opened, their blocking added up and the longest, null where the browser
+  // reports none.
+  stalls: orNull({ count: 'number', blocked: 'number', worst: 'number' }),
+  // What the page did last, oldest first, each a closed word, how long ago in milliseconds, and a number of its own
+  // (a duration, a count) or null (noteStep).
+  trail: listOf({ word: WORD, ago: 'number', n: orNull('number') }),
+  // The chat the problem is about, or the one on screen when it is about none.
   chat: orNull(CHAT),
   job: orNull(JOB),
+  script: orNull(SCRIPT),
+  frame: orNull(FRAME),
 } as const;
 
-type Spec = 'number' | 'numbers' | 'counts' | 'flag' | RegExp | readonly string[] | { readonly orNull: Spec } | { readonly [key: string]: Spec };
-type Read<S> = S extends 'number' ? number : S extends 'numbers' ? number[] : S extends 'counts' ? Record<string, number> : S extends 'flag' ? boolean : S extends RegExp ? string : S extends readonly (infer Word)[] ? Word : S extends { readonly orNull: infer Inner } ? Read<Inner> | null : { -readonly [K in keyof S]: Read<S[K]> };
+type Spec = 'number' | 'numbers' | 'counts' | 'flag' | RegExp | readonly string[] | { readonly orNull: Spec } | { readonly listOf: Spec } | { readonly [key: string]: Spec };
+type Read<S> = S extends 'number' ? number : S extends 'numbers' ? number[] : S extends 'counts' ? Record<string, number> : S extends 'flag' ? boolean : S extends RegExp ? string : S extends readonly (infer Word)[] ? Word : S extends { readonly orNull: infer Inner } ? Read<Inner> | null : S extends { readonly listOf: infer Each } ? Read<Each>[] : { -readonly [K in keyof S]: Read<S[K]> };
 
 export type AutoReport = Read<typeof REPORT>;
 export type AutoChat = Read<typeof CHAT>;
 export type AutoJob = Read<typeof JOB>;
+export type AutoUnit = Read<typeof UNIT>;
+export type AutoScript = Read<typeof SCRIPT>;
+export type AutoFrame = Read<typeof FRAME>;
+export type AutoStep = AutoReport['trail'][number];
 export type AutoCall = Read<typeof CALL>;
 export type AutoFailure = Read<typeof FAILURE>;
 export type AutoCache = Read<typeof CACHE>;
@@ -213,6 +305,7 @@ function fits(spec: Spec, value: unknown): boolean {
   if (spec instanceof RegExp) return typeof value === 'string' && spec.test(value);
   if (Array.isArray(spec)) return (spec as readonly unknown[]).includes(value);
   if ('orNull' in spec) return value === null || fits(spec.orNull as Spec, value);
+  if ('listOf' in spec) return Array.isArray(value) && value.length <= LIST_MOST && value.every((each) => fits(spec.listOf as Spec, each));
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
   const shape = spec as { readonly [key: string]: Spec };
   const fields = value as Record<string, unknown>;

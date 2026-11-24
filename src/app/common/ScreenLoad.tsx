@@ -1,4 +1,5 @@
 import { Component, lazy, Suspense, type ComponentType, type ReactNode } from 'react';
+import { noteThrown } from '../../runtime/diagnostics/diagnostics';
 import { Button, Intro, Progress, Screen } from '../ui';
 import { RELOAD_RETRY } from './failure';
 
@@ -33,6 +34,10 @@ export class ScreenLoad extends Component<{ at?: string; children: ReactNode }, 
 
   static getDerivedStateFromError() {
     return { failed: true };
+  }
+
+  componentDidCatch(error: unknown) {
+    noteThrown(error, 'screen');
   }
 
   componentDidUpdate(previous: { at?: string }) {
