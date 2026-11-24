@@ -1,48 +1,14 @@
-import { useState, type ComponentType } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { ChoiceGroup } from '../controls/ChoiceGroup';
 import { useReducedMotion } from '../foundation/media';
-import { CacheNoteDemo, EnterSendsDemo } from './ComposerDemos';
-import { FollowSystemDemo, LorebookDemo, MemoryDemo, PromptCacheDemo, ReverseDemo } from './FlowDemos';
-import { AutoIllustrateDemo, ComicDemo, FoldLongDemo, HidePicturesDemo, InlineIllustrationsDemo, PictureSideDemo, PortraitDemo, PovDemo, WideFillDemo } from './PictureDemos';
-import { BotStyleDemo, InkDemo, ThoughtsDemo, TranslateOriginalDemo, UsageDemo } from './ReplyDemos';
-import { FoldComposerDemo, HideHeaderDemo, ReplyScrollDemo, ScrubberDemo, StepButtonsDemo, UserStopsDemo } from './ScrollDemos';
+import type { DemoName } from './drawings';
 import styles from './Demo.module.css';
 
 // way 0 is the first of `ways` (켜면, or a choice's first option); a demo without ways plays way 0 only.
 export type Way = 0 | 1;
-type DemoDrawing = ComponentType<{ way: Way }>;
 
-const DRAWINGS = {
-  hideHeader: HideHeaderDemo,
-  foldComposer: FoldComposerDemo,
-  scrubber: ScrubberDemo,
-  stepButtons: StepButtonsDemo,
-  userStops: UserStopsDemo,
-  enterSends: EnterSendsDemo,
-  replyScroll: ReplyScrollDemo,
-  hidePictures: HidePicturesDemo,
-  wideFill: WideFillDemo,
-  inlineIllustrations: InlineIllustrationsDemo,
-  pictureSide: PictureSideDemo,
-  portrait: PortraitDemo,
-  usage: UsageDemo,
-  ink: InkDemo,
-  cacheNote: CacheNoteDemo,
-  followSystem: FollowSystemDemo,
-  botStyle: BotStyleDemo,
-  foldLong: FoldLongDemo,
-  thoughts: ThoughtsDemo,
-  translateOriginal: TranslateOriginalDemo,
-  reverse: ReverseDemo,
-  autoIllustrate: AutoIllustrateDemo,
-  pov: PovDemo,
-  comic: ComicDemo,
-  promptCache: PromptCacheDemo,
-  lorebook: LorebookDemo,
-  memory: MemoryDemo,
-} satisfies Record<string, DemoDrawing>;
-
-type DemoName = keyof typeof DRAWINGS;
+// The drawings come apart from the kit, with the first demo drawn: its stage keeps its size meanwhile.
+const Drawing = lazy(() => import('./drawings').then(({ Drawing }) => ({ default: Drawing })));
 
 // Without ways, a demo plays only what turning its setting on adds; with them it alternates both, the current one marked.
 // on: a switch's two ways. labels: a choice of two, `now` the one chosen.
@@ -62,11 +28,12 @@ export function Demo({ label, name, ways, bare = false }: DemoSpec & { label: st
   const still = useReducedMotion();
   const choice: Choice | undefined = ways && ('on' in ways ? { labels: SWITCH_WAYS, now: ways.on ? 0 : 1 } : ways);
   const [round, setRound] = useState<Round>({ way: choice?.now ?? 0, held: false, count: 0 });
-  const Drawing: DemoDrawing = DRAWINGS[name];
   return (
     <div className={bare ? `${styles.demo} ${styles.bare}` : styles.demo}>
       <div className={styles.stage} aria-hidden>
-        <Drawing key={round.count} way={round.way} />
+        <Suspense fallback={null}>
+          <Drawing key={round.count} name={name} way={round.way} />
+        </Suspense>
       </div>
       {choice && (
         <ChoiceGroup
