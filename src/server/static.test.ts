@@ -209,6 +209,8 @@ it('serves the opaque tool document with a classic script and its own CSP, never
   expect(response.headers.get('cache-control')).toBe('no-cache');
   expect(html).toContain('<script src="/sandbox/host.js"></script>');
   expect(html).not.toMatch(/type\s*=\s*['"]module['"]/i);
+  const styled = async (role: string) => (await (await client.request(`/sandbox.html?role=${role}`, { headers: PAGE })).text()).includes('rel="stylesheet"');
+  expect([await styled('background'), await styled('frame'), await styled('page')]).toEqual([false, true, true]);
   expect(SANDBOX_CSP).toContain('sandbox allow-scripts allow-downloads allow-modals;');
   expect(SANDBOX_CSP).toContain("connect-src 'none'");
   expect(SANDBOX_CSP).toContain("frame-src 'none'");

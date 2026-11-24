@@ -64,6 +64,9 @@ export function clientFiles(clientDir: string, sources: PageSources, visit: (pag
   const sandbox = serveStatic({ root: clientDir, path: 'sandbox.html', precompressed: true });
   client.get('/sandbox.html', async (c) => {
     for (const [name, value] of Object.entries(sandboxHeaders(c.req.query('network') === '1'))) c.header(name, value);
+    // A background tool's document only starts its worker and never paints (sandbox/page): without the stylesheet, a
+    // chat's opening does not parse the fonts' several hundred @font-face rules once for each of its tools.
+    if (c.req.query('role') === 'background') return c.html((await readFile(join(clientDir, 'sandbox.html'), 'utf8')).replace(/<link rel="stylesheet"[^>]*>/, ''));
     return (await sandbox(c, async () => {})) || c.notFound();
   });
   const listed = (c: Context) => !selfHost && INDEXED.has(c.req.path);
