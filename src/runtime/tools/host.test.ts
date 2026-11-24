@@ -739,12 +739,16 @@ it('notifies a running tool after pulling a data change written on another devic
   } finally { host.close(); }
 });
 
-it('reads a page\'s chat state once while nothing changes, again once the chat does, and keeps no read that failed', () => withTools(async (session, connect) => {
+it('reads a page\'s chat state once while nothing changes, again once the chat does or the minute turns, and keeps no read that failed', () => withTools(async (session, connect) => {
   const f = await fixture(session);
   const transport = inProcessTools(() => {});
   const host = connect(transport.open);
   const close = host.page(f.module, page(f.chat));
   const states = vi.spyOn(session.store.evaluation, 'state');
+  // From the top of the next minute, so none turns under the reads before the one that is stepped to.
+  let from = Math.ceil(Date.now() / 60_000) * 60_000;
+  const started = performance.now();
+  const clock = vi.spyOn(Date, 'now').mockImplementation(() => Math.floor(from + performance.now() - started));
   try {
     await vi.waitFor(() => expect(transport.frames[0]!.api).not.toBeNull());
     const chat = transport.frames[0]!.api!.page!.chat!;
@@ -762,7 +766,10 @@ it('reads a page\'s chat state once while nothing changes, again once the chat d
     await setModels(session.store, { kind: 'module', id: f.module }, true);
     expect(await texts()).toEqual(['hello', 'again']);
     expect(states).toHaveBeenCalledTimes(4);
-  } finally { close(); host.close(); }
+    from += 60_000;
+    expect(await texts()).toEqual(['hello', 'again']);
+    expect(states).toHaveBeenCalledTimes(5);
+  } finally { clock.mockRestore(); close(); host.close(); }
 }));
 
 it('applies page chat writes through the page runtime, distinguishes null and deletion, and keeps the page alive while open', () => withTools(async (session, connect) => {

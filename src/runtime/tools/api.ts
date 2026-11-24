@@ -508,8 +508,9 @@ export class ToolApi {
 
   private outside(frame: Frame, context: Context): Promise<ToolState> {
     const { messages } = this.session.store.foldedChat(context.chat);
-    if (frame.outside?.chat === context.chat && frame.outside.messages === messages) return frame.outside.state;
-    const kept = { chat: context.chat, messages, state: this.evaluate(frame, context) };
+    const minute = Math.floor(context.scope.clock.now / 60_000);
+    if (frame.outside?.chat === context.chat && frame.outside.messages === messages && frame.outside.minute === minute) return frame.outside.state;
+    const kept = { chat: context.chat, messages, minute, state: this.evaluate(frame, context) };
     frame.outside = kept;
     kept.state.catch(() => { if (frame.outside === kept) frame.outside = null; });
     return kept.state;
