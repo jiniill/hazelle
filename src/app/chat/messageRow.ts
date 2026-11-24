@@ -34,15 +34,13 @@ export function messageRow(chat: OpenChat, index: number) {
       inked: chat.inked,
     }, { message: Object.is, decor: sameFields }),
     translation: rowPart({
-      translatingText: chat.translating.live.get(version) ?? null,
-      untranslated: chat.translating.failed.get(version) ?? null,
       // 번역's and 삽화's 기능: off, the message offers neither.
       canTranslate: chat.features.translate,
       awaited: chat.awaited(version),
       flipped: chat.flipped.has(version),
       showOriginal: chat.translate.original,
       shownTranslation: chat.shownTranslation,
-    }, { untranslated: Object.is, shownTranslation: Object.is }),
+    }, { shownTranslation: Object.is }),
     illustration: rowPart({
       // text with its 삽화's marks as the display left them, null for none (runtime/store/read-model ChatScreen).
       placed: chat.placed.get(index) ?? null,

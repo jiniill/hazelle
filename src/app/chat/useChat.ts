@@ -174,7 +174,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   const { actions: panelActions, openInfo, flipTool, ...panels } = useChatPanels(chatId, id, tools, onboarding !== null, features.memory, messages, replyTarget);
   const timePin = useTimePin();
   const [branching, setBranching] = useState(false);
-  const { found, search, actions: searchActions } = useChatSearch(messages, texts, translation.translating, translation.flipped, translation.shownTranslation, seekTo, seed);
+  const { found, search, actions: searchActions } = useChatSearch(messages, texts, translation.flipped, translation.shownTranslation, seekTo, seed);
   const { bookmarked, actions: bookmarkActions } = useChatBookmarks(id, chat.bookmarks, messages, busy, searchActions.find);
   const { actions: statusActions, ...status } = useChatStatus(chat, shelf?.character ?? null, view, messages);
   const { actions: toggleActions } = useChatToggles(chat, prompt, toggles);

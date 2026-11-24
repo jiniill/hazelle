@@ -24,7 +24,7 @@ import { CapturedRead, type ChatScopeRead, type Opening } from '../runtime/store
 import type { ScriptsState } from '../runtime/scripts/interactions';
 import { isHalted, type ObjectStore } from '../runtime/store/store';
 import type { Turn } from '../runtime/chat/talk';
-import type { Translating } from '../runtime/tasks/translate';
+import type { TranslatorFailure } from '../runtime/tasks/translate';
 import { Saves } from './common/saveQueue';
 
 // admin/localProviders/proxy come from session opening; facts track later server answers.
@@ -322,9 +322,14 @@ export function useWritingChats(): ReadonlySet<string> {
   return useSyncExternalStore(talk.subscribe, talk.writing);
 }
 
-export function useTranslating(): Translating {
+// One version's translation run, read by the row showing it: the translator's state is new with every chunk of a
+// text being translated, and a screen that read it whole would render again for each.
+export function useTranslatingVersion(version: string): { text: string | null; failed: TranslatorFailure | null; awaited: boolean } {
   const { translator } = useSession();
-  return useSyncExternalStore(translator.subscribe, translator.snapshot);
+  const text = useSyncExternalStore(translator.subscribe, () => translator.snapshot().live.get(version) ?? null);
+  const failed = useSyncExternalStore(translator.subscribe, () => translator.snapshot().failed.get(version) ?? null);
+  const awaited = useSyncExternalStore(translator.subscribe, () => translator.snapshot().awaited.has(version));
+  return { text, failed, awaited };
 }
 
 export function useChatMemory(id: string | null): Memory | null {

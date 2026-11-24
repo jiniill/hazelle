@@ -14,6 +14,7 @@ import { languageLabel } from '../common/languages';
 import { withParticle } from '../common/particles';
 import { toolLine, usageFacts, usageLine, writtenSoFar } from '../common/receipt';
 import { useTokens } from '../common/useTokens';
+import { useTranslatingVersion } from '../session';
 import { useFocusReturn } from '../ui';
 import { timeOfDay } from '../common/time';
 import { agentsWaiting, DISCOUNT_STOPPING, DISCOUNT_WAITING, polishingNow, PRE_READ_RETRYING, PRE_READ_WAITING, RETRYING, toolFinishing, toolWaiting } from '../common/words';
@@ -53,7 +54,7 @@ const MARK = { length: 'length', 'no-terminal': 'length', stopped: 'stopped', re
 export const ChatMessage = memo(function ChatMessage(props: Props) {
   const { row, modelMenu, actions } = props;
   const { message, text: original, decor: decoration, opening, last, busy, branching, usageShown, inked } = row.story.value;
-  const { translatingText, untranslated, canTranslate, awaited, flipped, showOriginal, shownTranslation } = row.translation.value;
+  const { canTranslate, awaited, flipped, showOriginal, shownTranslation } = row.translation.value;
   const { placed, pictures, drawing, canIllustrate, pictureSizes } = row.illustration.value;
   const { remark, fresh } = row.mascot.value;
   const { badges, toolActions } = row.tools.value;
@@ -65,6 +66,7 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
   const otherModel = useMenuOpener(modelMenu);
   const wide = useWide();
   const version = shown(message);
+  const { text: translatingText, failed: untranslated, awaited: queued } = useTranslatingVersion(version.id);
   const receipt = version.receipt;
   const mine = message.role === 'user';
   const live = message.live === version.id;
@@ -76,7 +78,7 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
   const [rawShown, setRawShown] = useState(false);
   const raw = hasRaw && rawShown;
   const text = useMemo(() => seenText(original, version, translatingText, flipped, shownTranslation), [original, version, translatingText, flipped, shownTranslation]);
-  const pending = !translatingText && (awaited || translatingText === '');
+  const pending = !translatingText && (awaited || queued || translatingText === '');
   const reveal = useReveal(version.id, text, live && !message.whole);
   const places = picturePlaces(drawing, pictures, version.text);
   const paragraphs = new Set(places.flatMap(({ paragraph }) => (paragraph === null ? [] : [paragraph])));

@@ -1,4 +1,4 @@
-import { act, Fragment, isValidElement, type ReactNode } from 'react';
+import { act, Fragment, isValidElement, useSyncExternalStore, type ReactNode } from 'react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { pictureSizes } from '../../engine/illustrate';
 import { shown, type Message, type Receipt } from '../../model/chat';
@@ -13,7 +13,16 @@ type Split = { icon?: unknown; label: string; actions?: { label: string; onClick
 const rendered = vi.fn<(props: { id: string }) => null>(() => null);
 const divided = vi.fn<(props: Split) => null>(() => null);
 const live = vi.hoisted(() => ({ origin: null as { title: string } | null, edits: { forgetOrigin: vi.fn() } }));
-vi.mock('../session', () => ({ useChatSummary: () => live.origin, useAssetUrl: () => () => undefined }));
+const translations = vi.hoisted(() => ({ live: new Map<string, string>(), listeners: new Set<() => void>() }));
+vi.mock('../session', () => ({
+  useChatSummary: () => live.origin,
+  useAssetUrl: () => () => undefined,
+  useTranslatingVersion: (version: string) => ({
+    text: useSyncExternalStore((listener) => (translations.listeners.add(listener), () => translations.listeners.delete(listener)), () => translations.live.get(version) ?? null),
+    failed: null,
+    awaited: false,
+  }),
+}));
 vi.mock('./ChatEdits', () => ({ useChatEdits: () => live.edits }));
 vi.mock('./useReveal', () => ({ useReveal: (_version: string, text: string) => ({ text, revealing: false }) }));
 vi.mock('../ui', async (original) => ({
@@ -31,7 +40,6 @@ const closed = { open: false, from: null };
 const modelMenu = { read: () => closed, subscribe: () => () => {}, set: () => {} };
 const messageTools: OpenChat['messageTools'] = [];
 const lineage = vi.fn();
-let translations = new Map<string, string>();
 let status = 'HP 7';
 let bookmarked = new Set<string>();
 const plain = (text: string) => text;
@@ -40,7 +48,7 @@ const frame = (messages: OpenChat['messages'], item: OpenChat['item'] = null) =>
   names: { character: { name: 'Bot', image: null }, me: null, modelName: null },
   decor: { bot: true, css: '', buttons: 'inert' },
   agents: { pre: false, post: true }, features: { translate: true, illustrate: true, mascot: false }, translate: { original: false },
-  translating: { live: translations, failed: new Map() }, awaited: () => false, flipped: new Set(), shownTranslation: plain,
+  awaited: () => false, flipped: new Set(), shownTranslation: plain,
   pictures: new Map([['old', [picture]]]), placed: new Map(), illustrating: new Map(), pictureSizes: pictureSizes({}),
   remarks: new Map(), polishing: new Map(), badges: new Map([['old', ['badge']]]), messageTools,
   hosted: (index: number) => index === 0 ? [{ id: 'status', script: 0, html: status, at: 'top', message: 0 }] : [],
@@ -60,9 +68,10 @@ it('renders only changed rows through chunks and translation, including rebuilt 
     const chunk = withTurn(history, { ...turn, text: 'Now more' }, 'chat');
     await act(() => root.render(<ChatLog chat={frame(chunk)} />));
     expect(counts()).toEqual([1, 2]);
-    translations = new Map([['new', '지금']]);
-    await act(() => root.render(<ChatLog chat={frame(chunk)} />));
+    translations.live = new Map([['new', '지금']]);
+    await act(() => translations.listeners.forEach((listener) => listener()));
     expect(counts()).toEqual([1, 3]);
+    expect(htmls(rendered.mock.calls.findLast(([props]) => props.id === 'new')![0]).join('')).toContain('지금');
     status = 'HP 6';
     await act(() => root.render(<ChatLog chat={frame(chunk)} />));
     expect(counts()).toEqual([2, 3]);
@@ -102,6 +111,14 @@ it('marks the split with the origin as it is named now, its kept name once the o
     await act(() => root.unmount());
   }
 });
+
+// Every html a message's row draws.
+const htmls = (node: unknown): string[] => {
+  if (Array.isArray(node)) return node.flatMap(htmls);
+  if (isValidElement(node)) return htmls(node.props);
+  if (!node || typeof node !== 'object') return [];
+  return Object.entries(node).flatMap(([key, value]) => (key === 'html' && typeof value === 'string' ? [value] : key === 'children' ? htmls(value) : []));
+};
 
 // Every name a message's row gives its controls: labels, and words a button holds.
 const names = (node: unknown): string[] => {
