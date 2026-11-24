@@ -65,6 +65,37 @@ describe('tool storage', () => {
     expect(store.get('tool', toolId(module))!.value.settings.title).toBe('mine');
   });
 
+  it('carries manifest displayName and description on update and undo only where the user has not edited them away', async () => {
+    const { store, files } = await server.account();
+    const added = await importTool(store, files, source('1.0', '//@display-name 첫 이름\n//@description 첫 설명\n'));
+    if (!added.ok) throw new Error(added.error);
+    const module = added.data.id;
+    expect(store.get('module', module)!.value).toMatchObject({ name: '첫 이름', description: '첫 설명' });
+
+    const updated = await importTool(store, files, source('1.1', '//@display-name 새 이름\n//@description 새 설명\n'));
+    if (!updated.ok) throw new Error(updated.error);
+    expect(store.get('module', module)!.value).toMatchObject({ name: '새 이름', description: '새 설명' });
+
+    await undoToolImport(store, module, updated.data.previous!);
+    expect(store.get('module', module)!.value).toMatchObject({ name: '첫 이름', description: '첫 설명' });
+
+    // A user-edited name stays untouched while an unedited description still follows the manifest and its undo.
+    await store.update('module', module, (current) => ({ ...current, name: '내 이름' }));
+    const keptName = await importTool(store, files, source('1.2', '//@display-name 또 새 이름\n//@description 두 번째 설명\n'));
+    if (!keptName.ok) throw new Error(keptName.error);
+    expect(store.get('module', module)!.value).toMatchObject({ name: '내 이름', description: '두 번째 설명' });
+
+    await undoToolImport(store, module, keptName.data.previous!);
+    expect(store.get('module', module)!.value).toMatchObject({ name: '내 이름', description: '첫 설명' });
+
+    // An edit made after the update also survives undoing that update.
+    const third = await importTool(store, files, source('1.3', '//@display-name 셋째 이름\n//@description 셋째 설명\n'));
+    if (!third.ok) throw new Error(third.error);
+    await store.update('module', module, (current) => ({ ...current, description: '내 메모' }));
+    await undoToolImport(store, module, third.data.previous!);
+    expect(store.get('module', module)!.value).toMatchObject({ name: '내 이름', description: '내 메모' });
+  });
+
   it('exports the file as imported, without its settings, and reads back as the same plugin', async () => {
     const { store, files } = await server.account();
     const tool = source();
