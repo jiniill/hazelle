@@ -139,14 +139,14 @@ describe('the editDisplay pass', () => {
   });
 });
 
-it('gives a sign of life per stage of each message and per script it runs, and likewise per row a Lua pass patches', () => {
-  let signs = 0;
-  onProgress(() => signs++);
+it('gives a sign of life per stage of each message, per CBS read, script and finish of it, and for the styles, and likewise per row a Lua pass patches', () => {
+  const signs: string[] = [];
+  onProgress((kind) => signs.push(kind));
   try {
     const pass = new DisplayPass({ ...scope, messages: [message('a', 'user', 'one'), message('b', 'assistant', 'two')] }, new Set(), () => null);
-    expect(signs).toBe(8);
+    expect(signs.splice(0).join(' ')).toBe('message cbs show cbs regex finish message cbs regex show cbs regex finish cbs regex styles');
     pass.patch([{ version: 'b', text: 'done' }]);
-    expect(signs).toBe(10);
+    expect(signs.join(' ')).toBe('show cbs regex finish styles');
   } finally {
     onProgress(() => {});
   }

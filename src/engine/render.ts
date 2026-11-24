@@ -239,6 +239,7 @@ function renderStage(stage: Stage, scripts: Scripts, context: ReturnType<typeof 
     stopped = error;
     result = { text, drawn: [], boxes: [] };
   }
+  progressed('finish', index, null, result.text.length, stage === 'prompt' ? 'process' : 'display');
   // Before unescapeCbs, so an escaped tag stays text.
   const finished = (html: string) => unescapeCbs(stage === 'display' ? placeTextFiles(placeInlays(html, inlays), textfiles) : html);
   // A bot's regex writes a thinking block around what the model planned. It is never sent back, and is drawn folded

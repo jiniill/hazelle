@@ -5,13 +5,15 @@ import type { ChatScope } from '../../engine/render';
 import { holdDiagnosis } from '../diagnostics/auto-diagnosis';
 import { Evaluation, EvaluationFailed, EvaluationRefused, EvaluationStopped, EvaluationStuck, type Verdicts } from './evaluation';
 import { Evaluator, type EvaluationDown, type EvaluationUp } from './evaluation-core';
+import type { Sign } from '../worker';
 import { changedTail, sameHistory } from './history-delta';
 import { stubBrowser, stubPage } from '../testing';
 
 const scope: ChatScope = { card: null, cast: [], packs: [], persona: null, prompt: null, promptOut: false, note: null, status: { definitions: [], state: {} }, lore: [], loreFolders: {}, loreScan: { scanDepth: 5, tokenBudget: 800, recursive: true, fullWordMatching: false }, messages: [], variables: [], greeting: null, toggles: new Map(), model: null, axModel: null, clock: { now: 0, timeZone: 'UTC' }, assets: [], inlays: [], textfiles: [], modules: [], faces: { char: null, user: null }, screen: null, pick: '' };
 const message = (id: string, text: string) => ({ id, message: id, seed: id, role: 'user' as const, text, time: 0 });
-const SIGN = { unit: { kind: 'regex', stage: 'display', message: 0, script: 0, chars: 10 }, ended: 1, slow: null } as const;
-const SLOW = { ...SIGN.unit, script: 7, ms: 400 };
+const SPENT: Sign['spent'] = [{ kind: 'regex', stage: 'display', units: 1, ms: 400 }];
+const SIGN: Sign = { unit: { kind: 'regex', stage: 'display', message: 0, script: 0, chars: 10 }, ended: 1, slow: null, spent: SPENT };
+const SLOW = { ...SIGN.unit!, script: 7, ms: 400 };
 const none: Verdicts = { verdict: () => false, judged: () => {} };
 const screen = (chat = 'c') => ({ asker: 'screen', chat }) as const;
 
@@ -283,7 +285,7 @@ it('reports a job that went silent by closed words and sizes, once with the rege
   await expect(evaluation.read({ asker: 'memory', chat: 'reported-chat' }, chat, null)).rejects.toBeInstanceOf(EvaluationRefused);
   const reports = sent.mock.calls.map(([, init]) => JSON.parse(init.body as string) as { job: { ran: number; quiet: number } });
   expect(reports).toMatchObject([
-    { event: 'evaluation-stuck', detail: 'display', chat: null, job: { asker: 'projection', regex: true, scope: { regex: 1, messages: 2, chars: 9, longest: 6, lore: 0, packs: 1 }, waiting: 0, jobs: 1, signs: 1, units: 1, unit: SIGN.unit, slow: [SLOW] } },
+    { event: 'evaluation-stuck', detail: 'display', chat: null, job: { asker: 'projection', regex: true, scope: { regex: 1, messages: 2, chars: 9, longest: 6, lore: 0, packs: 1 }, waiting: 0, jobs: 1, signs: 1, units: 1, unit: SIGN.unit, slow: [SLOW], spent: SPENT } },
     { event: 'evaluation-stuck', detail: 'display', chat: null, job: { asker: 'projection', regex: false, scope: { regex: 0, messages: 2, chars: 9, lore: 0 }, jobs: 0 } },
   ]);
   expect(reports).toHaveLength(2);

@@ -159,8 +159,11 @@ const CHAT = {
 
 // What a worker says it is about to begin (engine/progress): the kind of unit, the stage a regex script runs at, the
 // message's place, the script's place among the packs' and the characters it reads. Never a pattern or a text.
-export const UNIT_KINDS = ['message', 'show', 'regex', 'repeat', 'lore', 'cache', 'inflate', 'count'] as const;
-const UNIT = { kind: UNIT_KINDS, stage: orNull(['input', 'output', 'process', 'display', 'translation']), message: orNull('number'), script: orNull('number'), chars: orNull('number') } as const;
+// regex: a script's search of a text. write: what a script that found something writes. cbs: a text's CBS read at a
+// stage. finish: a shown text's own markup placed. styles: the display's styles gathered.
+export const UNIT_KINDS = ['message', 'show', 'cbs', 'regex', 'write', 'repeat', 'finish', 'styles', 'lore', 'cache', 'inflate', 'count'] as const;
+export const UNIT_STAGES = ['input', 'output', 'process', 'display', 'translation'] as const;
+const UNIT = { kind: UNIT_KINDS, stage: orNull(UNIT_STAGES), message: orNull('number'), script: orNull('number'), chars: orNull('number') } as const;
 
 // On evaluation-stuck and evaluation-slow, whose detail is the job's kind: the job that went silent or ran long, in
 // closed words and sizes.
@@ -178,16 +181,17 @@ const JOB = {
   jobs: 'number',
   // Milliseconds from its start to the silence that ended it.
   ran: 'number',
-  // The signs of life it posted before that (engine/progress, at most one every 250 ms): 0 for a job whose first unit
-  // never ended.
+  // The signs of life it posted before that (runtime/worker SIGN_MS apart at least).
   signs: 'number',
-  // The units it began, the last one it named, and how long ago in milliseconds: the silent unit is that one or one
-  // begun in the PROGRESS_MS after it. Null for a job that named none.
+  // The units that ended, the last one it named, and how long ago in milliseconds: the silent unit is that one or one
+  // begun in the SIGN_MS after it. Null for a job that named none.
   units: 'number',
   unit: orNull(UNIT),
   quiet: 'number',
   // Its slowest units that ended, slowest first, each with how long it took.
   slow: listOf({ ...UNIT, ms: 'number' }),
+  // Where its time went: the units that ended and the milliseconds they took, added up by kind and stage.
+  spent: listOf({ kind: UNIT_KINDS, stage: orNull(UNIT_STAGES), units: 'number', ms: 'number' }),
 } as const;
 
 // On script-stuck from the Lua worker: the job last posted to it, what waited on it and for how long. Null from a

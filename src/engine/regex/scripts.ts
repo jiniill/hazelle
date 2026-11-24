@@ -65,7 +65,10 @@ export class Scripts {
   apply(stage: RegexScript['stage'], text: string, { take = new Set(), index, cbs }: Context): { text: string; drawn: number[]; boxes: Box[] } {
     const drawn: number[] = [];
     const boxes: Box[] = [];
+    progressed('cbs', index, null, text.length, stage);
     let result = cbs(text);
+    // A text a CBS pass left as it was, which another pass leaves so too: it read no tag, so it wrote nothing.
+    let settled: string | null = null;
     for (const { source, place, flags, dynamic, plain, directive, kind: planned, argument, pattern: fixed } of this.plans[stage]) {
       progressed('regex', index, place, result.length, stage);
       const pattern = dynamic ? compile(cbs(source), flags) : fixed;
@@ -73,6 +76,7 @@ export class Scripts {
       const regex = () => reset(pattern.regex);
       const once = () => reset(pattern.first);
       const matched = result.search(regex()) !== -1;
+      if (matched) progressed('write', index, place, result.length, stage);
       // On a match Risu runs a <repeat_back> flag as a plain replacement. The @@repeat_back form writes nothing then:
       // Risu writes the directive's own text (design §5 row 22).
       const kind = planned === 'repeat_back' && matched && !directive ? 'replace' : planned;
@@ -84,7 +88,12 @@ export class Scripts {
         if (copied !== null) result = cbs((PLACEMENTS.get(argument.trim()) ?? append)(result, copied));
       } else if (!matched) {
         // A tag an earlier script brought in through a variable is read here, as Risu reads it.
-        if (plain && CBS_TAG.test(result)) result = cbs(result);
+        if (plain && result !== settled && CBS_TAG.test(result)) {
+          progressed('cbs', index, place, result.length, stage);
+          const read = cbs(result);
+          if (read === result) settled = result;
+          result = read;
+        }
         continue;
       } else if (kind === 'move_top' || kind === 'move_bottom') {
         const { block, rest } = cut(result, once, argument);

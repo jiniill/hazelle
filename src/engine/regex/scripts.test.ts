@@ -11,12 +11,12 @@ const apply = (scripts: RegexScript[], text: string, over: Partial<Context> = {}
   new Scripts(scripts, [message('assistant', text, 0)]).apply('display', text, { index: 0, cbs, ...over });
 
 describe('Scripts', () => {
-  it('gives a sign of life before each script, so a bot of many scripts is not one silent unit', () => {
-    let signs = 0;
-    onProgress(() => signs++);
+  it('gives a sign of life before a text\'s CBS read, each script\'s search and what a script that found something writes, so a bot of many scripts is not one silent unit', () => {
     try {
+      const kinds: string[] = [];
+      onProgress((kind) => kinds.push(kind));
       apply([script('a', 'b'), script('x', 'y'), script('q', 'r', { stage: 'output' })], 'a');
-      expect(signs).toBe(2);
+      expect(kinds).toEqual(['cbs', 'regex', 'write', 'regex']);
     } finally {
       onProgress(() => {});
     }
@@ -29,7 +29,7 @@ describe('Scripts', () => {
     onProgress(() => signs++);
     try {
       scripts.apply('display', 'none', { index: 4, cbs: (text) => text });
-      expect(signs).toBe(5);
+      expect(signs).toBe(6);
     } finally {
       onProgress(() => {});
     }
@@ -80,6 +80,13 @@ describe('Scripts', () => {
     expect(apply([script('none', 'x', { flags: '<no_end_nl>' })], '{{v}}', { cbs: twice }).text).toBe('{{w}}');
     const legacy = (text: string) => text.replace('{#w#}', 'W').replace('{{v}}', '{#w#}');
     expect(apply([script('none', 'x')], '{{v}}', { cbs: legacy }).text).toBe('W');
+  });
+
+  it('reads a text a CBS pass left as it was once, however many scripts match nothing in it', () => {
+    let reads = 0;
+    const counted = (text: string) => (reads++, text.replace('{{v}}', '{{w}}'));
+    expect(apply([script('none', 'x'), script('nor', 'x'), script('neither', 'x'), script('never', 'x')], '{{v}}', { cbs: counted }).text).toBe('{{w}}');
+    expect(reads).toBe(2);
   });
 
   it('skips a script whose pattern is empty, also after CBS', () => {

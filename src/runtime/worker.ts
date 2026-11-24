@@ -1,4 +1,4 @@
-import type { AutoUnit } from '../contracts/auto-diagnosis';
+import { UNIT_KINDS, UNIT_STAGES, type AutoJob, type AutoUnit } from '../contracts/auto-diagnosis';
 import { onProgress } from '../engine/progress';
 
 type Policy = { createScriptURL(url: string): string };
@@ -24,8 +24,8 @@ const BEAT_MS = 1000;
 const SIGN_MS = 50;
 
 // unit: the one about to begin, null once a job's last has ended. ended: the units that ended since the last sign.
-// slow: the one that just ended, when it took SIGN_MS.
-export type Sign = { unit: AutoUnit | null; ended: number; slow: (AutoUnit & { ms: number }) | null };
+// slow: the one that just ended, when it took SIGN_MS. spent: the job's ended units so far, by kind and stage.
+export type Sign = { unit: AutoUnit | null; ended: number; slow: (AutoUnit & { ms: number }) | null; spent: AutoJob['spent'] };
 
 // Inside a worker: the engine's signs of life (engine/progress). Returns what a job tells of itself. begins: no unit
 // is running, so the time to the next sign is no unit's and nothing counted before is this job's. ends: its last
@@ -37,17 +37,28 @@ export function postProgress(post: (sign: Sign) => void) {
   let began: number | null = null;
   let [kind, message, script, chars, stage]: Parameters<Parameters<typeof onProgress>[0]> = ['message', null, null, null, null];
   const unit = (): AutoUnit => ({ kind, stage, message, script, chars });
+  // By kind and stage, a stage's place one past its own so that no stage is 0: counted in place, as a unit makes no object.
+  const STAGES = UNIT_STAGES.length + 1;
+  const units = new Uint32Array(UNIT_KINDS.length * STAGES);
+  const took = new Float64Array(units.length);
+  const spent = (): AutoJob['spent'] =>
+    [...units].flatMap((count, at) => (count ? [{ kind: UNIT_KINDS[Math.floor(at / STAGES)]!, stage: UNIT_STAGES[(at % STAGES) - 1] ?? null, units: count, ms: Math.round(took[at]!) }] : []));
   // A slow unit began no earlier than the last sign, so a sign is always due as it ends.
   const end = (now: number) => {
     if (began === null) return null;
     ended++;
-    const took = now - began;
-    return took >= SIGN_MS ? { ...unit(), ms: Math.round(took) } : null;
+    const ms = now - began;
+    const at = UNIT_KINDS.indexOf(kind) * STAGES + (stage === null ? 0 : UNIT_STAGES.indexOf(stage) + 1);
+    units[at]!++;
+    took[at]! += ms;
+    return ms >= SIGN_MS ? { ...unit(), ms: Math.round(ms) } : null;
   };
   const begins = () => {
     began = null;
     ended = 0;
     last = -Infinity;
+    units.fill(0);
+    took.fill(0);
   };
   onProgress((...next) => {
     const now = performance.now();
@@ -56,14 +67,14 @@ export function postProgress(post: (sign: Sign) => void) {
     began = now;
     if (now - last < SIGN_MS) return;
     last = now;
-    post({ unit: unit(), ended, slow });
+    post({ unit: unit(), ended, slow, spent: spent() });
     ended = 0;
   });
   return {
     begins,
     ends() {
       const slow = end(performance.now());
-      if (ended) post({ unit: null, ended, slow });
+      if (ended) post({ unit: null, ended, slow, spent: spent() });
       begins();
     },
   };

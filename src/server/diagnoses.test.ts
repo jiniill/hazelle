@@ -29,7 +29,7 @@ const CHAT: AutoChat = {
   request: { messages: 60, dropped: 15, unseen: 0, problems: 0, covered: 100, missing: 0, slot: true, tool: false, records: { over: 4, stale: 0, forgotten: 0, deleted: 0, changed: 0, rendered: 0 }, source: 'chat', bound: 'hard-upper', multiplier: 1.2, allowance: 40_000, inputLimit: 44_000, evidence: 3, cold: false, tokens: { 'block:chat': 40000, retrieval: 10 }, lore: { fired: 1, silent: 2, invalidKeys: 0, budget: 500 }, shape: { budget: 8000, used: 4000, fixed: 500, free: 3000, state: 300, stateLimit: 1600, threads: 200, chapters: [1200], sources: [4800], records: { tokens: 6000, largest: 900 }, status: { sent: 3, chaptered: 4 }, pinned: 0, edited: 0, recalled: 0 } },
 };
 const UNIT = { kind: 'regex', stage: 'display', message: 6, script: 11, chars: 4000 } as const;
-const JOB: AutoJob = { asker: 'projection', regex: true, scope: { regex: 12, messages: 7, chars: 9000, longest: 4000, lore: 3, packs: 2, assets: 40, variables: 5 }, waiting: 1, jobs: 0, ran: 4100, signs: 3, units: 90, unit: UNIT, quiet: 3200, slow: [{ ...UNIT, script: 4, ms: 700 }] };
+const JOB: AutoJob = { asker: 'projection', regex: true, scope: { regex: 12, messages: 7, chars: 9000, longest: 4000, lore: 3, packs: 2, assets: 40, variables: 5 }, waiting: 1, jobs: 0, ran: 4100, signs: 3, units: 90, unit: UNIT, quiet: 3200, spent: [{ kind: 'write', stage: 'display', units: 40, ms: 3100 }, { kind: 'message', stage: null, units: 7, ms: 20 }], slow: [{ ...UNIT, script: 4, ms: 700 }] };
 const REPORT: AutoReport = { event: 'memory-gap', detail: null, cause: null, version: 'v0.6.4', browser: 'chrome', major: 140, os: 'windows', mobile: false, place: null, frames: null, origin: null, screen: 'chat', page: 30, online: true, visible: true, standalone: false, cores: 8, memoryGb: 8, width: 1280, height: 800, language: 'ko-KR', dpr: 2.625, touch: true, reducedMotion: false, heapMb: 310, heapLimitMb: 2048, net: '4g', saveData: false, discarded: false, entered: 'reload', dom: 4200, shadow: 0, errors: 2, stalls: { count: 40, blocked: 9000, worst: 2400 }, trail: [{ word: 'screen:chat', ago: 9000, n: null }, { word: 'frame', ago: 120, n: 2400 }], chat: CHAT, job: null, script: null, frame: null };
 
 it('refuses anything off the list: a field more or less, a free word, a name where a word goes', () => {
@@ -55,6 +55,7 @@ it('refuses anything off the list: a field more or less, a free word, a name whe
   expect(readAutoReport({ ...REPORT, event: 'script-stuck', detail: 'lua', script })).not.toBeNull();
   expect(readAutoReport({ ...REPORT, event: 'script-stuck', detail: 'lua', script: { ...script, event: 'onSecretButton' } })).toBeNull();
   expect(readAutoReport({ ...REPORT, event: 'evaluation-slow', detail: 'display', job: { ...JOB, unit: { ...UNIT, pattern: 'secret' } } })).toBeNull();
+  expect(readAutoReport({ ...REPORT, event: 'evaluation-slow', detail: 'display', job: { ...JOB, spent: [{ kind: 'my script', stage: null, units: 1, ms: 1 }] } })).toBeNull();
 });
 
 let t: Awaited<ReturnType<typeof testApp>>;

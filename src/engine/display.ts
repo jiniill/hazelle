@@ -4,6 +4,7 @@ import { unescapeCbs } from './cbs/escape';
 import { evaluate, Runaway } from './cbs/evaluate';
 import { BACKGROUND } from './cbs/tags';
 import type { RanAway } from './pipeline';
+import { progressed } from './progress';
 import type { Box } from './regex/scripts';
 import { contexts, renderChat, type ChatScope, type LuaDisplay, type Missed } from './render';
 
@@ -60,6 +61,7 @@ export class DisplayPass {
     }
     this.textStyles = rendered.texts.map(() => []);
     this.boxStyles = rendered.boxes.map(() => []);
+    progressed('styles');
     const texts = rendered.texts.map((text, index) => this.stripStyles(text, this.textStyles[index]!));
     const boxes = rendered.boxes.map((rows, index) => rows.map((box) => ({ ...box, html: this.stripStyles(box.html, this.boxStyles[index]!) })));
     // Joined as Risu joins the character's to the modules'.
@@ -83,6 +85,7 @@ export class DisplayPass {
       this.value.boxes[index] = row.boxes;
       this.missing.delete(version);
     }
+    progressed('styles');
     let first = Infinity;
     let stopped: Runaway | null = null;
     for (const errors of [this.rendered.failures.input, this.rendered.failures.display]) for (const [index, error] of errors) {

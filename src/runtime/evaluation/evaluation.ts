@@ -95,10 +95,10 @@ const keyOf = ({ asker, chat, tool }: Lane) => `${asker}:${chat}${tool === undef
 const bare = (scope: ChatScope): ChatScope => ({ ...scope, packs: scope.packs.map((pack) => ({ ...pack, regex: [] })) });
 // started: when its pass began, null before. signs: the signs of life it has posted, signed: when the last came, and
 // what they told (worker Sign): the units begun, the last one named, the slowest that ended.
-type Active = { id: number; work: Work; started: number | null; signs: number; signed: number; units: number; unit: AutoJob['unit']; slow: AutoJob['slow'] };
+type Active = { id: number; work: Work; started: number | null; signs: number; signed: number; units: number; unit: AutoJob['unit']; slow: AutoJob['slow']; spent: AutoJob['spent'] };
 
 // 자동 진단's read of a job that went silent or ran long: its sizes and closed words, nothing a chat or a bot wrote or is named.
-const jobFacts = ({ work: { on, scope, regex }, started, signs, signed, units, unit, slow }: Active, jobs: number, waiting: number, now: number): AutoJob => ({
+const jobFacts = ({ work: { on, scope, regex }, started, signs, signed, units, unit, slow, spent }: Active, jobs: number, waiting: number, now: number): AutoJob => ({
   asker: on?.asker ?? null,
   regex,
   scope: scope && {
@@ -119,6 +119,7 @@ const jobFacts = ({ work: { on, scope, regex }, started, signs, signed, units, u
   unit,
   quiet: now - signed,
   slow,
+  spent,
 });
 
 export class Evaluation {
@@ -306,7 +307,7 @@ export class Evaluation {
     const work = this.next();
     if (!work) return this.heart.rest();
     const id = ++this.ids;
-    this.active = { id, work, started: null, signs: 0, signed: 0, units: 0, unit: null, slow: [] };
+    this.active = { id, work, started: null, signs: 0, signed: 0, units: 0, unit: null, slow: [], spent: [] };
     try {
       const worker = this.open();
       let input: EvaluationInput;
@@ -374,8 +375,9 @@ export class Evaluation {
 
   // A started job held the worker: only it fails, its chat is judged before anything else is posted, and the jobs
   // waiting go on in a new worker, which holds no history.
-  private signed(active: Active, { unit, ended, slow }: Sign) {
+  private signed(active: Active, { unit, ended, slow, spent }: Sign) {
     active.signs++;
+    active.spent = spent;
     active.signed = Date.now();
     active.units += ended;
     active.unit = unit;
