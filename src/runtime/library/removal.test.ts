@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { Lore } from '../../model/library';
 import { addCharacter } from './characters';
 import { planRemoval } from './removal';
@@ -8,7 +8,7 @@ import { blankCard } from '../../engine/import/card';
 const server = testServer();
 
 describe('planRemoval', () => {
-  it('takes what a character owns first (its 삽화 profiles too), its chats after their entries, and the character last', async () => {
+  it('takes what a character owns first (its 삽화 profiles too), its chats after their entries, and the character last, reading several chats at once', async () => {
     const { store, files } = await server.account();
     const saved = await files.save([new Uint8Array(8)]);
     if (!saved.ok) throw new Error(saved.error);
@@ -29,8 +29,15 @@ describe('planRemoval', () => {
     await chat(null, 1);
 
     const owned = [...store.children('avatar', id), ...store.children('lore', id), ...store.children('likeness', id), ...chats.flatMap((chatId) => [...store.children('entry', chatId), ...store.children('summary', chatId)])].map((object) => object.id);
+    const scan = store.scan.bind(store);
+    const reading = { now: 0, most: 0 };
+    vi.spyOn(store, 'scan').mockImplementation(async (...asked) => {
+      reading.most = Math.max(reading.most, ++reading.now);
+      try { return await scan(...asked); } finally { reading.now--; }
+    });
     const plan = await store.pinned((pin) => planRemoval(store, { kind: 'character', id }, pin));
     const rounds = plan.ok ? plan.data.map((round) => round.map((row) => row.id).toSorted()) : [];
     expect(rounds).toEqual([owned.toSorted(), chats.toSorted(), [id]]);
+    expect(reading.most).toBeGreaterThan(1);
   });
 });
