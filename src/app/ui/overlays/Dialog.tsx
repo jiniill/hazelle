@@ -8,7 +8,7 @@ import { Kbd } from '../foundation/Kbd';
 import { useLeaves } from '../foundation/leave';
 import { keyCaps, type Chord } from '../foundation/keys';
 import { Row } from '../layout/Row';
-import { Switcher } from '../story/StoryMessage';
+import { Switcher } from '../story/Switcher';
 import styles from './Dialog.module.css';
 import { useFocusTrap, useLayer } from './layers';
 import { stepByKey, stepping, useSwipe, type Pages } from './pages';

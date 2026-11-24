@@ -1,3 +1,5 @@
+@value switcher from './Switcher.module.css';
+
 .message {
   composes: riseIn from '../foundation/motion.module.css';
   position: relative;
@@ -224,7 +226,9 @@
   }
 }
 
+/* A version stepper here stands under the story's text, its first chevron on the text's edge (Switcher). */
 .after {
+  --versions-lead: calc(var(--space-8) * -1);
   flex-grow: 1;
   min-width: 0;
   display: flex;
@@ -484,32 +488,6 @@
 
 .dot:nth-child(3) {
   animation-delay: calc(var(--duration-stagger) * 2);
-}
-
-.switcher {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-/* A version stepper stands under the story's text, its first chevron on the text's edge. */
-.after .versions {
-  margin-left: calc(var(--space-8) * -1);
-}
-
-.count {
-  composes: detail from '../foundation/type.module.css';
-  composes: eased from '../foundation/hover.module.css';
-  min-width: var(--space-32);
-  line-height: var(--leading-none);
-  font-variant-numeric: tabular-nums;
-  text-align: center;
-  border-radius: var(--radius-sm);
-}
-
-.count:is(:hover, :active):enabled {
-  background: var(--color-surface);
-  color: var(--color-text);
 }
 
 .marker {

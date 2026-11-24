@@ -2,7 +2,7 @@ import { useState, type CSSProperties, type ReactNode } from 'react';
 import { useVeilTaps } from '../foundation/veil';
 import { PictureView } from '../overlays/PictureView';
 import styles from './StoryPicture.module.css';
-import { Switcher } from './StoryMessage';
+import { Switcher } from './Switcher';
 
 type Props = {
   // undefined while it loads; the frame keeps its shape meanwhile.
