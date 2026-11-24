@@ -373,7 +373,8 @@ export function accountRegistry(dataDir: string, service: Db, reads: StoreReads,
       held.pending--;
       held.lastUsed = clock();
     });
-    held.queue = run.catch(() => {});
+    // Settled with nothing: the queue outlives its call, and a call's value (a feed page) would be held until the next.
+    held.queue = run.then(() => {}, () => {});
     return run;
   };
 
