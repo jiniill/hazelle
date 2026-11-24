@@ -144,7 +144,8 @@ export class Lua {
             await this.exclusive(engine, async () => {
               if (engine.loaded) { keepTrace(trace, engine.loaded); engine.loaded = null; }
               if (engine.failed !== null) return void failed(script, { message: engine.failed });
-              if (!(await this.hears(engine, event))) return;
+              // A script's own hearsMain answers for no one: it fails as that script, like its listeners would.
+              if (!(await this.hears(engine, event).catch((error: unknown) => void failed(script, failure(null, error))))) return;
               const run = acting(script.owner);
               engine.run = run;
               engine.log = entry;

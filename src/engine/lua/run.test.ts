@@ -337,6 +337,11 @@ function onStart(id) setChatVar(id, 'seen', seen) seen = getChatVar(id, 'set') e
     expect(await at({ kind: 'output' })).toMatchObject({ handled: true, writes: [['out', 'hello']], removed: [] });
     expect(read).toHaveBeenCalledTimes(1);
   });
+  it('fails a script that broke the prelude it is asked through as that script alone, not the whole event', async () => {
+    const outcome = await run(`hearsMain = nil
+listenEdit('editRequest', function(id, value) return value end)`, { kind: 'edit', stage: 'editRequest', value: 'a', meta: {} });
+    expect(outcome).toMatchObject({ value: 'a', handled: false, errors: [expect.objectContaining({ script: 'main' })] });
+  });
 });
 
 it('keeps initialization log output once with the first hook of that engine', async () => {
