@@ -27,6 +27,11 @@ it('never takes back what it has shown, however the text arrives', () => {
   }
 });
 
+it('moves neither mark back on a frame stamped before its run was asked for', () => {
+  const ink = drawnInk(startInk(0, 100), 200, 100);
+  expect(stepInk(ink, -60, 40, pace)).toMatchObject({ edge: 0, solid: 0 });
+});
+
 it('closes on the end once nothing more comes, and waits on its gradient while more does', () => {
   let ink = drawnInk(startInk(0, 0), 200, 0);
   for (let now = FRAME; now <= 200; now += FRAME) ink = stepInk(ink, FRAME, now, pace);
@@ -40,7 +45,8 @@ it('stays inside a text that got shorter', () => {
   expect(ink).toMatchObject({ length: 230, edge: 230, solid: 220 });
 });
 
-it('asks for no frame once a text rewritten whole is no longer written', () => {
+// One story of one text node on a page of stubs. setStart: what laying a range does.
+function story(setStart: () => void = () => {}) {
   const frames = new Map<number, FrameRequestCallback>();
   const text = { data: '', parentElement: { localName: 'p' }, parentNode: null as unknown };
   const shadow = { adoptedStyleSheets: [], children: [] };
@@ -51,11 +57,16 @@ it('asks for no frame once a text rewritten whole is no longer written', () => {
   vi.stubGlobal('CSSStyleSheet', class { replaceSync() {} });
   vi.stubGlobal('Highlight', Set);
   vi.stubGlobal('CSS', { highlights: new Map() });
-  vi.stubGlobal('Range', class { setStart() {} setEnd() {} });
+  vi.stubGlobal('Range', class { setStart = setStart; setEnd() {} });
   vi.stubGlobal('Element', class {});
   vi.stubGlobal('NodeFilter', { SHOW_TEXT: 4 });
   vi.stubGlobal('document', { createTreeWalker: () => { const left = [text]; return { nextNode: () => left.shift() ?? null }; } });
-  const ink = inkOn({ setAttribute() {}, removeAttribute() {} } as unknown as HTMLElement, shadow as unknown as ShadowRoot, true);
+  const host = { setAttribute: vi.fn(), removeAttribute: vi.fn() };
+  return { frames, text, host, ink: inkOn(host as unknown as HTMLElement, shadow as unknown as ShadowRoot, true) };
+}
+
+it('asks for no frame once a text rewritten whole is no longer written', () => {
+  const { frames, text, ink } = story();
   text.data = '가나다라마바사';
   ink.drawn(true);
   frames.get(1)!(performance.now() + 50);
@@ -64,6 +75,28 @@ it('asks for no frame once a text rewritten whole is no longer written', () => {
   ink.drawn(true);
   ink.drawn(false);
   frames.delete(1);
+  expect(frames.size).toBe(0);
+  vi.unstubAllGlobals();
+});
+
+it('ends for a story whose text a range no longer fits: the draw does not throw, the text stands whole and the error is told', () => {
+  const gone = new DOMException('offset is larger than the node', 'IndexSizeError');
+  let cut = false;
+  const { frames, text, host, ink } = story(() => {
+    if (cut) throw gone;
+  });
+  const told = vi.fn();
+  vi.stubGlobal('reportError', told);
+  text.data = '가나다라마바사';
+  ink.drawn(true);
+  cut = true;
+  text.data = '가나다라마바사 그리고 더';
+  expect(() => ink.drawn(true)).not.toThrow();
+  expect(told).toHaveBeenCalledExactlyOnceWith(gone);
+  expect(host.removeAttribute).toHaveBeenLastCalledWith('data-ink');
+  expect(frames.size).toBe(0);
+  ink.drawn(true);
+  expect(told).toHaveBeenCalledOnce();
   expect(frames.size).toBe(0);
   vi.unstubAllGlobals();
 });

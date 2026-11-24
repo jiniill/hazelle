@@ -29,7 +29,8 @@ export function drawnInk(ink: Ink, length: number, now: number): Ink {
 }
 
 export function stepInk(ink: Ink, since: number, now: number, pace: Pace): Ink {
-  const passed = Math.min(LONGEST, since);
+  // A frame is stamped when it began, which on a busy page is before its run was asked for: no time has passed then.
+  const passed = Math.max(0, Math.min(LONGEST, since));
   const speed = Math.max(SLOWEST, ink.speed + ((ink.length - ink.edge) / pace.follow - ink.speed) * (1 - Math.exp(-passed / pace.even)));
   const edge = Math.min(ink.length, ink.edge + speed * passed);
   const closing = now - ink.grew < pace.idle ? 0 : Math.min(edge, ink.solid + (WIDTH / pace.close) * passed);
@@ -103,6 +104,7 @@ export function inkOn(host: HTMLElement, shadow: ShadowRoot, fresh: boolean): St
   let frame = 0;
   let last = 0;
   let writing = false;
+  let lost = false;
   // Where the ranges last laid begin and end: a frame that moves none of them lays nothing.
   let laid: string | null = null;
 
@@ -170,6 +172,23 @@ export function inkOn(host: HTMLElement, shadow: ShadowRoot, fresh: boolean): St
     frame = 0;
     clear();
   };
+  // The story's nodes are not the ink's alone: a browser's translation or an extension cuts and moves text between
+  // two draws, and a range then names an offset or a node that is gone. The ink ends for this story, its text stands
+  // whole, and the error is told as one nobody caught: thrown on, it would take the screen down from a draw.
+  const laying = () => {
+    try {
+      lay();
+      return true;
+    } catch (error) {
+      lost = true;
+      ink = null;
+      rest();
+      gateAt(null);
+      mark();
+      reportError(error);
+      return false;
+    }
+  };
   const run = () => {
     if (frame || !ink || settled(ink)) return;
     last = performance.now();
@@ -177,7 +196,7 @@ export function inkOn(host: HTMLElement, shadow: ShadowRoot, fresh: boolean): St
       ink = stepInk(ink!, now - last, now, pace);
       last = now;
       const next = settled(ink) ? '' : Array.from({ length: STEPS + 1 }, (_, at) => Math.round(ink!.edge - (at * (ink!.edge - ink!.solid)) / STEPS)).join();
-      if (next !== laid) lay();
+      if (next !== laid && !laying()) return;
       laid = next;
       mark();
       frame = settled(ink) ? 0 : requestAnimationFrame(tick);
@@ -187,6 +206,7 @@ export function inkOn(host: HTMLElement, shadow: ShadowRoot, fresh: boolean): St
   return {
     gate,
     drawn(now) {
+      if (lost) return;
       writing = now;
       // Settled and no longer written: nothing to read until the writing begins again.
       if (!writing && (!ink || settled(ink))) {
@@ -202,7 +222,7 @@ export function inkOn(host: HTMLElement, shadow: ShadowRoot, fresh: boolean): St
       // What the edge has passed reads as it did: the text only grew past it. Anything else is not a reply being
       // written on (a script rewrote it, a translation took its place), and stands whole at once.
       ink = ink && text.startsWith(before.slice(0, Math.round(ink.edge))) ? drawnInk(ink, text.length, at) : startInk(text.length, at);
-      lay();
+      if (!laying()) return;
       laid = null;
       mark();
       run();
