@@ -279,6 +279,8 @@ declare namespace Hazelle {
     layer(takes: LayerBox[], shows: LayerBox[]): void;
     missed(what: LayerMiss): void;
     layered(listener: (on: boolean, theme: 'dark' | 'light') => void): void;
+    // Chat.rendered of a chat's rows in one call, in their order, each null as there; css is the sheet they share.
+    rendered(chat: string, at: (At | null)[]): Promise<{ css: string; rows: (Omit<Rendered, 'css'> | null)[] }>;
   }
   interface Api {
     // Unreleased until tools are published (design §6.10, phase 3): version 1 changes in place until then.

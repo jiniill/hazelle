@@ -960,7 +960,8 @@ it('runs a frame tool as one frame: its registered items, a press from the chat,
   } finally { host.close(); }
 }));
 
-it('lays a frame tool\'s layer: its boxes are drawn without telling it, its word of a missed pointer reaches the screen, and it is told when the screen takes it back', () => withTools(async (session, connect) => {
+// A frame tool that does nothing, on in a new chat, and its frame warmed there.
+async function idleFrame(session: Session, connect: (open: OpenFrame) => ToolHost) {
   await answerable(session);
   const parsed = source('1', '');
   const added = await importTool(session.store, session.files, { ...parsed, manifest: { ...parsed.manifest, page: null, menu: [], risu: { verdict: 'all', missing: [], hosts: [] } } });
@@ -972,10 +973,26 @@ it('lays a frame tool\'s layer: its boxes are drawn without telling it, its word
   const module = added.data.id;
   const transport = inProcessRisu(() => {});
   const host = connect(transport.open);
+  await host.warm(chat);
+  await vi.waitFor(() => expect(host.frames().get(module)).toBeDefined());
+  return { chat, module, host, frame: transport.frames[0]!.api!.frame! };
+}
+
+it('answers a frame tool the chat screen\'s rows in one call, each as the screen draws it and the sheet once', () => withTools(async (session, connect) => {
+  const { chat, host, frame } = await idleFrame(session, connect);
   try {
-    await host.warm(chat);
-    await vi.waitFor(() => expect(host.frames().get(module)).toBeDefined());
-    const frame = transport.frames[0]!.api!.frame!;
+    const welcome = { html: '<p>welcome</p>', css: '.b { color: red; }', text: 'welcome' };
+    expect(await frame.rendered(chat, [null])).toEqual({ css: '', rows: [null] });
+    const leave = session.scriptPages.screen(chat, { send: async () => null, rendered: (at) => (at === null ? welcome : null) });
+    expect(await frame.rendered(chat, [{ index: 0, id: 'm', version: 'v' }, null])).toEqual({ css: welcome.css, rows: [null, { html: welcome.html, text: welcome.text }] });
+    await expect(frame.rendered(chat, [{ index: 0 } as Hazelle.At])).rejects.toThrow('Invalid tool call');
+    leave();
+  } finally { host.close(); }
+}));
+
+it('lays a frame tool\'s layer: its boxes are drawn without telling it, its word of a missed pointer reaches the screen, and it is told when the screen takes it back', () => withTools(async (session, connect) => {
+  const { chat, module, host, frame } = await idleFrame(session, connect);
+  try {
     const told = vi.fn();
     frame.layered(told);
     const screen = { chat, theme: 'light' as const, draw: vi.fn(), missed: vi.fn() };
