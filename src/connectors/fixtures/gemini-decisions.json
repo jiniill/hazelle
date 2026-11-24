@@ -1,0 +1,63 @@
+{
+  "model": {
+    "name": "models/gemini-decision-1",
+    "version": "gemini-decision-1",
+    "displayName": "Gemini Decision 1",
+    "description": "Gemini Decision 1",
+    "inputTokenLimit": 262144,
+    "outputTokenLimit": 1,
+    "supportedGenerationMethods": [
+      "createDecision"
+    ]
+  },
+  "answer": {
+    "answers": {
+      "mira_present": {
+        "confidence": 0.99,
+        "noul": 0.99,
+        "type": "noul"
+      },
+      "king_present": {
+        "confidence": 0.9525975880912904,
+        "noul": 0.04740241190870961,
+        "type": "noul"
+      },
+      "tam_mood": {
+        "confidence": 0.9900114921780002,
+        "choice": "annoyed",
+        "probabilities": {
+          "afraid": 0.004348469328058593,
+          "annoyed": 0.9900114921780002,
+          "happy": 0.005640038493941186
+        },
+        "type": "choice"
+      },
+      "tension": {
+        "confidence": 0.6791387724591861,
+        "score": 0.999646879475506,
+        "probabilities": {
+          "0": 0.16060717403265387,
+          "1": 0.6791387724591861,
+          "2": 0.16025405350816
+        },
+        "legend": {
+          "2": "Openly hostile.",
+          "1": "Slightly tense.",
+          "0": "Calm."
+        },
+        "type": "score"
+      }
+    },
+    "usage": {
+      "total_tokens": 352,
+      "total_input_tokens": 352,
+      "input_tokens_by_modality": [
+        {
+          "modality": "text",
+          "tokens": 352
+        }
+      ],
+      "total_output_tokens": 0
+    }
+  }
+}

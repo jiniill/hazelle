@@ -79,6 +79,7 @@ function RehearsalView({ rehearsal, sending, editor, onEdit }: { rehearsal: Rehe
     ...(said.length ? [{ label: '전송 시 알림', value: `${said.length}개` }] : []),
     ...(calls.model ? [{ label: '전송 시 모델 호출', value: `${calls.model}번` }] : []),
     ...(calls.embed ? [{ label: '전송 시 임베딩 생성', value: `${calls.embed}번` }] : []),
+    ...(calls.decide ? [{ label: '전송 시 결정 호출', value: `${calls.decide}번` }] : []),
     ...(calls.background ? [{ label: '전송 시 배경 변경', value: `${calls.background}번` }] : []),
   ];
   return (

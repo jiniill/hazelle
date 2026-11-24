@@ -1,5 +1,5 @@
 import { fromBase64, toBase64 } from '../base64';
-import { bareModel, embedUsage } from './chat-completions';
+import { bareModel, inputUsage } from './chat-completions';
 import { embedContent } from './gemini';
 import { ConnectorError, type ConnectionType, type Endpoint } from './types';
 import { count, jsonObject, vector } from './values';
@@ -138,7 +138,7 @@ export const vertex: ConnectionType = {
     parse(payload) {
       if (!isRecord(payload) || !isRecord(payload.embedding) || !vector(payload.embedding.values)) return null;
       const usage = isRecord(payload.usageMetadata) ? payload.usageMetadata : {};
-      return { vectors: [payload.embedding.values], usage: embedUsage(count(usage.promptTokenCount)), raw: usage };
+      return { vectors: [payload.embedding.values], usage: inputUsage(count(usage.promptTokenCount)), raw: usage };
     },
   },
   // Flex PayGo needs both headers on the global endpoint; one alone permits Provisioned Throughput first. us and eu

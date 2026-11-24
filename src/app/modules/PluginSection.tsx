@@ -4,6 +4,7 @@ import { setModels, setModuleModel, setNetwork, setTakesMemory } from '../../run
 import { sharedModel } from '../../runtime/models/assignment';
 import { writerOf } from '../../runtime/models/profiles';
 import { scriptsOf } from '../../runtime/scripts/selection';
+import { callsModels } from '../../tool-api/manifest';
 import { describeModuleModelFailure } from '../common/failure';
 import { TaskModelRow } from '../common/TaskPrompt';
 import { ToolSetting } from '../common/ToolSetting';
@@ -61,7 +62,7 @@ export function PluginSection({ module }: { module: Stored<'module'> }) {
   const stored = useTool(module.id);
   if (!stored) return null;
   const { manifest, settings } = stored.value;
-  const models = hasLua(module) || manifest.uses.some((use) => use === 'model' || use === 'embed');
+  const models = hasLua(module) || callsModels(manifest.uses);
   const memory = manifest.uses.includes('memory');
   const network = manifest.uses.includes('network');
   return (

@@ -1,23 +1,24 @@
 import { fitsRole, type ModelRef, type Role } from '../../connectors/assignment';
 import { entryName, entryOf } from '../../connectors/types';
-import { embedRoute } from '../../connectors/registry';
+import { servesRole } from '../../connectors/registry';
 import type { Stored } from '../../model/kinds';
 import type { Route } from '../../runtime/models/assignment';
 import { ChipButton, Divider, Menu, MenuItem, PickCard, SettingRow } from '../ui';
 import { ModelChoices } from './ModelChoices';
-import { AUX_HELP, EMBED_HELP, follows, MAIN_HELP, MODEL_ROLES, MODEL_SETTINGS, NOT_STARRED, NOT_PICKED } from './words';
+import { AUX_HELP, DECIDE_HELP, EMBED_HELP, follows, MAIN_HELP, MODEL_ROLES, MODEL_SETTINGS, NOT_STARRED, NOT_PICKED } from './words';
 
 // A role's own row in 공용: what it is for, and what it reads while unpicked.
 export const ROLE_ROWS: Record<Role, { help: string; follow: string | null }> = {
   main: { help: MAIN_HELP, follow: null },
   aux: { help: AUX_HELP, follow: follows(MODEL_ROLES.main) },
   embed: { help: EMBED_HELP, follow: NOT_PICKED },
+  decide: { help: DECIDE_HELP, follow: NOT_PICKED },
 };
 
-// 임베딩 모델 offers only what its connection embeds: the type says so, not the model (design §4).
+// 임베딩 모델 and 결정 모델 offer only what the connection serves: the type says so, not the model (design §4).
 export function starredModels(connections: readonly Stored<'connection'>[], role: Role): Route[] {
   return connections.flatMap((connection) =>
-    connection.value.starred.filter((model) => fitsRole(model, role) && (role !== 'embed' || embedRoute(connection.value, model) !== null)).map((model) => ({ connection, model })),
+    connection.value.starred.filter((model) => fitsRole(model, role) && servesRole(connection.value, model, role)).map((model) => ({ connection, model })),
   );
 }
 

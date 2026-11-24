@@ -847,12 +847,13 @@ describe('tool events through Scripts', () => {
     }, { run, close: () => {} });
   });
 
-  it('answers an unasked consent with no card under a tool deadline, asks from a menu press, and tells a missing 임베딩 모델 once', async () => {
+  it('answers an unasked consent with no card under a tool deadline, asks from a menu press, and tells a missing 임베딩 모델 or 결정 모델 once', async () => {
     const answers: unknown[] = [];
     const binding: Binding<ToolUnit> = { run: async (_chat, unit, _scope, event, host) => {
       if (event.kind === 'showing' || event.kind === 'menu') {
         answers.push(await host.embed(['query'], 'query', { kind: 'module', id: unit.module }));
         if (event.kind === 'showing') answers.push(await host.model('aux', [{ role: 'user', content: 'x' }], { kind: 'module', id: unit.module }));
+        if (event.kind === 'menu') answers.push(await (host as ToolReach).decide('x', { q: { type: 'noul', instructions: 'x' } }, { kind: 'module', id: unit.module }));
       }
       return noOutcome();
     }, close: () => {} };
@@ -869,8 +870,8 @@ describe('tool events through Scripts', () => {
       session.scriptInteractions.answer(session.scriptInteractions.snapshot().questions[0]!.id, 'yes');
       await pressed;
       await session.scriptCommands.menu(f.chat, f.module, 'now');
-      expect(answers.slice(2)).toEqual([{ ok: false, reason: 'no-model' }, { ok: false, reason: 'no-model' }]);
-      expect(session.scriptInteractions.snapshot().notes.filter(({ kind }) => kind === 'no-model')).toMatchObject([{ role: 'embed' }]);
+      expect(answers.slice(2)).toEqual(Array(4).fill({ ok: false, reason: 'no-model' }));
+      expect(session.scriptInteractions.snapshot().notes.filter(({ kind }) => kind === 'no-model')).toMatchObject([{ role: 'embed' }, { role: 'decide' }]);
     }, binding);
   });
 
@@ -1303,7 +1304,7 @@ describe('a rehearsal of the pre-send scripts', () => {
       const sending = (await wouldSend(session, chat, { kind: 'send', text: '안녕' }, undefined, 'view'))!;
       const rehearsal = (await session.scriptPreview.rehearse(chat, sending, new AbortController().signal))!;
       expect(log).toHaveLength(0);
-      expect(rehearsal.calls).toEqual({ model: 1, embed: 0, background: 0, fetch: 0 });
+      expect(rehearsal.calls).toEqual({ model: 1, embed: 0, decide: 0, background: 0, fetch: 0 });
       expect(rehearsal.scope.pending).toEqual([['answer', NOT_REHEARSED]]);
     }));
 

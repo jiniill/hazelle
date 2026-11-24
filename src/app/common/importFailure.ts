@@ -1,5 +1,5 @@
 import { EXPANSION, METADATA_BYTES } from '../../engine/import/inflate';
-import { USES } from '../../engine/import/tool';
+import { TOOL_USES } from '../../tool-api/manifest';
 import type { ImportFailure } from '../../engine/import/types';
 import { sizeText } from './size';
 import { RISU_PLUGIN, UNREADABLE_FILE, WRONG_PASSWORD } from './words';
@@ -31,7 +31,7 @@ const DETAIL_FAILURE: Record<string, string> = {
   'tool-composer': '입력창 줄을 읽지 못했어요.',
   'tool-function': '모델 도구 줄을 읽지 못했어요.',
   'tool-composer-needed': '입력창 버튼을 쓰려면 //@composer도 있어야 해요.',
-  'tool-uses': `//@uses에는 ${USES.join(', ')}만 쓸 수 있어요.`,
+  'tool-uses': `//@uses에는 ${TOOL_USES.join(', ')}만 쓸 수 있어요.`,
   'tool-unknown': '알 수 없는 줄이에요.',
   'risu-old': `예전 버전의 ${RISU_PLUGIN}이라 가져올 수 없어요. API 3.0 플러그인만 쓸 수 있어요.`,
   'risu-name': '//@name이 꼭 있어야 해요.',

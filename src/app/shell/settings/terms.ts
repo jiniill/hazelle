@@ -14,7 +14,7 @@ import { GLIDE } from '../../common/reading';
 // item is implied.
 const TERMS: Record<SettingsPage, string[]> = {
   setup: [FINDINGS, ROLES_TITLE, STARRED, FEATURES_TITLE],
-  models: [DEFAULT_MODELS, SCOPE.default, MODEL_ROLES.main, MODEL_ROLES.aux, MODEL_ROLES.embed, STARRED, IDLE_MODELS, MODEL_SETTINGS, '기능별 모델', PROMPT_MODELS, '모델 이름', '모델 ID', '이미지 설정', PICTURE_INPUT, HOST],
+  models: [DEFAULT_MODELS, SCOPE.default, ...Object.values(MODEL_ROLES), STARRED, IDLE_MODELS, MODEL_SETTINGS, '기능별 모델', PROMPT_MODELS, '모델 이름', '모델 ID', '이미지 설정', PICTURE_INPUT, HOST],
   // Its rows are 대화's and the features' own labels, each a page here.
   features: [],
   connections: ['모델', '계정', '계정 추가', '그룹', '전환일', '사용량과 한도', RETRY_COUNT, '사용 내역', '연결 이름', '키 변경', '모델 ID로 추가'],

@@ -1,15 +1,16 @@
 import type { ModelRef, Role } from '../../connectors/assignment';
-import type { Cost } from '../../connectors/types';
-import type { EmbedPurpose } from '../../connectors/types';
+import type { Cost, DecideQuestion, EmbedPurpose } from '../../connectors/types';
 import type { HttpRequest } from '../../contracts/http';
 import type { ChatScope } from '../../engine/render';
-import type { EmbedResult, FetchResult, Host, ModelMessage, ModelRefusal, ModelResult, ToolReach } from '../../engine/script-api';
+import type { DecideResult, EmbedResult, FetchResult, Host, ModelMessage, ModelRefusal, ModelResult, ToolReach } from '../../engine/script-api';
+import type { Receipt } from '../../model/chat';
 import { live, type PackOwner } from '../../model/library';
-import { chatModel, embedModel, sharedModel, taskModel } from '../models/assignment';
+import { chatModel, decideModel, embedModel, sharedModel, taskModel, type Route } from '../models/assignment';
 import { setBackground } from '../library/pack';
 import { keepCall } from '../chat/chat-log';
 import type { Costs } from '../models/cost';
 import type { Credentials } from '../models/credential';
+import { decide } from '../models/decide';
 import { countTexts, embedTexts } from '../models/embed';
 import { gather, receiptOf } from '../models/generate';
 import { writerOf, type Writer } from '../models/profiles';
@@ -17,6 +18,7 @@ import { relayRaw } from '../models/relay';
 import type { ReadModels } from '../store/read-model';
 import type { RequestLog } from '../models/request-log';
 import type { ScriptInteractions } from './interactions';
+import { noteStep } from '../diagnostics/auto-diagnosis';
 import type { ObjectStore } from '../store/store';
 import { callOf, generateOnce, pageCall, taskCall } from '../models/streams';
 import type { Tokens } from '../models/token-calibration';
@@ -39,6 +41,7 @@ export class ScriptReach {
       ask: (question, from, callSignal) => this.interactions.ask(chat, question, from, either(callSignal)),
       model: (role, messages, from, callSignal) => this.model(chat, role, messages, from, deadline, either(callSignal)),
       embed: (texts, as, from, callSignal) => this.embed(chat, texts, as, from, deadline, either(callSignal)),
+      decide: (input, questions, from, callSignal) => this.decide(chat, input, questions, from, deadline, either(callSignal)),
       background: (html, from, callSignal) => this.background(chat, html, from, deadline, either(callSignal)),
       fetch: (request, module, callSignal) => this.fetch(chat, request, module, deadline, either(callSignal)),
       progress: (text) => { if (!signal?.aborted) progress(text); },
@@ -133,20 +136,38 @@ export class ScriptReach {
     return { ok: false, reason: response.kind === 'stopped' ? 'stopped' : 'offline' };
   }
 
-  // With the account's 임베딩 모델, under the spender's one answer for model calls.
+  // An account role's model for a spender's call, under the spender's one answer for model calls; why not, where
+  // there is none to call.
+  private async accountModel(chat: string, role: 'embed' | 'decide', from: PackOwner, deadline: boolean, signal?: AbortSignal): Promise<Route | 'failed' | 'not-allowed' | 'no-model'> {
+    const { store } = this.session;
+    if (signal?.aborted || this.closing.aborted || !live(store.get('chat', chat)) || !live(store.get(from.kind, from.id))) return 'failed';
+    if (!(await this.interactions.allowed(chat, from, deadline, signal))) return 'not-allowed';
+    if (signal?.aborted || !live(store.get(from.kind, from.id))) return 'failed';
+    const route = role === 'embed' ? embedModel(store) : decideModel(store);
+    if (!('kind' in route)) return route;
+    this.interactions.tell(chat, `no-model:${role}`, { kind: 'no-model', role }, from);
+    noteStep(`script-${role}:no-model`);
+    return 'no-model';
+  }
+
+  // Kept in the chat, whose Costs settles a pending cost.
+  private async spent<T extends { ok: boolean; reason?: string }>(chat: string, role: 'embed' | 'decide', { answer, receipt }: { answer: T; receipt: Receipt | null }, from: PackOwner): Promise<T> {
+    if (receipt) await keepCall(this.session, chat, role === 'embed' ? 'embedding' : 'script', receipt);
+    if (answer.reason === 'flood') this.interactions.tell(chat, 'flood', { kind: 'flood' }, from);
+    noteStep(`script-${role}:${answer.reason ?? 'done'}`, receipt?.totalMs ?? null);
+    return answer;
+  }
+
   private async embed(chat: string, texts: string[], as: EmbedPurpose | null, from: PackOwner, deadline: boolean, signal?: AbortSignal): Promise<EmbedResult> {
     const { store, credentials, log } = this.session;
-    if (signal?.aborted || this.closing.aborted || !live(store.get('chat', chat)) || !live(store.get(from.kind, from.id))) return { ok: false, reason: 'failed' };
-    if (!(await this.interactions.allowed(chat, from, deadline, signal))) return { ok: false, reason: 'not-allowed' };
-    if (signal?.aborted || !live(store.get(from.kind, from.id))) return { ok: false, reason: 'failed' };
-    const route = embedModel(store);
-    if ('kind' in route) {
-      this.interactions.tell(chat, 'no-model:embed', { kind: 'no-model', role: 'embed' }, from);
-      return { ok: false, reason: 'no-model' };
-    }
-    const { answer, receipt } = await embedTexts({ credentials, log, count: countTexts(store) }, route, texts, as, chat, true, signal ? AbortSignal.any([this.closing, signal]) : this.closing);
-    if (receipt) await keepCall(this.session, chat, 'embedding', receipt);
-    if (!answer.ok && answer.reason === 'flood') this.interactions.tell(chat, 'flood', { kind: 'flood' }, from);
-    return answer;
+    const route = await this.accountModel(chat, 'embed', from, deadline, signal);
+    if (typeof route === 'string') return { ok: false, reason: route };
+    return this.spent(chat, 'embed', await embedTexts({ credentials, log, count: countTexts(store) }, route, texts, as, chat, true, signal ? AbortSignal.any([this.closing, signal]) : this.closing), from);
+  }
+
+  private async decide(chat: string, input: string, questions: Record<string, DecideQuestion>, from: PackOwner, deadline: boolean, signal?: AbortSignal): Promise<DecideResult> {
+    const route = await this.accountModel(chat, 'decide', from, deadline, signal);
+    if (typeof route === 'string') return { ok: false, reason: route };
+    return this.spent(chat, 'decide', await decide(this.session, route, input, questions, chat, signal ? AbortSignal.any([this.closing, signal]) : this.closing), from);
   }
 }

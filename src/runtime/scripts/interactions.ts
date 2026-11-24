@@ -1,6 +1,7 @@
 import { autoDiagnose, noteStep } from '../diagnostics/auto-diagnosis';
 import { ChangeSignal } from '../../change-signal';
 import type { Role } from '../../connectors/assignment';
+import { callsModels } from '../../tool-api/manifest';
 import { Runaway } from '../../engine/cbs/evaluate';
 import type { Outcome, Question } from '../../engine/script-api';
 import { live, type PackOwner } from '../../model/library';
@@ -156,7 +157,7 @@ export class ScriptInteractions {
     if (!value) return [];
     return [
       ...(uses.includes('network') && value.network === undefined ? ['network' as const] : []),
-      ...(uses.some((use) => use === 'model' || use === 'embed') && value.botModels === undefined ? ['model' as const] : []),
+      ...(callsModels(uses) && value.botModels === undefined ? ['model' as const] : []),
       ...(uses.includes('memory') && value.takesMemory === undefined ? ['memory' as const] : []),
     ];
   }

@@ -12,6 +12,7 @@ import { unsetValue } from '../../engine/cbs/tags';
 import { live } from '../../model/library';
 import { accountSettings } from '../account-settings';
 import { toolId } from '../../model/tool';
+import { isQuestions } from '../../connectors/decide';
 import { TOOL_LOG_CHARS, TOOL_PROGRESS_CHARS, TOOL_VARIABLES, toolVar, type Json } from '../../tool-api/manifest';
 import { called, type ChatHeader, type Down, type Message, type ToolOutcome } from '../../tool-api/protocol';
 import { RISU_DECLINED } from '../../tool-api/risu-methods';
@@ -435,6 +436,11 @@ export class ToolApi {
         if (method === 'embed' && Array.isArray(first) && first.every((text) => typeof text === 'string') && (second === null || second === 'query' || second === 'document')) {
           if (!entry.tool.manifest.uses.includes('embed')) return { ok: false, reason: 'not-declared' };
           return context.host.embed(first as string[], second, owner, context.signal);
+        }
+        if (method === 'decide' && typeof first === 'string') {
+          if (!isQuestions(second)) throw new Error('Invalid questions: see DecideQuestion in hazelle.d.ts');
+          if (!entry.tool.manifest.uses.includes('decide')) return { ok: false, reason: 'not-declared' };
+          return context.host.decide(first, second, owner, context.signal);
         }
         if (method === 'model' && (first === 'main' || first === 'aux') && isModelMessages(second)) {
           if (!entry.tool.manifest.uses.includes('model')) return { ok: false, reason: 'not-declared' };

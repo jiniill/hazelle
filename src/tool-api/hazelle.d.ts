@@ -14,11 +14,27 @@ declare namespace Hazelle {
   interface RequestMessage extends ModelMessage { message?: string; cache?: true }
   // A message about to be shown; at: null for the greeting.
   type Shown = { at: At | null; text: string };
-  // flood: past 20 model, embed and fetch calls a minute in the chat, its bot's scripts and every tool counted together.
+  // flood: past 20 model, embed, decide and fetch calls a minute in the chat, its bot's scripts and every tool counted together.
   type ModelRefusal = 'not-allowed' | 'not-declared' | 'no-model' | 'flood' | 'failed';
   type ModelAnswer = { ok: true; text: string } | { ok: false; reason: ModelRefusal };
   // model: the embedding model that made the vectors; vectors from another model cannot be compared with them.
   type EmbedAnswer = { ok: true; model: string; vectors: number[][] } | { ok: false; reason: ModelRefusal | 'too-large' };
+  // A question a decision model answers without writing: instructions say what is asked of the input. noul: a yes or
+  // no, criteria wording each side where the instructions alone do not. choice: one of 2 to 255 options, each an id and
+  // what it means. score: a level of a rubric of 2 to 10, lowest first.
+  type DecideQuestion =
+    | { type: 'noul'; instructions: string; criteria?: { true: string; false: string } }
+    | { type: 'choice'; instructions: string; criteria: { [option: string]: string } }
+    | { type: 'score'; instructions: string; criteria: string[] };
+  // noul: the probability of yes, 0 to 1. choice: the likeliest option's id, and every option's probability. score:
+  // the probability-weighted level, counted from 0 (1.2 lies between the second and the third), and each level's
+  // probability in the rubric's order.
+  type Decision =
+    | { type: 'noul'; noul: number }
+    | { type: 'choice'; choice: string; probabilities: { [option: string]: number } }
+    | { type: 'score'; score: number; probabilities: number[] };
+  // answers: one for each question, under the question's id. model: the decision model that answered.
+  type DecideAnswer = { ok: true; model: string; answers: { [id: string]: Decision } } | { ok: false; reason: ModelRefusal };
   // refused: the relay or the app refused the call, code naming why (not-https, not-public, upstream-redirect,
   // upstream-not-api, relay-host-limit, relay-traffic-limit, …). A body is text, or bytes sent as they are, with POST
   // only; a redirect is not followed.
@@ -108,6 +124,11 @@ declare namespace Hazelle {
     model(role: 'main' | 'aux', messages: ModelMessage[]): Promise<ModelAnswer>;   // needs //@uses model
     // needs //@uses embed. as: what the texts are for, which retrieval-tuned models embed differently.
     embed(texts: string[], as?: 'query' | 'document'): Promise<EmbedAnswer>;
+    // needs //@uses decide. The account's 결정 모델 reads input once and answers every question in one call, far sooner
+    // and cheaper than a reply a model writes: who is in a scene, which entry applies, how strong a change was.
+    // questions: 1 to 1,000, each under an id of letters, numbers, _ or -, at most 64 characters. Throws on questions
+    // outside those bounds.
+    decide(input: string, questions: { [id: string]: DecideQuestion }): Promise<DecideAnswer>;
     // needs //@uses network, which the user allows once per module; through the app's relay. An aborted signal rejects
     // with its reason, as fetch does.
     fetch(url: string, init?: FetchInit): Promise<FetchAnswer>;

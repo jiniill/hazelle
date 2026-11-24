@@ -300,9 +300,13 @@ it('refuses undeclared spending and forged event contexts, and isolates module s
   const f = await fixture(session, '');
   let answer: Hazelle.ModelAnswer | null = null;
   let fetched: Hazelle.FetchAnswer | null = null;
+  let decided: Hazelle.DecideAnswer | null = null;
+  let unbounded = '';
   const transport = inProcessTools((api) => api.on('prompt', async (chat) => {
     answer = await chat.model('aux', [{ role: 'user', content: 'hi' }]);
     fetched = await chat.fetch('https://api.example.com/');
+    decided = await chat.decide('hi', { here: { type: 'noul', instructions: 'Is she here?' } });
+    unbounded = await chat.decide('hi', { 'bad id': { type: 'noul', instructions: 'Is she here?' } }).then(() => '', (error: Error) => error.message);
     return null;
   }));
   const host = connect(transport.open);
@@ -310,11 +314,15 @@ it('refuses undeclared spending and forged event contexts, and isolates module s
     const context = f.context();
     const model = vi.fn<Host['model']>();
     const fetch = vi.fn<ToolReach['fetch']>();
-    await host.run(f.chat, f.tool(), context.scope, { kind: 'prompt', turn: { memory: false } }, { ...context.host, model, fetch });
+    const decide = vi.fn<ToolReach['decide']>();
+    await host.run(f.chat, f.tool(), context.scope, { kind: 'prompt', turn: { memory: false } }, { ...context.host, model, fetch, decide });
     expect(answer).toEqual({ ok: false, reason: 'not-declared' });
     expect(fetched).toEqual({ ok: false, reason: 'not-declared' });
+    expect(decided).toEqual({ ok: false, reason: 'not-declared' });
+    expect(unbounded).toContain('Invalid questions');
     expect(model).not.toHaveBeenCalled();
     expect(fetch).not.toHaveBeenCalled();
+    expect(decide).not.toHaveBeenCalled();
     const frame = transport.frames[0]!;
     frame.emit({ kind: 'call', call: 900, event: 9999, method: 'model', args: ['aux', []] });
     await vi.waitFor(() => expect(frame.host.sent).toContainEqual(expect.objectContaining({ kind: 'answer', call: 900, ok: false, value: 'stopped' })));

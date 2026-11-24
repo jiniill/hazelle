@@ -10,7 +10,7 @@ const gone: RolePick = { runs: { kind: 'model-gone' }, from: { layer: 'settings'
 const none: RolePick = { runs: { kind: 'no-model' }, from: null };
 
 const overview = (aux: RolePick): Overview => ({
-  roles: { main: picked('main'), aux, embed: none },
+  roles: { main: picked('main'), aux, embed: none, decide: none },
   talk: { prompt: { kind: 'prompt', own: false, prompt: { id: 'p', value: { name: '기본' } } } as never, pins: [] },
   tasks: [
     { feature: 'translate', on: true, own: undefined, apart: false, runs: 'kind' in aux.runs ? aux.runs : { route } },
@@ -32,7 +32,7 @@ it('marks every feature that is on and cannot run, whatever the cause, and none 
   const failing = overview(gone);
   expect(Object.keys(failingOf(failing, ['translate', 'memory']))).toEqual(['translate']);
   expect(failingOf({ ...failing, tasks: failing.tasks.map((task) => ({ ...task, on: false })) }, ['translate', 'memory'])).toEqual({});
-  expect(Object.keys(failingOf({ ...overview(picked('aux')), roles: { main: none, aux: picked('aux'), embed: none } }, ['translate']))).toEqual(['chat']);
+  expect(Object.keys(failingOf({ ...overview(picked('aux')), roles: { main: none, aux: picked('aux'), embed: none, decide: none } }, ['translate']))).toEqual(['chat']);
 });
 
 it("says a place's own reason, and for a place that lists pages of its own, each failing one's by name", () => {

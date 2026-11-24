@@ -1,5 +1,5 @@
 import { isRecord } from '../../record';
-import type { Json, Settings, ToolField, ToolFunction, ToolManifest, ToolUse } from '../../tool-api/manifest';
+import { TOOL_USES, type Json, type Settings, type ToolField, type ToolFunction, type ToolManifest } from '../../tool-api/manifest';
 import type { ToolIdentity } from '../../model/tool';
 import type { ImportFailure } from './types';
 
@@ -9,7 +9,6 @@ export const TOOL_FILE_BYTES = 8 * 1024 * 1024;
 export const TOOL_ACTIONS = 3;
 export const TOOL_ACTION_CHARS = 16;
 const TOOL_COMPOSER_CHARS = 8;
-export const USES: readonly ToolUse[] = ['model', 'embed', 'memory', 'network'];
 export type ImportedTool = { manifest: ToolManifest; bytes: Uint8Array<ArrayBuffer> };
 export type ToolRead = { ok: true; tool: ImportedTool } | { ok: false; failure: ImportFailure };
 const HEADER_KEYS = new Set(['api', 'name', 'author', 'display-name', 'version', 'description', 'page']);
@@ -137,7 +136,7 @@ export function readTool(bytes: Uint8Array<ArrayBuffer>): ToolRead {
       if (!value || [...value].length > TOOL_COMPOSER_CHARS || manifest.composer) return failed('tool-composer', written);
       manifest.composer = { label: value };
     } else if (key === 'uses') {
-      const use = USES.find((each) => each === value);
+      const use = TOOL_USES.find((each) => each === value);
       if (!use) return failed('tool-uses', written);
       if (!manifest.uses.includes(use)) manifest.uses.push(use);
     } else if (HEADER_KEYS.has(key)) header.set(key, value);

@@ -2,7 +2,7 @@ import { refOf, sameModelRef, type ModelRef, type Role } from '../../connectors/
 import type { Chat } from '../../model/chat';
 import { live } from '../../model/library';
 import { pinsModels } from '../../model/prompt';
-import { accountTaskModel, chatRole, embedRole, type Route, type RolePick } from '../models/assignment';
+import { accountRole, accountTaskModel, chatRole, type Route, type RolePick } from '../models/assignment';
 import { chatIllustrate, chatTranslate, featuresOf, SHARED_CHAT } from './features';
 import { imageRoute, sceneWriterOf, type IllustrateFailure } from './illustrate';
 import { mascotWriterOf, type MascotFailure } from './mascot';
@@ -47,7 +47,7 @@ export function overviewOf(store: ObjectStore, chat: Chat | null): Overview {
   const mine = prompt.kind === 'prompt' ? prompt.prompt.id : null;
   const prompts = chat ? [] : store.list('prompt').filter(live);
   const pins = prompts.flatMap((each) => (each.id !== mine && ofSort(each, 'conversation') && pinsModels(each.value) && each.value.models.main ? [{ prompt: each, ref: each.value.models.main }] : []));
-  const roles = { main: chatRole(store, place, 'main'), aux: chatRole(store, place, 'aux'), embed: embedRole(store) };
+  const roles = { main: chatRole(store, place, 'main'), aux: chatRole(store, place, 'aux'), embed: accountRole(store, 'embed'), decide: accountRole(store, 'decide') };
   const tasks: TaskRun[] = [
     { feature: 'translate', on: on.translate, own: translate.model, apart: translate.own, runs: translator.ok ? { route: translator.route } : translator.failure },
     { feature: 'illustrate', on: on.illustrate, own: illustrate.sceneModel, apart: illustrate.own, runs: sceneWriterOf(store, place), draws: imageRoute(store, illustrate.model) },

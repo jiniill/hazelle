@@ -1,5 +1,5 @@
 import { resolveRole, type Assignment, type ModelRef, type Role } from '../../connectors/assignment';
-import { embedRoute } from '../../connectors/registry';
+import { servesRole } from '../../connectors/registry';
 import { entryOf, type Model, type Starred } from '../../connectors/types';
 import type { Chat } from '../../model/chat';
 import type { Stored } from '../../model/kinds';
@@ -39,16 +39,17 @@ export const chatModel = (store: Pick<ObjectStore, 'get'>, chat: Chat, role: Rol
 // 모델 고정: the prompt whose own 대화 모델 the chat talks on, the chat picking none of its own.
 export const pinnedBy = (chat: Pick<Chat, 'models'>, prompt: PromptChoice) => (chat.models.main === undefined && prompt.kind === 'prompt' && prompt.prompt.value.models.main !== undefined ? prompt.prompt : null);
 
-// 임베딩 모델 is set in 공용 alone (connectors/assignment ROLES). A model whose connection serves no embeddings is gone
-// for this role, as one no longer added is.
-export function embedRole(store: Pick<ObjectStore, 'get'>): RolePick {
-  const ref = accountSettings(store).models.embed;
+// 임베딩 모델 and 결정 모델 are set in 공용 alone (connectors/assignment ROLES). A model whose connection does not serve
+// the role is gone for it, as one no longer added is.
+export function accountRole(store: Pick<ObjectStore, 'get'>, role: 'embed' | 'decide'): RolePick {
+  const ref = accountSettings(store).models[role];
   if (!ref) return { runs: { kind: 'no-model' }, from: null };
   const route = routeOf(store, ref);
-  return { runs: 'kind' in route || embedRoute(route.connection.value, route.model) ? route : { kind: 'model-gone' }, from: { layer: 'settings', role: 'embed' } };
+  return { runs: 'kind' in route || servesRole(route.connection.value, route.model, role) ? route : { kind: 'model-gone' }, from: { layer: 'settings', role } };
 }
 
-export const embedModel = (store: Pick<ObjectStore, 'get'>): Route | RouteFailure => embedRole(store).runs;
+export const embedModel = (store: Pick<ObjectStore, 'get'>): Route | RouteFailure => accountRole(store, 'embed').runs;
+export const decideModel = (store: Pick<ObjectStore, 'get'>): Route | RouteFailure => accountRole(store, 'decide').runs;
 
 // 설정 › 모델's own pick for a role, which no chat or prompt changes: what 번역기 calls with. own is a model picked for one call.
 export function sharedModel(store: Pick<ObjectStore, 'get'>, role: Role, own: ModelRef | null = null): Route | RouteFailure {

@@ -1,6 +1,6 @@
 import { failedTerminal } from './errors';
 import type { Reasoning } from './settings';
-import { bareModel, embedUsage } from './chat-completions';
+import { bareModel, inputUsage } from './chat-completions';
 import type { ChatMessage, Codec, EmbedPurpose, InputPicture, Model, Phase, StreamFacts, Terminal, ToolCall, ToolResult } from './types';
 import { packPdf, pdfData } from './gemini-pdf';
 import { count, jsonObject, list, vector } from './values';
@@ -123,7 +123,7 @@ export const gemini: Codec = {
   inlineSystem: 'system:',
 
   // Google omits default fields: absent thinking means false. Other unlisted capabilities stay unknown.
-  // Supported methods distinguish embedding models from generators.
+  // Supported methods distinguish embedding and decision models from generators.
   parseModels(payload) {
     if (!isRecord(payload) || !Array.isArray(payload.models)) return null;
     return payload.models.flatMap((raw): Model[] => {
@@ -131,13 +131,14 @@ export const gemini: Codec = {
       const methods = list(raw.supportedGenerationMethods);
       const chats = methods.includes('generateContent');
       const embeds = !chats && methods.includes('embedContent');
-      if (!chats && !embeds) return [];
+      const decides = !chats && methods.includes('createDecision');
+      if (!chats && !embeds && !decides) return [];
       const id = raw.name.slice('models/'.length);
       return [
         {
           ...bareModel(id),
           name: typeof raw.displayName === 'string' && raw.displayName ? raw.displayName : id,
-          output: embeds ? ['embedding'] : null,
+          output: embeds ? ['embedding'] : decides ? ['decision'] : null,
           contextLength: count(raw.inputTokenLimit) || null,
           maxOutput: count(raw.outputTokenLimit) || null,
           reasoning: raw.thinking === true,
@@ -244,7 +245,7 @@ export const gemini: Codec = {
       const vectors = payload.embeddings.map((embedding) => (isRecord(embedding) && vector(embedding.values) ? embedding.values : null));
       if (vectors.some((values) => values === null)) return null;
       const usage = isRecord(payload.usageMetadata) ? payload.usageMetadata : {};
-      return { vectors: vectors as number[][], usage: embedUsage(count(usage.promptTokenCount)), raw: usage };
+      return { vectors: vectors as number[][], usage: inputUsage(count(usage.promptTokenCount)), raw: usage };
     },
   },
 };

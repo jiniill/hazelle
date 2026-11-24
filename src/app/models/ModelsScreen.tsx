@@ -145,6 +145,7 @@ export function ModelsScreen({ back }: { back: Back | null }) {
           <RoleCard role="main" {...ROLE_ROWS.main} own={main} connections={connections} onPick={(ref) => ref && pickModel('main', ref)} {...cardOf(main)} />
           <RoleCard role="aux" {...ROLE_ROWS.aux} own={settings.models.aux} connections={connections} onPick={(ref) => pickModel('aux', ref)} {...cardOf(settings.models.aux)} />
           <RoleCard role="embed" {...ROLE_ROWS.embed} own={settings.models.embed} connections={connections} onPick={(ref) => pickModel('embed', ref)} />
+          <RoleCard role="decide" {...ROLE_ROWS.decide} own={settings.models.decide} connections={connections} onPick={(ref) => pickModel('decide', ref)} />
         </PickCards>
         {main && !findStarred(main, connections) && <Callout tone="warn">{`${MODEL_ROLES.main}로 정한 모델이 ${STARRED}에 없어요.`}</Callout>}
       </Section>

@@ -1,5 +1,6 @@
 import { nearest } from '../../../engine/edit-distance';
-import { readTool, splitTool, toolSource, toolText, USES } from '../../../engine/import/tool';
+import { readTool, splitTool, toolSource, toolText } from '../../../engine/import/tool';
+import { TOOL_USES } from '../../../tool-api/manifest';
 import type { ToolIdentity } from '../../../model/tool';
 import type { CodeLanguage, CodeProblem } from '../../ui';
 import { describeImportFailure } from '../importFailure';
@@ -30,7 +31,7 @@ function lint(body: string): CodeProblem[] {
   if (failure.detail === 'tool-uses') {
     const parsed = toolText(bytes);
     const header = parsed.ok && parsed.header.find(({ written }) => written === failure.line);
-    const near = header && nearest(header.value, USES, (use) => use, 3);
+    const near = header && nearest(header.value, TOOL_USES, (use) => use, 3);
     if (near && header) problem.fix = { label: `${near}로 바꾸기`, insert: line.slice(0, line.lastIndexOf(header.value)) + near + line.slice(line.lastIndexOf(header.value) + header.value.length) };
   }
   return [problem];
