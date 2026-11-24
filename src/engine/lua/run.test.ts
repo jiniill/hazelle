@@ -381,6 +381,27 @@ describe('Lua display', () => {
     await expect(lua.display('retained', 2, 1)).rejects.toThrow('expired');
   });
 
+  it('decodes the chat once per display session for every read of it, each read with rows of its own, and an event anew', async () => {
+    const code = `local full, recent, reads = getFullChatMain, getRecentChatsMain, 0
+      getFullChatMain = function(...) reads = reads + 1 return full(...) end
+      getRecentChatsMain = function(...) reads = reads + 1 return recent(...) end
+      listenEdit('editDisplay', function(id, value)
+        local chat = getFullChat(id)
+        chat[1].data = 'mine'
+        chat[2] = nil
+        return value .. ':' .. #getFullChat(id) .. getFullChat(id)[1].data .. ':' .. getRecentChats(id, 1)[1].data .. getRecentChats(id, 1)[1].data .. ':' .. reads
+      end)`;
+    const scripts: LuaUnit[] = [{ owner: OWNER, kind: 'lua', ...PLAIN_LUA, name: 'main', code }];
+    const items = ['a', 'b', 'c'].map((text, index) => ({ index, text, variables: [] }));
+    await lua.installDisplay('held', 1, scripts, SNAPSHOT, items);
+    expect((await lua.display('held', 1, 2)).texts).toEqual(['b:2hello:hi therehi there:2', 'c:2hello:hi therehi there:2']);
+    expect((await lua.display('held', 1, 2)).texts).toEqual(['a:2hello:hi therehi there:2']);
+    await lua.installDisplay('held', 2, scripts, { ...SNAPSHOT, messages: [{ role: 'user', data: 'again', time: 3 }] }, items.slice(0, 1));
+    expect((await lua.display('held', 2, 1)).texts).toEqual(['a:1again:againagain:4']);
+    const event = await run(`function onOutput(id) local before = getFullChat(id)[1].data setChat(id, 0, 'x') setChat(id, 1, before .. getFullChat(id)[1].data) end`, { kind: 'output' });
+    expect(event.edits).toEqual([{ index: 0, text: 'x' }, { index: 1, text: 'hellox' }]);
+  });
+
   it('tells its watcher that it runs, inside a long call and between short ones', async () => {
     const alive = vi.fn();
     const machine = await Lua.create({ alive });

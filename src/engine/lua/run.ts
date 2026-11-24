@@ -482,6 +482,7 @@ export class Lua {
     set('getChatRole', (run, index: number) => run.messages.at(index)?.role ?? '');
     set('getChatLength', (run) => run.messages.length);
     set('getFullChatMain', (run) => JSON.stringify(run.messages.map(view)));
+    set('chatStampMain', (run) => (run.quiet ? stamp(run.messages) : undefined));
     set('getRecentChatsMain', (run, count: number) => JSON.stringify(run.messages.slice(Math.max(0, run.messages.length - Math.max(0, Math.floor(count || 0)))).map(view)));
     set('getCharacterLastMessage', (run) => last(run, 'char') ?? run.snapshot.character.firstMessage);
     set('getUserLastMessage', (run) => last(run, 'user') ?? '');
@@ -581,6 +582,15 @@ export class Lua {
     }
   }
 }
+
+// A quiet run cannot change its messages, so the prelude keeps what it decoded of them under their stamp.
+const STAMPS = new WeakMap<Working[], number>();
+let stamped = 0;
+const stamp = (messages: Working[]) => {
+  let known = STAMPS.get(messages);
+  if (known === undefined) STAMPS.set(messages, (known = ++stamped));
+  return known;
+};
 
 // Closed once what it is running has ended.
 const end = (engine: Promise<Engine>) => void engine.then(({ lua, queue, hook }) => queue.then(() => {
