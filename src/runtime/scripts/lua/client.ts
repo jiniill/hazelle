@@ -36,8 +36,8 @@ export type Up =
   | { kind: 'background'; id: number; call: number; args: Parameters<Host['background']> }
   | { kind: 'pong' };
 
-// The engine stops a script's stretch at 5 s by itself; this catches what it cannot count, such as one pattern match
-// that never ends.
+// The engine stops a script's stretch at 5 s of its running by itself, and while a script runs the worker answers
+// unasked; this catches what the engine cannot count, such as one pattern match that never ends.
 const STUCK_MS = 8000;
 
 export class LuaStuck extends Error {}

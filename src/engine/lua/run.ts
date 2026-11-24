@@ -2,7 +2,7 @@ import { errorMessage } from '../../error-message';
 import { jsonObject } from '../../connectors/values';
 import { sha256Hex } from '../../hex';
 import type { PackOwner } from '../../model/library';
-import { LuaFactory, type LuaEngine } from 'wasmoon';
+import { LuaEventMasks, LuaFactory, type LuaEngine } from 'wasmoon';
 import { runBlocks, type Unit } from './blocks';
 import { ranked } from './similar';
 import { chatLorebook, luaCodes } from '../import/convert';
@@ -24,6 +24,13 @@ type DisplaySession = { revision: number; scripts: Script[]; snapshot: Snapshot;
 
 // Only idle worksets count toward this budget. Splitting an active script set loses globals and thrashes every pass.
 const IDLE_ENGINES = 8;
+// How often at most a running script tells whoever watches its thread that it runs.
+const ALIVE_MS = 250;
+// A script's clock ticks every this many of its instructions. Two ticks further apart than PAUSE_MS were not the
+// script running: its thread was kept off the processor, the page was frozen, or one call into a library or the host
+// took that long.
+const TICK = 1000;
+const PAUSE_MS = 50;
 // Passed where Risu passes a run's access key. Bots hand it back as each call's first argument and never read it.
 const KEY = 'lua';
 
@@ -40,7 +47,9 @@ export const UNSUPPORTED = Object.keys(LACKING);
 // Async in Risu, so bots write them with :await(), which a bare nil turns into an error before the bot's own nil check.
 const AWAITED = new Set(['request', 'generateImage', 'getCharacterImageMain', 'getPersonaImageMain']);
 
-type Engine = { loaded: HookLog | null; log: HookLog | null; lua: LuaEngine; own: Set<string>; run: Run | null; queue: Promise<unknown>; failed: string | null };
+// clock: how long the stretch begun at the last entry has run, and its last tick. hook: the clock's place in the VM's
+// table, given back when the engine ends.
+type Engine = { loaded: HookLog | null; log: HookLog | null; lua: LuaEngine; own: Set<string>; run: Run | null; queue: Promise<unknown>; failed: string | null; clock: { spent: number; last: number }; hook: number };
 type Lane = RunLane | 'display';
 // preview: the 점검 panel's rehearsal of a send, whose engines never share a Lua global with the events' (or the
 // reverse), so a rehearsal neither sees nor leaves state a real turn reads.
@@ -73,18 +82,23 @@ export class Lua {
   private readonly displays = new Map<string, DisplaySession>();
   private readonly active = new Map<Lane, Workset>();
   private checker: Promise<LuaEngine> | null = null;
+  private signed = 0;
 
   private constructor(
     private readonly factory: LuaFactory,
     private readonly sliceMs: number,
+    private readonly alive: () => void,
   ) {}
 
   // wasm: where the browser loads the VM from; node finds its own. sliceMs: a stretch of a script that neither ends
-  // nor yields within it is stopped with an error.
-  static async create({ wasm, sliceMs = 5000 }: { wasm?: string; sliceMs?: number } = {}): Promise<Lua> {
+  // nor yields within that much of its own running is stopped with an error. Not by the wall clock, which on a phone
+  // also counts a page frozen in the background and a thread waiting for the processor. alive: called
+  // now and then while a script runs, from inside its calls and between them: the thread answers nobody meanwhile,
+  // and a watcher that heard nothing would take a slow script on a busy device for one that hangs.
+  static async create({ wasm, sliceMs = 5000, alive = () => {} }: { wasm?: string; sliceMs?: number; alive?: () => void } = {}): Promise<Lua> {
     const factory = new LuaFactory(wasm);
     await factory.mountFile('json.lua', JSON_LUA);
-    return new Lua(factory, sliceMs);
+    return new Lua(factory, sliceMs, alive);
   }
 
   // The triggers in the packs' order, as Risu walks them: each Lua one called for every event, each block one run when
@@ -289,8 +303,16 @@ export class Lua {
     return typeof answer === 'string' ? (JSON.parse(answer) as unknown) : DEAF;
   }
 
+  private sign(now: number) {
+    if (now - this.signed < ALIVE_MS) return;
+    this.signed = now;
+    this.alive();
+  }
+
   private call(engine: Engine, name: string, ...args: unknown[]): Promise<unknown> {
     const called = engine.lua.global.get(name) as (...args: unknown[]) => unknown;
+    entered(engine);
+    this.sign(engine.clock.last);
     return Promise.resolve(called(...args));
   }
 
@@ -377,10 +399,26 @@ export class Lua {
 
   private async start(script: Script): Promise<Engine> {
     // enableProxy off: an object handed to Lua becomes a table, never a live JS object a script could walk.
-    const lua = await this.factory.createEngine({ injectObjects: true, enableProxy: false, functionTimeout: this.sliceMs });
+    const lua = await this.factory.createEngine({ injectObjects: true, enableProxy: false });
     const loaded = hookLog('load', script.owner, script.name, true);
     const began = performance.now();
-    const engine: Engine = { loaded: null, log: loaded, lua, own: new Set(), run: null, queue: Promise.resolve(), failed: null };
+    const clock = { spent: 0, last: 0 };
+    const vm = lua.global.lua;
+    const hook = vm.module.addFunction((thread: number) => {
+      const now = Date.now();
+      if (now - clock.last < PAUSE_MS) clock.spent += now - clock.last;
+      clock.last = now;
+      this.sign(now);
+      if (clock.spent <= this.sliceMs) return;
+      vm.lua_pushstring(thread, 'thread timeout exceeded');
+      vm.lua_error(thread);
+    }, 'vii');
+    // A thread takes its maker's hook. The script loads on one the main state makes; wasmoon calls a script's function
+    // on one made by a thread of its own, which it made before this line and keeps to itself.
+    const calls = (lua.global as unknown as { typeExtensions: { extension: { callbackContext?: { address: number } } }[] }).typeExtensions.map(({ extension }) => extension.callbackContext).find(Boolean);
+    if (!calls) throw new Error('wasmoon keeps no thread for calls');
+    for (const state of [lua.global.address, calls.address]) vm.lua_sethook(state, hook, LuaEventMasks.Count, TICK);
+    const engine: Engine = { loaded: null, log: loaded, lua, own: new Set(), run: null, queue: Promise.resolve(), failed: null, clock, hook };
     this.declare(engine);
     await lua.doString(PRELUDE);
     const changed = setSince(lua);
@@ -389,7 +427,8 @@ export class Lua {
       const index = lua.global.getTop();
       try {
         thread.loadString(script.code, `=${script.name}`);
-        await thread.run(0, { timeout: this.sliceMs });
+        entered(engine);
+        await thread.run(0);
       } finally {
         lua.global.remove(index);
       }
@@ -409,6 +448,7 @@ export class Lua {
     engine.lua.global.set('afterMain', (awaited: Promise<unknown>, step: () => void, fail: (reason: string) => void) => {
       const resume = () => {
         try {
+          entered(engine);
           step();
         } catch (error) {
           fail(errorMessage(error));
@@ -543,7 +583,16 @@ export class Lua {
 }
 
 // Closed once what it is running has ended.
-const end = (engine: Promise<Engine>) => void engine.then(({ lua, queue }) => queue.then(() => lua.global.close()));
+const end = (engine: Promise<Engine>) => void engine.then(({ lua, queue, hook }) => queue.then(() => {
+  lua.global.close();
+  lua.global.lua.module.removeFunction(hook);
+}));
+
+// A stretch begins wherever this side calls into the script: its clock starts from nothing.
+const entered = ({ clock }: Engine) => {
+  clock.spent = 0;
+  clock.last = Date.now();
+};
 
 // The global functions set after this call, under new names or over Lua's and the prelude's (a bot's own next or
 // select is a button's function as any other).

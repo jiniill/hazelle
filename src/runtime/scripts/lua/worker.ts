@@ -59,7 +59,8 @@ addEventListener('message', ({ data }: MessageEvent<Down>) => {
     return;
   }
   const eventScope = data.kind === 'run' ? { ...data.input.scope, messages: history = applyTail(history, data.input.history) } : null;
-  lua ??= Lua.create({ wasm });
+  // A script in the middle of its work answers for the loop it holds: a ping waits behind it.
+  lua ??= Lua.create({ wasm, alive: () => scope.postMessage({ kind: 'pong' }) });
   const { id } = data;
   const controller = data.kind === 'run' ? new AbortController() : null;
   if (controller) runs.set(id, controller);

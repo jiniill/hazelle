@@ -207,6 +207,17 @@ describe('Lua runs', () => {
     expect((await run(`listenEdit('editRequest', function(id, value) value[#value + 1] = { role = 'system', content = 'b' } return value end)`, { kind: 'edit', stage: 'editRequest', value: request, meta: {} })).value).toEqual([...request, { role: 'system', content: 'b' }]);
   });
 
+  it('counts against a script the time it ran, and not a pause of its thread', async () => {
+    let ahead = 0;
+    const clock = vi.spyOn(Date, 'now').mockImplementation(() => performance.timeOrigin + performance.now() + ahead);
+    try {
+      const code = `function onStart(id) alertNormal(id, 'paused') local n = 0 for i = 1, 200000 do n = n + i end setChatVar(id, 'after', 'ran') end`;
+      expect(await run(code, { kind: 'start' }, { say: () => void (ahead += 10_000) })).toMatchObject({ errors: [], writes: [['after', 'ran']] });
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
   it("calls a button's function only when the script defined it", async () => {
     const code = `function open(id) setChatVar(id, 'door', 'open') end
       function onButtonClick(id, data) setChatVar(id, 'pressed', data) end`;
@@ -368,6 +379,22 @@ describe('Lua display', () => {
     expect((await lua.display('retained', 2, 1)).texts).toEqual(['d:7:b:0']);
     lua.forgetDisplay('retained', 2);
     await expect(lua.display('retained', 2, 1)).rejects.toThrow('expired');
+  });
+
+  it('tells its watcher that it runs, inside a long call and between short ones', async () => {
+    const alive = vi.fn();
+    const machine = await Lua.create({ alive });
+    const display = async (ms: number, count: number) => {
+      const code = `listenEdit('editDisplay', function(id, value) local began = os.clock() while os.clock() - began < ${ms / 1000} do end return value end)`;
+      const items = Array.from({ length: count }, (_, index) => ({ index, text: 'a', variables: [] }));
+      await machine.installDisplay('alive' + ms, 1, [{ owner: OWNER, kind: 'lua', ...PLAIN_LUA, name: 'main', code }], SNAPSHOT, items);
+      alive.mockClear();
+      await machine.display('alive' + ms, 1, items.length);
+      return alive.mock.calls.length;
+    };
+    expect(await display(700, 1)).toBeGreaterThan(1);
+    expect(await display(1, 600)).toBeGreaterThan(1);
+    machine.close();
   });
 
   it('passes on only text from one editDisplay listener to the next, as Risu does', async () => {
