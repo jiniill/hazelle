@@ -7,7 +7,7 @@
 /* The frame's lengths that move while the page stands (ChatFrame: the composer's height on each frame of its fold and
    each line it grows, what is pinned). Nothing in a story reads them, and inherited on, each change of one restyles
    every element of every story's shadow, the bulk of a chat's elements. Set back here, the change stops at the
-   story. --story-illustration-most passes: a picture standing in the story reads it (StoryPicture). */
+   story. A picture standing in the story is handed the composer's height on its own frame (StoryPicture). */
 .story,
 .backdrop {
   --footer-height: initial;

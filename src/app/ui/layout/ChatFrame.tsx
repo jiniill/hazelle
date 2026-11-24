@@ -36,6 +36,10 @@ export type StageSide = 'right' | 'left';
 const MarginRoom = createContext<StageSide | false>(false);
 export const useMarginRoom = () => useContext(MarginRoom);
 
+// The composer's settled height, read by the pictures in the story alone (StoryPicture): set on the column, each line
+// the composer grows would restyle every element of every story.
+export const FooterSpace = createContext(0);
+
 type Props = {
   back?: { label: string; onClick: () => void };
   title: ReactNode;
@@ -218,7 +222,9 @@ export function ChatFrame({ back, title, actions, children, above, footer, dockR
                 {pinned}
               </div>
             )}
-            <MarginRoom.Provider value={staged && stage && side}>{children}</MarginRoom.Provider>
+            <FooterSpace.Provider value={space}>
+              <MarginRoom.Provider value={staged && stage && side}>{children}</MarginRoom.Provider>
+            </FooterSpace.Provider>
           </div>
         </div>
         {staged && !stage && (
