@@ -11,9 +11,9 @@ const scope = self as unknown as { postMessage(message: Up): void };
 let lua: Promise<Lua> | null = null;
 const displays = new Map<string, { revision: number; snapshot: Snapshot }>();
 let history: ChatScope['messages'] = [];
-// The last run's replay and the basis it was made on (LuaWorker.run), which a run on that basis takes again. Made as
-// the run starts, in the order the runs came.
-let replayed: { basis: number; replay: Replay } | null = null;
+// The last run's replay and the basis it is on (LuaWorker.run), which a run on that basis takes again. Made the first
+// time one of those runs asks for it.
+let replayed: { basis: number; replay: () => Replay } | null = null;
 let calls = 0;
 const runs = new Map<number, AbortController>();
 const waiting = new Map<number, { id: number; resolve: (value: never) => void; reject: (error: unknown) => void }>();

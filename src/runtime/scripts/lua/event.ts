@@ -10,14 +10,20 @@ export type ScriptOutcome = Omit<Outcome, 'edits'> & { edits: (Outcome['edits'][
 // The chat replayed as a run reads it, but for the scope's pending, which runEvent sets on top: renderChat sets pending
 // after every message, so the two read as one replay with it.
 export type Replay = Pick<ReturnType<typeof renderChat>, 'staged' | 'wrote' | 'variables'>;
-export const replayChat = (scope: ChatScope): Replay => renderChat('prompt', { ...scope, pending: [] });
+// Made the first time it is asked for, which is once a script runs on the chat.
+export function replayChat(scope: ChatScope): () => Replay {
+  let made: Replay | null = null;
+  return () => (made ??= renderChat('prompt', { ...scope, pending: [] }));
+}
 
 export async function runEvent(machine: Lua, owner: string, triggers: ScriptUnit[], scope: ChatScope, event: Event, host: Host, lane: RunLane, signal?: AbortSignal, replay = replayChat(scope)): Promise<ScriptOutcome> {
-  const { staged, wrote } = replay;
-  const variables = new Map(replay.variables);
-  for (const [name, value] of scope.pending ?? []) variables.set(name, value);
-  const snapshot = luaSnapshot(scope, luaStanding(scope), staged, [...variables]);
+  const snapshot = () => {
+    const { staged, variables: replayed } = replay();
+    const variables = new Map(replayed);
+    for (const [name, value] of scope.pending ?? []) variables.set(name, value);
+    return luaSnapshot(scope, luaStanding(scope), staged, [...variables]);
+  };
   const outcome = await machine.run(owner, triggers, snapshot, event, host, lane, signal);
   const greeting = scope.greeting === null ? 0 : 1;
-  return { ...outcome, edits: outcome.edits.map(edit => ({ ...edit, wrote: wrote[edit.index + greeting]! })) };
+  return { ...outcome, edits: outcome.edits.map(edit => ({ ...edit, wrote: replay().wrote[edit.index + greeting]! })) };
 }

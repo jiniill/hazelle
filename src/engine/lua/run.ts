@@ -57,7 +57,7 @@ export type RunLane = 'event' | 'preview';
 export type SyntaxProblem = { line: number | null; message: string };
 type Workset = { engines: Map<string, Promise<Engine>>; codes: Set<string>; held: number; retired: boolean };
 
-const failure = (run: Run, error: unknown): Failure => (run.ranAway ? { runaway: true } : { message: errorMessage(error) });
+const failure = (run: Run | null, error: unknown): Failure => (run?.ranAway ? { runaway: true } : { message: errorMessage(error) });
 const roleOf = (value: unknown): Working['role'] => (value === 'user' ? 'user' : 'char');
 const view = ({ role, data, time }: Working) => ({ role, data, time });
 
@@ -102,13 +102,23 @@ export class Lua {
   }
 
   // The triggers in the packs' order, as Risu walks them: each Lua one called for every event, each block one run when
-  // the event is its own, and either one's conditions and later effects at start, input, output and calls.
-  async run(owner: string, triggers: Unit[], snapshot: Snapshot, event: Event, host: Host, lane: RunLane, signal?: AbortSignal): Promise<Outcome & { trace: HookTrace }> {
+  // the event is its own, and either one's conditions and later effects at start, input, output and calls. snapshot is
+  // read as the first script runs on the chat, so an event no script hears never reads it.
+  async run(owner: string, triggers: Unit[], snapshot: () => Snapshot, event: Event, host: Host, lane: RunLane, signal?: AbortSignal): Promise<Outcome & { trace: HookTrace }> {
     const workset = this.hold(owner, lane, triggers.flatMap(luaCodes));
     try {
       const trace: HookTrace = { entries: [], omitted: 0 };
       let active: HookLog | null = null;
-      const run: Run & { host: Host } = { owner: null, chat: owner, lore: new Map(), quiet: false, snapshot, variables: new Map(snapshot.variables), globals: new Map(snapshot.globals), written: new ObservedWrites((name, value) => { if (active) boundedItem(active, active.writes, [clipped(active, name), clipped(active, value)]); }), messages: working(snapshot), host, signal, stop: false, reload: false, missing: new ObservedMissing((name) => { if (active && !active.missing.includes(name)) boundedItem(active, active.missing, clipped(active, name)); }), ranAway: false, triggerId: event.kind === 'call' ? event.id : '' };
+      const triggerId = event.kind === 'call' ? event.id : '';
+      let run = null as (Run & { host: Host }) | null;
+      const acting = (pack: PackOwner) => {
+        if (!run) {
+          const read = snapshot();
+          run = { owner: null, chat: owner, lore: new Map(), quiet: false, snapshot: read, variables: new Map(read.variables), globals: new Map(read.globals), written: new ObservedWrites((name, value) => { if (active) boundedItem(active, active.writes, [clipped(active, name), clipped(active, value)]); }), messages: working(read), host, signal, stop: false, reload: false, missing: new ObservedMissing((name) => { if (active && !active.missing.includes(name)) boundedItem(active, active.missing, clipped(active, name)); }), ranAway: false, triggerId };
+        }
+        run.owner = pack;
+        return run;
+      };
       const errors: ScriptError[] = [];
       let value = event.kind === 'edit' ? event.value : undefined;
       let handled = false;
@@ -125,9 +135,8 @@ export class Lua {
           const entry = hookLog(event.kind === 'edit' ? event.stage : event.kind === 'call' ? event.name : event.kind === 'button' || event.kind === 'form' ? event.kind : hookName(event), script.owner, script.name);
           const began = performance.now();
           const before = event.kind === 'edit' ? JSON.stringify(value) : undefined;
-          const stopped = run.stop;
+          const stopped = run?.stop ?? false;
           active = entry;
-          run.owner = script.owner;
           // The handler for the event in code's engine.
           const lua = async (code: string) => {
             if (!code.trim()) return;
@@ -135,6 +144,8 @@ export class Lua {
             await this.exclusive(engine, async () => {
               if (engine.loaded) { keepTrace(trace, engine.loaded); engine.loaded = null; }
               if (engine.failed !== null) return void failed(script, { message: engine.failed });
+              if (!(await this.hears(engine, event))) return;
+              const run = acting(script.owner);
               engine.run = run;
               engine.log = entry;
               try {
@@ -146,8 +157,6 @@ export class Lua {
                   return;
                 }
                 const name = hookName(event);
-                if (event.kind === 'call' && !engine.own.has(name)) return;
-                if (typeof engine.lua.global.get(name) !== 'function') return;
                 handled = entry.handled = true;
                 const args = event.kind === 'button' ? [event.data] : event.kind === 'form' ? [event.name, JSON.stringify({ data: event.fields })] : [];
                 if ((await this.call(engine, name, KEY, ...args)) === false) run.stop = true;
@@ -168,13 +177,15 @@ export class Lua {
             // The triggers it runs speak for their own packs, and the rest of this one for its own.
             const call = async (name: string) => {
               if (depth >= TRIGGER_DEPTH) throw new Error(`triggers ran each other more than ${TRIGGER_DEPTH} deep`);
-              await fire({ kind: 'call', name, id: run.triggerId }, depth + 1);
-              run.owner = script.owner;
+              await fire({ kind: 'call', name, id: triggerId }, depth + 1);
+              acting(script.owner);
             };
-            await runBlocks(script, run as Acting, call, lua).catch((error: unknown) => failed(script, failure(run, error)));
+            // A Lua trigger with no conditions or effects is its code alone, as runBlocks would run it.
+            const alone = script.kind === 'lua' && !script.conditions.length && !script.effects.length;
+            await (alone ? lua(script.code) : runBlocks(script, acting(script.owner) as Acting, call, lua)).catch((error: unknown) => failed(script, failure(run, error)));
           } finally {
             entry.duration = performance.now() - began;
-            entry.stopped = !stopped && run.stop;
+            entry.stopped = !stopped && !!run?.stop;
             entry.changed = event.kind === 'edit' && before !== JSON.stringify(value);
             if (entry.handled || entry.errors.length) {
               keepTrace(trace, entry);
@@ -184,7 +195,10 @@ export class Lua {
         }
       };
       await fire(event, 0);
-      const kept = run.messages.filter((message) => message.origin !== null);
+      // No script ran on the chat, so nothing of it changed.
+      if (!run) return { trace, value, stop: false, handled, writes: [], edits: [], removed: [], added: [], reload: false, lore: [], errors, missing: [] };
+      const { messages } = run;
+      const kept = messages.filter((message) => message.origin !== null);
       const origins = new Set(kept.map((message) => message.origin));
       return {
         trace,
@@ -193,8 +207,8 @@ export class Lua {
         handled,
         writes: [...run.written],
         edits: kept.filter((message) => message.data !== message.first).map((message) => ({ index: message.origin!, text: message.data })),
-        removed: snapshot.messages.flatMap((_, index) => (origins.has(index) ? [] : [index])),
-        added: run.messages.flatMap(({ origin, role, data }, at) => origin === null ? [{ role, text: data, before: run.messages.slice(at + 1).find((next) => next.origin !== null)?.origin ?? null }] : []),
+        removed: run.snapshot.messages.flatMap((_, index) => (origins.has(index) ? [] : [index])),
+        added: messages.flatMap(({ origin, role, data }, at) => origin === null ? [{ role, text: data, before: messages.slice(at + 1).find((next) => next.origin !== null)?.origin ?? null }] : []),
         reload: run.reload,
         lore: [...run.lore.values()],
         errors,
@@ -301,6 +315,14 @@ export class Lua {
   private async listeners(engine: Engine, stage: EditStage | 'editDisplay', value: unknown, meta: Record<string, unknown>): Promise<unknown> {
     const answer = await this.call(engine, 'callListenMain', stage, KEY, JSON.stringify(value), JSON.stringify(meta));
     return typeof answer === 'string' ? (JSON.parse(answer) as unknown) : DEAF;
+  }
+
+  // Whether the engine holds what the event calls: a listener at the edit stage, or the event's function, a call's only
+  // when the script itself set it.
+  private async hears(engine: Engine, event: Event): Promise<boolean> {
+    if (event.kind === 'edit') return (await this.call(engine, 'hearsMain', event.stage)) === true;
+    const name = hookName(event);
+    return (event.kind !== 'call' || engine.own.has(name)) && typeof engine.lua.global.get(name) === 'function';
   }
 
   private sign(now: number) {

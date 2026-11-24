@@ -151,6 +151,11 @@ simpleLLM = async(function(id, prompt)
     return json.decode(LLMMain(id, json.encode({ { role = 'user', content = prompt } })):await())
 end)
 
+-- Asked before callListenMain, which runs the listeners on the chat, so that a stage nobody listens at never reads it.
+function hearsMain(stage)
+    return #listeners[stage] > 0
+end
+
 callListenMain = async(function(stage, id, value, meta)
     -- With nobody listening nothing is answered and the value is never decoded: a request is its whole text.
     if #listeners[stage] == 0 then
