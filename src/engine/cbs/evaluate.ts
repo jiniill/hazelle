@@ -111,6 +111,8 @@ type Frame = { run: Run; prefix: string; writes: boolean; depth: number; args: s
 
 // Callers must unescapeCbs once, at the very end. Runaway aborts the whole evaluation, never returning partial output.
 export function evaluate(text: string, context: CbsContext, trace: CbsTrace | null = null): string {
+  // Nothing in it to read, and nothing in it that could grow: it is not counted against the limits either.
+  if (!CBS_TAG.test(text)) return text;
   const { source } = context;
   const message = 'message' in source;
   const seed = message ? context.messages[source.message]!.seed : source.seed;
@@ -125,6 +127,8 @@ export function evaluate(text: string, context: CbsContext, trace: CbsTrace | nu
 
 // Risu reads <user>, <char> and <bot>, in any case, as those tags.
 const STEPPED = /<(user|char|bot)>/gi;
+// What opens a tag. A text with none reads the same after an evaluation.
+export const CBS_TAG = /\{\{|\{#|<(?:user|char|bot)>/i;
 const prestep = (text: string) => text.replace(STEPPED, (_, name: string) => `{{${name.toLowerCase()}}}`);
 // A place in prestep's text back in the text as written: each rewrite before it is two characters longer there.
 const NAME = /\{\{(char|bot|user)\}\}/gi;

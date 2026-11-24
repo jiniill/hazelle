@@ -52,6 +52,10 @@ describe('evaluate', () => {
     expect(() => run('{{settempvar::x::abcdefghijklmnop}}' + '{{settempvar::x::{{gettempvar::x}}{{gettempvar::x}}}}'.repeat(22))).toThrow(Runaway);
   });
 
+  it('gives back as written a text that opens no tag, a stray close and a lone brace included', () => {
+    for (const text of ['plain', 'a }} b #} c', '{ <users> { # }', '\\{\\{ <User', '{\n{']) expect(run(text)).toBe(text);
+  });
+
   it('reads names without case, spaces, _ or -, and splits at a single colon when the first colon is single', () => {
     expect(run('{{Get_Var:mood}} {{ USER }}', { variables: new Map([['mood', 'calm']]) })).toBe('calm jin');
   });

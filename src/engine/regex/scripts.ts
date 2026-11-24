@@ -1,3 +1,4 @@
+import { CBS_TAG } from '../cbs/evaluate';
 import type { HistoryMessage } from '../history';
 import type { RegexScript } from '../import/types';
 import { progressed } from '../progress';
@@ -41,8 +42,18 @@ type Pattern = { regex: RegExp; first: RegExp };
 // pattern: null for a dynamic plan, compiled anew per message. plain: no action and no @@ directive, which Risu follows
 // with a CBS pass whether it matched or not. directive: the kind is written as @@kind in the replacement, not as a <kind> flag.
 type Plan = { source: string; place: number; order: number; flags: string; dynamic: boolean; plain: boolean; directive: boolean; kind: string; argument: string; pattern: Pattern | null };
-// A text with neither reads the same after a CBS pass.
-const CBS_TAG = /\{\{|\{#|<(?:user|char|bot)>/i;
+
+// A run of any character, lazy or not. The dot is one only under the s flag.
+const ANY = String.raw`(?:\[(?:\\s\\S|\\S\\s|\^|\\w\\W|\\d\\D)\]|(\.))\*\??`;
+const LED = new RegExp(String.raw`^(?:${ANY}|\((?:\?:|\?<[^=!>][^>]*>)?${ANY}\)(?![*+?{]))`);
+const ALTERNATIVE_OR_BACKREFERENCE = /\||\\[1-9k]/;
+// A pattern led by such a run, bare or as the whole of one group, with no alternative and no backreference: where it
+// matches from one place it matches from every place before it. So a miss where its search starts is a miss everywhere,
+// and tried there alone (y) it reads the text once instead of once from each character, with the same matches.
+function led(source: string, flags: string): boolean {
+  const run = LED.exec(source);
+  return run !== null && (flags.includes('s') || (run[1] ?? run[2]) === undefined) && !ALTERNATIVE_OR_BACKREFERENCE.test(source);
+}
 
 export class Scripts {
   private readonly plans: Record<RegexScript['stage'], Plan[]> = { input: [], output: [], process: [], display: [], translation: [] };
@@ -67,7 +78,7 @@ export class Scripts {
     const boxes: Box[] = [];
     progressed('cbs', index, null, text.length, stage);
     let result = cbs(text);
-    // A text a CBS pass left as it was, which another pass leaves so too: it read no tag, so it wrote nothing.
+    // A text that holds no tag, or that a CBS pass left as it was: another pass leaves it so too.
     let settled: string | null = null;
     for (const { source, place, flags, dynamic, plain, directive, kind: planned, argument, pattern: fixed } of this.plans[stage]) {
       progressed('regex', index, place, result.length, stage);
@@ -88,9 +99,10 @@ export class Scripts {
         if (copied !== null) result = cbs((PLACEMENTS.get(argument.trim()) ?? append)(result, copied));
       } else if (!matched) {
         // A tag an earlier script brought in through a variable is read here, as Risu reads it.
-        if (plain && result !== settled && CBS_TAG.test(result)) {
-          progressed('cbs', index, place, result.length, stage);
-          const read = cbs(result);
+        if (plain && result !== settled) {
+          const tagged = CBS_TAG.test(result);
+          if (tagged) progressed('cbs', index, place, result.length, stage);
+          const read: string = tagged ? cbs(result) : result;
           if (read === result) settled = result;
           result = read;
         }
@@ -198,8 +210,9 @@ export function trySample(script: Script, text: string): string {
 function compile(source: string, flags: string): Pattern | null {
   // An empty pattern would match between every character.
   if (!source) return null;
+  const tried = led(source, flags) && !flags.includes('y') ? `${flags}y` : flags;
   try {
-    return { regex: new RegExp(source, flags), first: new RegExp(source, flags.replace('g', '')) };
+    return { regex: new RegExp(source, tried), first: new RegExp(source, tried.replace('g', '')) };
   } catch {
     return null;
   }

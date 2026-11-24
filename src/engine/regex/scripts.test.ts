@@ -121,6 +121,24 @@ describe('Scripts', () => {
     expect([options, replacements]).toEqual([1, 1]);
   });
 
+  it('finds what a pattern led by a run of any character finds wherever it is tried, and misses in one read of a long text', () => {
+    const same = (text: string) => text;
+    const texts = ['', 'a', 'xa\nb<s>c</s>\n<s>', 'ab\nab', '<s>\n<s>a', 'b\nxb', 'aXbxb\n'];
+    const patterns: [find: string, flags: string][] = [
+      ['[\\s\\S]*?<s>', 'g'], ['([\\s\\S]*)<s>', 'g'], ['(?<head>[^]*?)a', 'g'], ['(?:[\\w\\W]*)b$', 'gm'], ['[\\d\\D]*?(?<=\\n)b', 'g'], ['[\\S\\s]*', 'g'],
+      ['[\\s\\S]*?', 'g'], ['(.*?)b', 'gs'], ['.*x', 'is'], ['([\\s\\S]*?)x', 'giu'], ['[\\s\\S]*?a', 'y'],
+      // Each of these is led by such a run and is still tried everywhere.
+      ['[\\s\\S]*?a|b', 'g'], ['([\\s\\S]*)x\\1', 'g'], ['([\\s\\S]*){0}b', 'g'], ['.*?b', 'g'], ['(?<=a[\\s\\S]*)b', 'g'],
+    ];
+    for (const [find, flags] of patterns) {
+      for (const text of texts) expect([find, text, apply([script(find, '[$&]', { flags })], text, { cbs: same }).text]).toEqual([find, text, text.replace(new RegExp(find, flags), '[$&]')]);
+    }
+    const long = '가나다라\n'.repeat(40_000);
+    const began = performance.now();
+    expect(apply([script('([\\s\\S]*?)<status>', '$1'), script('([\\s\\S]*)<status>', '$1')], long, { cbs: same }).text).toBe(long);
+    expect(performance.now() - began).toBeLessThan(500);
+  });
+
   it('moves only the first match to the top or the bottom on a line of its own, with $1 expanded', () => {
     const text = 'a<s>1</s>b<s>2</s>';
     expect(apply([script('<s>(\\d)</s>', '@@move_top [$1]')], text).text).toBe('[1]\nab<s>2</s>');
