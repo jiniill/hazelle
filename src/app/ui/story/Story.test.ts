@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { cleanCss, formFields, groundRules, setStylesAside } from './Story';
+import { cleanCss, formFields, groundRules, groundStyle, setStylesAside } from './Story';
 import shadowCss from './Story.shadow.css?raw';
 
 it("keeps the rule after an @import whose font URL holds a ;", () => {
@@ -81,4 +81,34 @@ it("reads a form's fields as Risu does, a name given again as a list, and __prot
   const fields = formFields([['who', 'Jin'], ['pick', 'a'], ['pick', 'b'], ['pick', 'c'], ['__proto__', 'x']]);
   expect(fields).toEqual({ who: 'Jin', pick: ['a', 'b', 'c'], ['__proto__']: 'x' });
   expect(Object.getPrototypeOf(fields)).toBe(Object.prototype);
+});
+
+it('cleans and grounds an inline style a bot repeats only once, and grounds again one that grounding changes', () => {
+  const styled = (written: string) => {
+    let reads = 0;
+    const style = {
+      cssText: '',
+      getPropertyValue: (property: string) => {
+        reads++;
+        return new Map(style.cssText.split(';').map((declaration) => declaration.split(':').map((part) => part.trim()) as [string, string])).get(property) ?? '';
+      },
+      getPropertyPriority: () => '',
+      setProperty() {},
+      removeProperty: () => '',
+    };
+    return { element: { style, getAttribute: () => written, removeAttribute() {} } as unknown as HTMLElement, reads: () => reads };
+  };
+  const [first, again] = [styled('color: red; background: url(https://e/a.png)'), styled('color: red; background: url(https://e/a.png)')];
+  groundStyle(first.element, false);
+  groundStyle(again.element, false);
+  expect(again.element.style.cssText).toBe('color: red; background: none');
+  expect([first.reads() > 0, again.reads()]).toEqual([true, 0]);
+  const [fixed, fixedAgain] = [styled('position: fixed'), styled('position: fixed')];
+  groundStyle(fixed.element, false);
+  groundStyle(fixedAgain.element, false);
+  expect(fixedAgain.reads()).toBe(fixed.reads());
+  const veiled = styled('color: red; background: url(data:,a)');
+  groundStyle(styled('color: red; background: url(data:,a)').element, false);
+  groundStyle(veiled.element, true);
+  expect([veiled.element.style.cssText, veiled.reads() > 0]).toEqual(['color: red; background: none', true]);
 });
