@@ -14,7 +14,7 @@ declare namespace Hazelle {
   interface RequestMessage extends ModelMessage { message?: string; cache?: true }
   // A message about to be shown; at: null for the greeting.
   type Shown = { at: At | null; text: string };
-  // flood: past 20 model, embed, decide and fetch calls a minute in the chat, its bot's scripts and every tool counted together.
+  // flood: past 20 model, embed, decide, draw and fetch calls a minute in the chat, its bot's scripts and every tool counted together.
   type ModelRefusal = 'not-allowed' | 'not-declared' | 'no-model' | 'flood' | 'failed';
   type ModelAnswer = { ok: true; text: string } | { ok: false; reason: ModelRefusal };
   // model: the embedding model that made the vectors; vectors from another model cannot be compared with them.
@@ -35,6 +35,11 @@ declare namespace Hazelle {
     | { type: 'score'; score: number; probabilities: number[] };
   // answers: one for each question, under the question's id. model: the decision model that answered.
   type DecideAnswer = { ok: true; model: string; answers: { [id: string]: Decision } } | { ok: false; reason: ModelRefusal };
+  // A picture asked of the chat's image model (삽화's) in the tags or words that model takes; the plugin never learns
+  // which model it is. shape: portrait when absent. seed: 0 to 4294967295, random when absent.
+  type DrawRequest = { prompt: string; negative?: string; shape?: 'portrait' | 'landscape' | 'square'; seed?: number };
+  // costs: the picture is not known to cost nothing, and the chat's 삽화 draws such a picture only when asked.
+  type DrawAnswer = { ok: true; type: string; bytes: Uint8Array } | { ok: false; reason: ModelRefusal | 'costs' };
   // refused: the relay or the app refused the call, code naming why (not-https, not-public, upstream-redirect,
   // upstream-not-api, relay-host-limit, relay-traffic-limit, …). A body is text, or bytes sent as they are, with POST
   // only; a redirect is not followed.
@@ -132,6 +137,9 @@ declare namespace Hazelle {
     // questions: 1 to 1,000, each under an id of letters, numbers, _ or -, at most 64 characters. Throws on questions
     // outside those bounds.
     decide(input: string, questions: { [id: string]: DecideQuestion }): Promise<DecideAnswer>;
+    // needs //@uses draw. One picture from the chat's image model, at the size and generation settings the user chose
+    // for 삽화. Nothing is saved: chat.picture puts it under a message. Throws on a request that is no DrawRequest.
+    draw(picture: DrawRequest): Promise<DrawAnswer>;
     // needs //@uses network, which the user allows once per module; through the app's relay. An aborted signal rejects
     // with its reason, as fetch does.
     fetch(url: string, init?: FetchInit): Promise<FetchAnswer>;

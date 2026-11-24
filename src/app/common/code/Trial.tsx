@@ -238,6 +238,7 @@ export function trialFacts({ outcome, said, asked, calls }: Trial, own: { label:
     ...count('생략된 모델 호출', calls.model, '번'),
     ...count('생략된 임베딩 생성', calls.embed, '번'),
     ...count('생략된 결정 호출', calls.decide, '번'),
+    ...count('생략된 이미지 생성', calls.draw, '번'),
     ...count('생략된 배경 변경', calls.background, '번'),
     ...count('생략된 네트워크 요청', calls.fetch, '번'),
   ];

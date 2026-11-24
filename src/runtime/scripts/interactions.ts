@@ -1,6 +1,7 @@
 import { autoDiagnose, noteStep } from '../diagnostics/auto-diagnosis';
 import { ChangeSignal } from '../../change-signal';
 import type { Role } from '../../connectors/assignment';
+import type { Costs } from '../../connectors/types';
 import { callsModels } from '../../tool-api/manifest';
 import { Runaway } from '../../engine/cbs/evaluate';
 import type { Outcome, Question } from '../../engine/script-api';
@@ -23,8 +24,10 @@ type Note =
   | { kind: 'failed'; message: string }
   | { kind: 'missing'; names: string[] }
   | { kind: 'stuck'; disabled?: true }
-  // own: the model that cannot run is the module's own pick, not the chat's.
-  | { kind: 'no-model'; role: Role; own?: true }
+  // own: the model that cannot run is the module's own pick, not the chat's; of an image model, the chat's 삽화's pick.
+  | { kind: 'no-model'; role: Role | 'image'; own?: true }
+  // A plugin's picture left undrawn: not known to cost nothing, where the chat's 삽화 draws such a one only when asked.
+  | { kind: 'unpaid'; why: Costs }
   | { kind: 'late' }
   | { kind: 'memory-held'; by: string }
   | { kind: 'stale-reply' }

@@ -13,10 +13,10 @@ export const TOOL_LOG_CHARS = 200;
 const encoder = new TextEncoder();
 export const dataBytes = (key: string, value: Json) => encoder.encode(key).byteLength + encoder.encode(JSON.stringify(value)).byteLength;
 export const toolVar = (manifest: Pick<ToolManifest, 'author' | 'name'>, key: string) => `${TOOL_VARIABLES}${manifest.author}/${manifest.name}:${key}`;
-export const TOOL_USES = ['model', 'embed', 'decide', 'memory', 'network'] as const;
+export const TOOL_USES = ['model', 'embed', 'decide', 'draw', 'memory', 'network'] as const;
 export type ToolUse = (typeof TOOL_USES)[number];
 // The uses that spend on a model, which the user answers as one.
-export const callsModels = (uses: readonly ToolUse[]) => uses.some((use) => use === 'model' || use === 'embed' || use === 'decide');
+export const callsModels = (uses: readonly ToolUse[]) => uses.some((use) => use === 'model' || use === 'embed' || use === 'decide' || use === 'draw');
 // composer: the field is shown in the tool's composer popover too.
 export type ToolField = { key: string; type: 'text' | 'number' | 'switch' | 'choice'; label: string; options?: string[]; default?: string | number | boolean; composer?: true };
 // Risu import scan: missing lists refused/unmapped methods; hosts lists literal hosts.

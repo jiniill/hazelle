@@ -13,6 +13,7 @@ import { live } from '../../model/library';
 import { accountSettings } from '../account-settings';
 import { toolId } from '../../model/tool';
 import { isQuestions } from '../../connectors/decide';
+import { isDrawRequest } from '../../engine/illustrate';
 import { TOOL_LOG_CHARS, TOOL_PROGRESS_CHARS, TOOL_VARIABLES, toolVar, type Json } from '../../tool-api/manifest';
 import { called, type ChatHeader, type Down, type Message, type ToolOutcome } from '../../tool-api/protocol';
 import { RISU_DECLINED } from '../../tool-api/risu-methods';
@@ -441,6 +442,11 @@ export class ToolApi {
           if (!isQuestions(second)) throw new Error('Invalid questions: see DecideQuestion in hazelle.d.ts');
           if (!entry.tool.manifest.uses.includes('decide')) return { ok: false, reason: 'not-declared' };
           return context.host.decide(first, second, owner, context.signal);
+        }
+        if (method === 'draw') {
+          if (!isDrawRequest(first)) throw new Error('Invalid picture: see DrawRequest in hazelle.d.ts');
+          if (!entry.tool.manifest.uses.includes('draw')) return { ok: false, reason: 'not-declared' };
+          return context.host.draw(first, owner, context.signal);
         }
         if (method === 'model' && typeof first === 'string' && isModelMessages(second)) {
           if (first !== 'main' && first !== 'aux' && !entry.tool.manifest.models?.some(({ id }) => id === first)) throw new Error(`No model named ${first}: declare it with //@model`);

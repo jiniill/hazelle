@@ -2,11 +2,15 @@ import type { ModelRef } from '../../connectors/assignment';
 import type { Cost, DecideQuestion, EmbedPurpose } from '../../connectors/types';
 import type { HttpRequest } from '../../contracts/http';
 import type { ChatScope } from '../../engine/render';
-import type { DecideResult, EmbedResult, FetchResult, Host, ModelMessage, ModelRefusal, ModelResult, ToolReach } from '../../engine/script-api';
+import { plainPicture } from '../../engine/illustrate';
+import type { DecideResult, DrawResult, EmbedResult, FetchResult, Host, ModelMessage, ModelRefusal, ModelResult, ToolReach } from '../../engine/script-api';
 import type { Receipt } from '../../model/chat';
 import { live, type PackOwner } from '../../model/library';
 import { chatModel, decideModel, embedModel, sharedModel, taskModel, type Route } from '../models/assignment';
 import { setBackground } from '../library/pack';
+import { illustrationPrompt } from '../library/prompts';
+import { chatIllustrate } from '../tasks/features';
+import { drawPicture, imageRoute } from '../tasks/illustrate';
 import { keepCall } from '../chat/chat-log';
 import type { Costs } from '../models/cost';
 import type { Credentials } from '../models/credential';
@@ -42,6 +46,7 @@ export class ScriptReach {
       model: (role, messages, from, callSignal) => this.model(chat, role, messages, from, deadline, either(callSignal)),
       embed: (texts, as, from, callSignal) => this.embed(chat, texts, as, from, deadline, either(callSignal)),
       decide: (input, questions, from, callSignal) => this.decide(chat, input, questions, from, deadline, either(callSignal)),
+      draw: (picture, from, callSignal) => this.draw(chat, picture, from, deadline, either(callSignal)),
       background: (html, from, callSignal) => this.background(chat, html, from, deadline, either(callSignal)),
       fetch: (request, module, callSignal) => this.fetch(chat, request, module, deadline, either(callSignal)),
       progress: (text) => { if (!signal?.aborted) progress(text); },
@@ -139,13 +144,19 @@ export class ScriptReach {
     return { ok: false, reason: response.kind === 'stopped' ? 'stopped' : 'offline' };
   }
 
-  // An account role's model for a spender's call, under the spender's one answer for model calls; why not, where
-  // there is none to call.
-  private async accountModel(chat: string, role: 'embed' | 'decide', from: PackOwner, deadline: boolean, signal?: AbortSignal): Promise<Route | 'failed' | 'not-allowed' | 'no-model'> {
+  // Why a spender's call is not made, under the spender's one answer for model calls; null where it may be.
+  private async unadmitted(chat: string, from: PackOwner, deadline: boolean, signal?: AbortSignal): Promise<'failed' | 'not-allowed' | null> {
     const { store } = this.session;
     if (signal?.aborted || this.closing.aborted || !live(store.get('chat', chat)) || !live(store.get(from.kind, from.id))) return 'failed';
     if (!(await this.interactions.allowed(chat, from, deadline, signal))) return 'not-allowed';
-    if (signal?.aborted || !live(store.get(from.kind, from.id))) return 'failed';
+    return signal?.aborted || !live(store.get('chat', chat)) || !live(store.get(from.kind, from.id)) ? 'failed' : null;
+  }
+
+  // An account role's model for a spender's call; why not, where there is none to call.
+  private async accountModel(chat: string, role: 'embed' | 'decide', from: PackOwner, deadline: boolean, signal?: AbortSignal): Promise<Route | 'failed' | 'not-allowed' | 'no-model'> {
+    const { store } = this.session;
+    const refused = await this.unadmitted(chat, from, deadline, signal);
+    if (refused) return refused;
     const route = role === 'embed' ? embedModel(store) : decideModel(store);
     if (!('kind' in route)) return route;
     this.interactions.tell(chat, `no-model:${role}`, { kind: 'no-model', role }, from);
@@ -166,6 +177,38 @@ export class ScriptReach {
     const route = await this.accountModel(chat, 'embed', from, deadline, signal);
     if (typeof route === 'string') return { ok: false, reason: route };
     return this.spent(chat, 'embed', await embedTexts({ credentials, log, count: countTexts(store) }, route, texts, as, chat, true, signal ? AbortSignal.any([this.closing, signal]) : this.closing), from);
+  }
+
+  // A picture from the chat's image model, sized and tuned as its 삽화 prompt says. One not known to cost nothing is
+  // drawn only where the chat's 삽화 spends unasked. Image calls report no cost, so it leaves no receipt.
+  private async draw(chat: string, asked: Hazelle.DrawRequest, from: PackOwner, deadline: boolean, signal?: AbortSignal): Promise<DrawResult> {
+    const { store, credentials } = this.session;
+    const began = performance.now();
+    const ended = <T extends DrawResult>(answer: T): T => {
+      noteStep(`script-draw:${answer.ok ? 'done' : answer.reason}`, Math.round(performance.now() - began));
+      return answer;
+    };
+    const refused = await this.unadmitted(chat, from, deadline, signal);
+    if (refused) return { ok: false, reason: refused };
+    const setup = chatIllustrate(store, store.get('chat', chat)!.value);
+    const route = imageRoute(store, setup.model);
+    if ('kind' in route) {
+      this.interactions.tell(chat, 'no-model:image', { kind: 'no-model', role: 'image', ...(route.kind === 'image-model-gone' && { own: true }) }, from);
+      return ended({ ok: false, reason: 'no-model' });
+    }
+    const prompt = illustrationPrompt(store, setup.prompt);
+    const picture = plainPicture(route.model, asked, prompt.kind === 'missing' ? undefined : prompt.prompt.value.picture, crypto.getRandomValues(new Uint32Array(1))[0]!);
+    const drawn = await drawPicture(credentials, route, picture, { spend: setup.spend, chat }, signal ? AbortSignal.any([this.closing, signal]) : this.closing);
+    if (!('kind' in drawn)) return ended({ ok: true, type: drawn.type, bytes: drawn.bytes });
+    if (drawn.kind === 'costs') {
+      this.interactions.tell(chat, 'unpaid', { kind: 'unpaid', why: drawn.why }, from);
+      return ended({ ok: false, reason: 'costs' });
+    }
+    if (drawn.kind === 'undrawn' && drawn.error.kind === 'app' && drawn.error.code === 'too-many-bot-calls') {
+      this.interactions.tell(chat, 'flood', { kind: 'flood' }, from);
+      return ended({ ok: false, reason: 'flood' });
+    }
+    return ended({ ok: false, reason: 'failed' });
   }
 
   private async decide(chat: string, input: string, questions: Record<string, DecideQuestion>, from: PackOwner, deadline: boolean, signal?: AbortSignal): Promise<DecideResult> {

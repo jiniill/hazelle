@@ -9,6 +9,7 @@ export type ModelResult = { success: true; result: string } | { success: false; 
 
 export type EmbedResult = Hazelle.EmbedAnswer;
 export type DecideResult = Hazelle.DecideAnswer;
+export type DrawResult = Hazelle.DrawAnswer;
 
 export type Question = Hazelle.Question;
 export type ModelMessage = Hazelle.ModelMessage;
@@ -36,6 +37,8 @@ export type ToolReach = Omit<Host, 'model'> & {
   progress(text: string): void;
   // With the account's 결정 모델, under the same answer as model.
   decide(input: string, questions: Record<string, Hazelle.DecideQuestion>, spender: PackOwner, signal?: AbortSignal): Promise<DecideResult>;
+  // With the chat's image model, under the same answer as model.
+  draw(picture: Hazelle.DrawRequest, spender: PackOwner, signal?: AbortSignal): Promise<DrawResult>;
   // Through the relay, under module's one answer for the network; the upstream's answer whatever its status.
   fetch(request: HttpRequest, module: string, signal?: AbortSignal): Promise<FetchResult>;
 };

@@ -57,7 +57,7 @@ function applied(chat: string, scope: ChatScope, { edits, removed, added, lore }
 
 // Dismiss preview questions and refuse calls without saving; real execution may branch differently.
 // loreRanAway means the script read no lore after CBS exceeded its limit.
-export type Heard = { said: { tone: 'normal' | 'error'; text: string }[]; asked: Question[]; calls: { model: number; embed: number; decide: number; background: number; fetch: number }; loreRanAway: boolean };
+export type Heard = { said: { tone: 'normal' | 'error'; text: string }[]; asked: Question[]; calls: { model: number; embed: number; decide: number; draw: number; background: number; fetch: number }; loreRanAway: boolean };
 
 // The pre-send scripts run ahead on a copy (ScriptPreview.rehearse). stopped: the stage that ended the turn, which then sends
 // nothing. scope: the chat as onStart leaves it, its writes and then editRequest's pending. input: the message as
@@ -84,7 +84,7 @@ export type ToolTrial = Trial & { writes: TrialWrite[]; called: (Cost | null)[];
 export type ToolTried = ToolTrial | 'unheard' | 'no-event' | { error: unknown; log: TrialCalls };
 
 export const NOT_REHEARSED = 'Error: not called while rehearsing';
-const unheard = (): Heard => ({ said: [], asked: [], calls: { model: 0, embed: 0, decide: 0, background: 0, fetch: 0 }, loreRanAway: false });
+const unheard = (): Heard => ({ said: [], asked: [], calls: { model: 0, embed: 0, decide: 0, draw: 0, background: 0, fetch: 0 }, loreRanAway: false });
 
 export class ScriptPreview {
   constructor(
@@ -191,7 +191,7 @@ export class ScriptPreview {
     });
   }
 
-  // A host for a run that saves nothing: each question dismissed, each model, embedding, decision, background and network call
+  // A host for a run that saves nothing: each question dismissed, each model, embedding, decision, picture, background and network call
   // refused.
   private quiet(chat: string, scope: ChatScope, heard: Heard, signal: AbortSignal): ToolReach {
     return {
@@ -202,6 +202,7 @@ export class ScriptPreview {
       model: async () => { heard.calls.model++; return { success: false, reason: 'failed', result: NOT_REHEARSED }; },
       embed: async () => { heard.calls.embed++; return { ok: false, reason: 'failed' }; },
       decide: async () => { heard.calls.decide++; return { ok: false, reason: 'failed' }; },
+      draw: async () => { heard.calls.draw++; return { ok: false, reason: 'failed' }; },
       background: async () => { heard.calls.background++; return false; },
       fetch: async () => { heard.calls.fetch++; return { ok: false, reason: 'stopped' }; },
     };

@@ -101,6 +101,7 @@ export function trialReport({ outcome, said, asked, calls, writes, called }: Too
     calls.model > 0 && `Model calls refused (the user did not allow them in tests): ${calls.model}`,
     calls.embed > 0 && `Embeddings refused in a test: ${calls.embed}`,
     calls.decide > 0 && `Decisions refused in a test: ${calls.decide}`,
+    calls.draw > 0 && `Pictures refused in a test: ${calls.draw}`,
     calls.fetch > 0 && `Network calls refused in a test: ${calls.fetch}`,
   ];
   return lines.filter((line): line is string => typeof line === 'string').join('\n');

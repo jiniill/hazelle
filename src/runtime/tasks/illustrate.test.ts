@@ -12,6 +12,8 @@ import { takeTurn } from '../chat/turn';
 import { removeIllustration, restoreIllustration } from './illustrate';
 import { likenessId } from '../../model/likeness';
 import { editPortrait, removeLikeness, removePortrait, restoreLikeness } from './likeness';
+import type { ChatScope } from '../../engine/render';
+import { ScriptReach } from '../scripts/reach';
 import { addPersona } from '../library/personas';
 
 const { PAINTER } = vi.hoisted(() => {
@@ -56,6 +58,13 @@ async function painted(session: Session, starred = true) {
   await startChat(session.store, chat, { title: null, character: null, models: {} }, null);
   await appendUserMessage(session.store, chat, { id: crypto.randomUUID(), text: 'Go on' });
   return chat;
+}
+
+// A module whose model calls the user allowed, as a plugin's is once its card is answered.
+async function painter(session: Session) {
+  const made = await session.store.create('module', { name: 'Painter', description: '', namespace: null, loreFolders: [], regex: [], triggers: [], toggles: [], botModels: true });
+  if (!made.ok) throw new Error('fixture');
+  return made.data.id;
 }
 
 describe('Illustrator', () => {
@@ -128,6 +137,43 @@ describe('Illustrator', () => {
       await takeTurn(session, chat, { kind: 'answer' });
       await vi.waitFor(() => expect(session.store.children('illustration', chat)).toHaveLength(1), { timeout: 5000 });
       expect(log.map(({ sent }) => sent.url)).not.toContain('https://image.example/free');
+    }));
+
+  it("draws a plugin's picture on the chat's image model as 삽화 would: asked whether it is free, sized by shape, counted among the chat's bot calls, and left undrawn where it may cost", () =>
+    server.withSession(async (session) => {
+      const chat = await painted(session);
+      const module = await painter(session);
+      const host = new ScriptReach(session, session.scriptInteractions, new AbortController().signal).host(chat, {} as ChatScope);
+      const draw = (picture: Hazelle.DrawRequest) => host.draw(picture, { kind: 'module', id: module });
+      const log = stubRelay(inTurn([free(true), picture(), free(false), picture(), Response.json({ error: 'too-many-bot-calls' }, { status: 429 })]));
+      const drawn = await draw({ prompt: '1girl, rain', negative: 'text', shape: 'landscape', seed: 7 });
+      expect(drawn).toMatchObject({ ok: true, type: 'image/png' });
+      expect(drawn.ok && [...drawn.bytes]).toEqual([...PNG]);
+      expect(log[1]!.sent).toMatchObject({ url: 'https://image.example/generate', headers: { authorization: 'Bearer pk-secret' } });
+      expect(JSON.parse(log[1]!.sent.body!)).toMatchObject({ prompt: '1girl, rain', negative: 'text', characters: [], width: 1216, height: 832, seed: 7 });
+      expect(session.store.children('illustration', chat)).toHaveLength(0);
+
+      expect(await draw({ prompt: '1girl' })).toEqual({ ok: false, reason: 'costs' });
+      expect(log).toHaveLength(3);
+      expect(session.scriptInteractions.snapshot().notes).toMatchObject([{ kind: 'unpaid', why: 'allowance' }]);
+      await setIllustrate(session.store, null, { spend: true });
+      expect(await draw({ prompt: '1girl' })).toMatchObject({ ok: true });
+      expect(JSON.parse(log[3]!.sent.body!)).toMatchObject({ width: 832, height: 1216 });
+      expect(await draw({ prompt: '1girl' })).toEqual({ ok: false, reason: 'flood' });
+
+      await session.store.update('module', module, (current) => ({ ...current, botModels: false }));
+      expect(await draw({ prompt: '1girl' })).toEqual({ ok: false, reason: 'not-allowed' });
+    }));
+
+  it("answers a plugin's picture no-model where no added model draws, and says so once", () =>
+    server.withSession(async (session) => {
+      const chat = await painted(session, false);
+      const module = await painter(session);
+      const host = new ScriptReach(session, session.scriptInteractions, new AbortController().signal).host(chat, {} as ChatScope);
+      const log = stubRelay(inTurn([]));
+      for (let turn = 0; turn < 2; turn++) expect(await host.draw({ prompt: '1girl' }, { kind: 'module', id: module })).toEqual({ ok: false, reason: 'no-model' });
+      expect(log).toHaveLength(0);
+      expect(session.scriptInteractions.snapshot().notes).toMatchObject([{ kind: 'no-model', role: 'image' }]);
     }));
 
   it('tells the scene call the last picture, draws through the persona’s eyes and as a manga page only while switched on, and takes the persona out', () =>

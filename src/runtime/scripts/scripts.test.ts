@@ -1338,7 +1338,7 @@ describe('a rehearsal of the pre-send scripts', () => {
       const sending = (await wouldSend(session, chat, { kind: 'send', text: '안녕' }, undefined, 'view'))!;
       const rehearsal = (await session.scriptPreview.rehearse(chat, sending, new AbortController().signal))!;
       expect(log).toHaveLength(0);
-      expect(rehearsal.calls).toEqual({ model: 1, embed: 0, decide: 0, background: 0, fetch: 0 });
+      expect(rehearsal.calls).toEqual({ model: 1, embed: 0, decide: 0, draw: 0, background: 0, fetch: 0 });
       expect(rehearsal.scope.pending).toEqual([['answer', NOT_REHEARSED]]);
     }));
 

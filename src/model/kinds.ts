@@ -151,7 +151,7 @@ const ENTRIES = {
 } satisfies Record<Entry['type'], Check>;
 
 // Typed by the tool contract's own list, which the model may not import as a value (eslint/boundaries.js).
-const TOOL_USES: Record<ToolUse, true> = { model: true, embed: true, decide: true, memory: true, network: true };
+const TOOL_USES: Record<ToolUse, true> = { model: true, embed: true, decide: true, draw: true, memory: true, network: true };
 const picture = shape({ name: str, type: str, size: num, file: shape({ id: str, key: str }) });
 const toggle = shape({ key: str, label: str, kind: str });
 const mark = shape({ label: str });

@@ -145,6 +145,7 @@ export function connectApi(port: Port, execute: (code: string, api: Hazelle.Api)
       model: (role, messages) => call('model', [role, messages], event),
       embed: (texts, as) => call('embed', [texts, as ?? null], event),
       decide: (input, questions) => call('decide', [input, questions], event),
+      draw: (picture) => call('draw', [picture], event),
       fetch: (url, { method = 'GET', headers = {}, body, signal } = {}) => call('fetch', [url, { method, headers, body: body ?? null }], event, signal),
       badge: (index, text) => { pending().badges.set(index, text); changed(); },
       // Bound to the chat, not the event: a picture often lands after its event has ended.

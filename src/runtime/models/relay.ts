@@ -216,9 +216,9 @@ export async function relayJson(request: HttpRequest, signal?: AbortSignal, bot?
 
 export type BytesAnswer = { ok: true; bytes: Uint8Array<ArrayBuffer>; type: string | null } | { ok: false; failure: RelayFailure };
 
-// A body that is not text, such as a picture, with its content type.
-export async function relayBytes(request: HttpRequest, signal: AbortSignal, pulse: PulseLabel, type?: ConnectionType | null): Promise<BytesAnswer> {
-  const response = await relay(request, signal, undefined, pulse, type);
+// A body that is not text, such as a picture, with its content type. bot: as relay takes it.
+export async function relayBytes(request: HttpRequest, signal: AbortSignal, pulse: PulseLabel, type?: ConnectionType | null, bot?: string): Promise<BytesAnswer> {
+  const response = await relay(request, signal, bot, pulse, type);
   if (!(response instanceof Response)) return { ok: false, failure: response };
   try {
     return { ok: true, bytes: new Uint8Array(await response.arrayBuffer()), type: response.headers.get('content-type') };

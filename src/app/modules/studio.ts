@@ -12,7 +12,7 @@ export const draftTitle = (identity: ToolIdentity) => identity.displayName || '�
 export const DRAFT_STATES: Record<Exclude<DraftState, 'applied'>, string> = { unapplied: '적용 안 함', differs: '적용한 버전과 다름' };
 
 export const SEE_IN_CODE = '코드에서 보기';
-export const USE_TAGS: Record<ToolUse, string> = { model: MODULE_MODELS, embed: ROLE_TAGS.embed, decide: ROLE_TAGS.decide, memory: FEATURE_NAMES.memory, network: NETWORK };
+export const USE_TAGS: Record<ToolUse, string> = { model: MODULE_MODELS, embed: ROLE_TAGS.embed, decide: ROLE_TAGS.decide, draw: '이미지', memory: FEATURE_NAMES.memory, network: NETWORK };
 
 // What 테스트 can run a draft on: a saved reply, then the turn's stages in their order, a message shown or changed, then
 // each item its header declares. text: the event takes the text typed for it. request: it runs on the chat's next

@@ -303,12 +303,16 @@ it('refuses undeclared spending and forged event contexts, and isolates module s
   let decided: Hazelle.DecideAnswer | null = null;
   let unbounded = '';
   let unnamed = '';
+  let drawn: Hazelle.DrawAnswer | null = null;
+  let undrawable = '';
   const transport = inProcessTools((api) => api.on('prompt', async (chat) => {
     answer = await chat.model('aux', [{ role: 'user', content: 'hi' }]);
     fetched = await chat.fetch('https://api.example.com/');
     decided = await chat.decide('hi', { here: { type: 'noul', instructions: 'Is she here?' } });
     unbounded = await chat.decide('hi', { 'bad id': { type: 'noul', instructions: 'Is she here?' } }).then(() => '', (error: Error) => error.message);
     unnamed = await chat.model('sorter', [{ role: 'user', content: 'hi' }]).then(() => '', (error: Error) => error.message);
+    drawn = await chat.draw({ prompt: '1girl' });
+    undrawable = await chat.draw({ prompt: '1girl', shape: 'wide' as never }).then(() => '', (error: Error) => error.message);
     return null;
   }));
   const host = connect(transport.open);
@@ -323,6 +327,8 @@ it('refuses undeclared spending and forged event contexts, and isolates module s
     expect(decided).toEqual({ ok: false, reason: 'not-declared' });
     expect(unbounded).toContain('Invalid questions');
     expect(unnamed).toContain('No model named sorter');
+    expect(drawn).toEqual({ ok: false, reason: 'not-declared' });
+    expect(undrawable).toContain('Invalid picture');
     expect(model).not.toHaveBeenCalled();
     expect(fetch).not.toHaveBeenCalled();
     expect(decide).not.toHaveBeenCalled();

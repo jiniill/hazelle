@@ -256,7 +256,7 @@ export class Illustrator {
     const { store, files } = this.deps;
     const seed = crypto.getRandomValues(new Uint32Array(1))[0]!;
     const request = pictureRequest(scene, prompt, route.model, seed, portraits);
-    const drawn = await this.picture(route, request, spend, signal);
+    const drawn = await drawPicture(this.deps.credentials, route, request, { spend }, signal);
     if ('kind' in drawn) return drawn;
     const saved = await files.save([drawn.bytes], { signal });
     if (!saved.ok) return saved.error === 'stopped' ? { kind: 'stopped' } : { kind: 'unsaved', failure: saved };
@@ -305,35 +305,38 @@ export class Illustrator {
       .sort((a, b) => a.at - b.at || a.value.scene.paragraph - b.value.scene.paragraph || a.value.at - b.value.at)
       .map(({ at, value }) => ({ scene: value.scene, ago: history.length - 1 - at }));
   }
+}
 
-  private async picture({ connection, draws }: ImageRoute, picture: PictureRequest, spend: boolean, signal: AbortSignal): Promise<Picture | IllustrateFailure | Stopped> {
-    const { credentials } = this.deps;
-    let request: HttpRequest;
-    try {
-      request = draws.request(picture);
-    } catch (error) {
-      if (error instanceof ConnectorError) return { kind: 'undrawn', error: { kind: 'refused', code: error.code } };
-      throw error;
-    }
-    const picked = await credentials.pool.pick(connection.value);
-    if (!picked.ok) return { kind: 'undrawn', error: picked.failure };
-    const failed = (error: Exclude<ReplyError, { kind: 'pool' }>): IllustrateFailure | Stopped => {
-      if (error.kind === 'stopped') return { kind: 'stopped' };
-      credentials.pool.stale(connection.value, picked.account);
-      return { kind: 'undrawn', error };
-    };
-    const resolved = resolveConnection(connection.value)!;
-    const credential = await credentials.get(resolved, picked.account.secret, signal);
-    if (!credential.ok) return failed(credential.failure);
-    if (!spend) {
-      if (!draws.free) return { kind: 'costs', why: 'unknown' };
-      const asked = await relayJson(draws.free.request(credential.credential), signal, undefined, undefined, resolved.type);
-      if (!asked.ok) return failed(asked.failure);
-      const why = draws.free.costs(asked.data, picture);
-      if (why) return { kind: 'costs', why };
-    }
-    const answer = await relayBytes({ ...request, headers: { ...request.headers, ...draws.authHeaders(credential.credential) } }, signal, callLabel('image', connection.value, picture.model.id), resolved.type);
-    if (!answer.ok) return failed(answer.failure);
-    return (await draws.parse(answer.bytes, answer.type)) ?? { kind: 'not-a-picture' };
+type Undrawn = Extract<IllustrateFailure, { kind: 'undrawn' | 'costs' | 'not-a-picture' }>;
+
+// One image call. spend: leave to draw a picture not known to cost nothing. chat: the chat among whose bot calls it
+// counts (contracts/http), as a plugin's does.
+export async function drawPicture(credentials: Deps['credentials'], { connection, draws }: ImageRoute, picture: PictureRequest, { spend, chat }: { spend: boolean; chat?: string }, signal: AbortSignal): Promise<Picture | Undrawn | Stopped> {
+  let request: HttpRequest;
+  try {
+    request = draws.request(picture);
+  } catch (error) {
+    if (error instanceof ConnectorError) return { kind: 'undrawn', error: { kind: 'refused', code: error.code } };
+    throw error;
   }
+  const picked = await credentials.pool.pick(connection.value);
+  if (!picked.ok) return { kind: 'undrawn', error: picked.failure };
+  const failed = (error: Exclude<ReplyError, { kind: 'pool' }>): Undrawn | Stopped => {
+    if (error.kind === 'stopped') return { kind: 'stopped' };
+    credentials.pool.stale(connection.value, picked.account);
+    return { kind: 'undrawn', error };
+  };
+  const resolved = resolveConnection(connection.value)!;
+  const credential = await credentials.get(resolved, picked.account.secret, signal);
+  if (!credential.ok) return failed(credential.failure);
+  if (!spend) {
+    if (!draws.free) return { kind: 'costs', why: 'unknown' };
+    const asked = await relayJson(draws.free.request(credential.credential), signal, undefined, undefined, resolved.type);
+    if (!asked.ok) return failed(asked.failure);
+    const why = draws.free.costs(asked.data, picture);
+    if (why) return { kind: 'costs', why };
+  }
+  const answer = await relayBytes({ ...request, headers: { ...request.headers, ...draws.authHeaders(credential.credential) } }, signal, callLabel('image', connection.value, picture.model.id), resolved.type, chat);
+  if (!answer.ok) return failed(answer.failure);
+  return (await draws.parse(answer.bytes, answer.type)) ?? { kind: 'not-a-picture' };
 }

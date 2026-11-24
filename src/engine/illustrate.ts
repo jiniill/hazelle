@@ -219,7 +219,6 @@ const tags = (...parts: string[]) => parts.map((part) => part.trim()).filter((pa
 // Match figures by profile name/alias and resolve outfit names; portraits arrive in pack order.
 export function pictureRequest(scene: Scene, prompt: IllustratePrompt, model: Model, random: number, portraits: readonly Portrait[]): PictureRequest {
   const { artist, quality, negative } = prompt.tags ?? PICTURE_DEFAULTS;
-  const { steps = null, scale = null, rescale = null, sampler = null, seed = random } = prompt.picture ?? {};
   const byName = portraitsByName(portraits);
   const matched = scene.characters.map(({ name }) => byName.get(nameKey(name)) ?? null);
   const drawn = portraits.find((portrait) => matched.includes(portrait) && portrait.artist.trim());
@@ -233,11 +232,22 @@ export function pictureRequest(scene: Scene, prompt: IllustratePrompt, model: Mo
       const drawnAs = portrait ? tags(portrait.look, wornBy(portrait, outfit), action) : tags(look, outfit, action);
       return { prompt: drawnAs, negative: '', center: { x, y } };
     }),
-    ...pictureSizes(prompt)[scene.shape],
-    seed,
-    steps,
-    scale,
-    rescale,
-    sampler,
+    ...tuned(prompt.picture, scene.shape, random),
   };
 }
+
+// The size and generation controls a prompt gives a picture of a shape; a seed it fixes stands in for random.
+function tuned(picture: IllustratePrompt['picture'], shape: Shape, random: number) {
+  const { steps = null, scale = null, rescale = null, sampler = null, seed = random } = picture ?? {};
+  return { ...pictureSizes({ picture })[shape], seed, steps, scale, rescale, sampler };
+}
+
+export const isDrawRequest = (value: unknown): value is Hazelle.DrawRequest =>
+  isRecord(value) && typeof value.prompt === 'string' && value.prompt.trim() !== '' && (value.negative === undefined || typeof value.negative === 'string')
+  && (value.shape === undefined || typeof value.shape === 'string' && Object.hasOwn(SIZES.normal, value.shape))
+  && (value.seed === undefined || Number.isInteger(value.seed) && (value.seed as number) >= 0 && (value.seed as number) <= 0xffffffff);
+
+// A picture asked for in its own words (Chat.draw): sized and tuned as picture, a 삽화 prompt's, says, with none of
+// that prompt's tags; the seed asked for stands over the prompt's.
+export const plainPicture = (model: Model, { prompt, negative = '', shape = 'portrait', seed }: Hazelle.DrawRequest, picture: IllustratePrompt['picture'], random: number): PictureRequest =>
+  ({ model, prompt, negative, characters: [], ...tuned(picture, shape, random), ...(seed !== undefined && { seed }) });
