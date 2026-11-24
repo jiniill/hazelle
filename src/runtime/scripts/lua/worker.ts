@@ -3,7 +3,7 @@ import { Lua, type DisplayBatch, type SyntaxProblem } from '../../../engine/lua/
 import type { Snapshot } from '../../../engine/lua/state';
 import type { Host } from '../../../engine/script-api';
 import type { ChatScope } from '../../../engine/render';
-import { runEvent, type ScriptOutcome } from './event';
+import { replayChat, runEvent, type Replay, type ScriptOutcome } from './event';
 import { applyTail } from '../../evaluation/history-delta';
 import type { Down, Up } from './client';
 
@@ -11,6 +11,9 @@ const scope = self as unknown as { postMessage(message: Up): void };
 let lua: Promise<Lua> | null = null;
 const displays = new Map<string, { revision: number; snapshot: Snapshot }>();
 let history: ChatScope['messages'] = [];
+// The last run's replay and the basis it was made on (LuaWorker.run), which a run on that basis takes again. Made as
+// the run starts, in the order the runs came.
+let replayed: { basis: number; replay: Replay } | null = null;
 let calls = 0;
 const runs = new Map<number, AbortController>();
 const waiting = new Map<number, { id: number; resolve: (value: never) => void; reject: (error: unknown) => void }>();
@@ -67,7 +70,11 @@ addEventListener('message', ({ data }: MessageEvent<Down>) => {
   lua
     .then<ScriptOutcome | DisplayBatch | SyntaxProblem | null>(async (machine) => {
       if (data.kind === 'check') return machine.check(data.code);
-      if (data.kind === 'run') return runEvent(machine, data.owner, data.triggers, eventScope!, data.event, host(id), data.lane, controller!.signal);
+      if (data.kind === 'run') {
+        const { basis } = data.input;
+        const replay = replayed?.basis === basis ? replayed.replay : (replayed = { basis, replay: replayChat(eventScope!) }).replay;
+        return runEvent(machine, data.owner, data.triggers, eventScope!, data.event, host(id), data.lane, controller!.signal, replay);
+      }
       if (data.kind === 'display') return machine.display(data.owner, data.revision, data.size);
       const previous = displays.get(data.owner)?.snapshot;
       const { install } = data;

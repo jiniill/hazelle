@@ -11,7 +11,14 @@ import { PendingRequests } from '../../pending-requests';
 import { Heartbeat, moduleWorker } from '../../worker';
 import workerUrl from './worker?worker&url';
 
-type EventInput = { scope: ChatBasis; history: Tail<ChatScope['messages'][number]> };
+// basis: names the messages and the scope's other parts but pending, the same for runs that share them (worker replayed).
+type EventInput = { scope: ChatBasis; history: Tail<ChatScope['messages'][number]>; basis: number };
+
+// A scope's parts are never changed in place, so one object is one value.
+const samePartsButPending = (a: ChatBasis, b: ChatBasis) => {
+  const keys = Object.keys(b).filter((key) => key !== 'pending') as (keyof ChatBasis)[];
+  return keys.length === Object.keys(a).filter((key) => key !== 'pending').length && keys.every((key) => key in a && a[key] === b[key]);
+};
 
 type DisplayInstall = { revision: number; scripts: Script[]; snapshot: Omit<Snapshot, 'messages' | 'scope'> & { scope: Omit<Snapshot['scope'], 'messages'> }; messages: Tail<LuaMessage>; history: Tail<Snapshot['scope']['messages'][number]>; items: DisplayItem[] };
 
@@ -52,14 +59,20 @@ export class LuaWorker implements LuaRunner {
   private readonly displays = new Map<string, { revision: number; snapshot: Snapshot }>();
   // One ordered event transport, not a cache per chat; the receiver applies each tail before awaiting Lua.
   private history: ChatScope['messages'] = [];
+  private replayed: { scope: ChatBasis; basis: number } | null = null;
+  private bases = 0;
   private readonly heart = new Heartbeat(() => this.worker?.postMessage({ kind: 'ping' } satisfies Down), () => this.gone('lua'));
   // Each unanswered job's sizes and closed words, oldest first, for 자동 진단: never the job, whose texts would stay held.
   private readonly posted = new Map<number, { owner: string | null; at: number; facts: Omit<AutoScript, 'pending' | 'waited'> }>();
 
   run(owner: string, triggers: ScriptUnit[], scope: ChatScope, event: Event, host: Host, lane: RunLane, signal?: AbortSignal): Promise<ScriptOutcome> {
     const { messages, ...fixed } = scope;
-    const input: EventInput = { scope: fixed, history: changedTail(this.history, messages, sameHistory) };
+    const history = changedTail(this.history, messages, sameHistory);
+    const kept = history.from === this.history.length && history.items.length === 0;
+    const basis = kept && this.replayed && samePartsButPending(this.replayed.scope, fixed) ? this.replayed.basis : ++this.bases;
+    const input: EventInput = { scope: fixed, history, basis };
     this.history = messages;
+    this.replayed = { scope: fixed, basis };
     return this.send((id) => ({ kind: 'run', id, owner, triggers, input, event, lane }), host, signal) as Promise<ScriptOutcome>;
   }
 
@@ -166,6 +179,7 @@ export class LuaWorker implements LuaRunner {
     this.worker = null;
     this.displays.clear();
     this.history = [];
+    this.replayed = null;
     this.posted.clear();
     this.heart.rest();
     this.pending.rejectAll(() => error);

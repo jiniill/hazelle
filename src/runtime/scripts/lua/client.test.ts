@@ -82,6 +82,33 @@ it('sends event history tails in order across edits, truncation, chat switches a
   } finally { runner.close(); }
 });
 
+it('names one basis for runs on the same messages and parts, whatever their pending, and a new one for any other', async () => {
+  const sent: Down[] = [];
+  let crash: () => void;
+  vi.stubGlobal('Worker', class {
+    onmessage: ((event: { data: Up }) => void) | null = null;
+    onerror: (() => void) | null = null;
+    constructor() { crash = () => this.onerror?.(); }
+    postMessage(message: Down) {
+      sent.push(message);
+      if (message.kind === 'run') queueMicrotask(() => this.onmessage?.({ data: { kind: 'done', id: message.id, result: { value: undefined, stop: false, handled: false, writes: [], edits: [], removed: [], added: [], reload: false, lore: [], errors: [], missing: [] } } }));
+    }
+    terminate() {}
+  });
+  const runner = new LuaWorker();
+  const host: Host = { say() {}, ask: async () => null, model: async () => ({ success: true, result: '' }), embed: async () => ({ ok: false, reason: 'no-model' }), tokens: async () => 0, lore: async () => [], background: async () => false };
+  const scope: ChatScope = { ...snapshot.scope, cast: [], packs: [], toggles: new Map(), status: { definitions: [], state: {} } };
+  const pending: [string, string][] = [['hp', '3']];
+  try {
+    const run = (next: ChatScope) => runner.run('chat', [], next, { kind: 'start' }, host, 'event');
+    for (const next of [scope, { ...scope, pending }, { ...scope, messages: scope.messages.slice() }, { ...scope, toggles: new Map() }, { ...scope, messages: scope.messages.slice(0, 1) }, { ...scope, messages: scope.messages.slice(0, 1) }]) await run(next);
+    crash!();
+    await run({ ...scope, messages: [] });
+    await run({ ...scope, messages: [] });
+    expect(sent.filter((message) => message.kind === 'run').map(({ input }) => input.basis)).toEqual([1, 1, 1, 2, 3, 3, 4, 4]);
+  } finally { runner.close(); }
+});
+
 it('keeps each pending host until completion and ignores old replies after a crash and restart', async () => {
   const made: FakeWorker[] = [];
   class FakeWorker {
