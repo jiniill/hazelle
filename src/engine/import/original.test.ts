@@ -1,12 +1,17 @@
 import { strToU8, zipSync } from 'fflate';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { importCard, importRisum } from './card';
 import { concat } from './inflate';
 import { isFrame, joinOriginal, originalParts, risumParts, standIn, stoodFor } from './original';
-import { withText } from './png';
+import { readPng, withTexts } from './png';
 import { risumBlock, risumHead, RISUM_END } from './risum';
 import type { FileSource } from './source';
 import { crc32 } from './zip-format';
+
+vi.mock('./inflate', async (actual) => {
+  const inflate = await actual<typeof import('./inflate')>();
+  return { ...inflate, concat: vi.fn(inflate.concat) };
+});
 
 function chunk(type: string, data: Uint8Array): Uint8Array<ArrayBuffer> {
   const out = new Uint8Array(12 + data.length);
@@ -61,10 +66,20 @@ describe('joinOriginal', () => {
 
   it('rebuilds a card PNG from its image, its card and its decoded asset chunks', async () => {
     const v2 = { ...card, spec: 'chara_card_v2', data: { ...card.data, assets: undefined, extensions: { risuai: { additionalAssets: [['smile', '__asset:0', 'png']] } } } };
-    const file = withText(withText(picture, 'chara', base64(strToU8(JSON.stringify(v2)))), 'chara-ext-asset_:0', base64(picture));
+    const file = withTexts(picture, [['chara', base64(strToU8(JSON.stringify(v2)))], ['chara-ext-asset_:0', base64(picture)]]);
     const parts = await kept(originalParts(file));
     expect(parts.get('png-asset/0')).toEqual(picture);
     expect(await read(await importCard('bot.png', await joinOriginal(parts)))).toEqual(await read(await importCard('bot.png', file)));
+  });
+
+  it('copies a card PNG\'s image once however many asset chunks it rejoins', async () => {
+    const assets = ['0', '1', '2'].map((key) => [`png-asset/${key}`, picture] as const);
+    const parts = new Map([['png-image', picture], ['png-card', own(strToU8('card'))], ...assets]);
+    vi.mocked(concat).mockClear();
+    const png = await joinOriginal(parts);
+    expect(concat).toHaveBeenCalledTimes(1);
+    const read = readPng(png)!;
+    expect([read.card, read.image, [...read.assets.keys()]]).toEqual(['card', picture, ['0', '1', '2']]);
   });
 
   it('rebuilds a .risum with its blocks in order', async () => {

@@ -53,16 +53,19 @@ export function readPng(bytes: Uint8Array): Png | null {
 
 const IEND = 12;
 
-// The PNG with a tEXt chunk key = value before its IEND, which must be its last 12 bytes, as a canvas writes it. Both
-// are Latin-1, as tEXt is; a base64 value always is.
-export function withText(png: Uint8Array, key: string, value: string): Uint8Array<ArrayBuffer> {
+// The PNG with a tEXt chunk key = value for each text, in their order, before its IEND, which must be its last 12 bytes,
+// as a canvas writes it. Both are Latin-1, as tEXt is; a base64 value always is.
+export function withTexts(png: Uint8Array, texts: readonly (readonly [key: string, value: string])[]): Uint8Array<ArrayBuffer> {
   const end = png.length - IEND;
   if (end < SIGNATURE.length || String.fromCharCode(...png.subarray(end + 4, end + 8)) !== 'IEND') throw new TypeError('the PNG does not end in IEND');
-  const data = Uint8Array.from(`tEXt${key}\0${value}`, (char) => char.charCodeAt(0));
-  const chunk = new Uint8Array(data.length + 8);
-  const view = new DataView(chunk.buffer);
-  view.setUint32(0, data.length - 4);
-  chunk.set(data, 4);
-  view.setUint32(chunk.length - 4, crc32(data));
-  return concat([png.subarray(0, end), chunk, png.subarray(end)]);
+  const chunks = texts.map(([key, value]) => {
+    const data = Uint8Array.from(`tEXt${key}\0${value}`, (char) => char.charCodeAt(0));
+    const chunk = new Uint8Array(data.length + 8);
+    const view = new DataView(chunk.buffer);
+    view.setUint32(0, data.length - 4);
+    chunk.set(data, 4);
+    view.setUint32(chunk.length - 4, crc32(data));
+    return chunk;
+  });
+  return concat([png.subarray(0, end), ...chunks, png.subarray(end)]);
 }

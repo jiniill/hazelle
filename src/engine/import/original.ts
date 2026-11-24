@@ -1,6 +1,6 @@
 import { fromBase64, toBase64 } from '../../base64';
 import { concat } from './inflate';
-import { readPng, withText } from './png';
+import { readPng, withTexts } from './png';
 import { readRisum, risumBlock, risumHead, RISUM_END } from './risum';
 import type { FileSource } from './source';
 import { openZip, zipWriter } from './zip';
@@ -48,11 +48,7 @@ export async function joinOriginal(parts: ReadonlyMap<string, Uint8Array<ArrayBu
   const card = parts.get(PNG_CARD);
   // Without its image, which the server may have refused to keep, it is no PNG and reads as nothing.
   const image = parts.get(PNG_IMAGE);
-  if (card && image) {
-    let png = withText(image, 'ccv3', text.decode(card));
-    for (const [path, bytes] of under(parts, PNG_ASSET)) png = withText(png, `chara-ext-asset_:${path}`, toBase64(bytes));
-    return png;
-  }
+  if (card && image) return withTexts(image, [['ccv3', text.decode(card)], ...under(parts, PNG_ASSET).map(([path, bytes]) => [`chara-ext-asset_:${path}`, toBase64(bytes)] as const)]);
   const module = parts.get(RISUM_MODULE);
   if (module) {
     const blocks = [...under(parts, RISUM_BLOCK)].sort(([a], [b]) => Number(a) - Number(b)).map(([, bytes]) => risumBlock(bytes));
