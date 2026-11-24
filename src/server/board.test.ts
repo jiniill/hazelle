@@ -6,6 +6,7 @@ import { sha256Hex } from './http';
 import { forgetOldRecords } from './admin';
 import { beginRestore } from './lifecycle';
 import { testApp } from './testing';
+import { UNREAD_BOARD } from './unread';
 
 let t: Awaited<ReturnType<typeof testApp>>;
 beforeAll(async () => {
@@ -355,6 +356,22 @@ it("lists what others did to one's posts and comments, counts it unread, and mar
   expect((await t.get('objects?since=0', author.cookie)).headers.get(UNREAD_BOARD_HEADER)).toBe('3');
   expect((await t.post('board/seen', { id: reply * 2 }, author.cookie)).headers.get(UNREAD_BOARD_HEADER)).toBe('1');
   expect((await t.post('board/seen', { id: id * 2 + 1 }, author.cookie)).headers.get(UNREAD_BOARD_HEADER)).toBe('0');
+});
+
+it("hears a reply to its comment under another's post, and reads for its count only the comments its own posts and comments lead to", async () => {
+  const admin = await operator();
+  const other = await member('other');
+  const theirs = await posted(other, { title: '남의 글' });
+  const mine = await commented(admin, theirs, '운영자 댓글');
+  const reply = await commented(other, theirs, '답글', mine);
+  const heard = async (who: Who) => ((await (await t.get('board/activity', who.cookie)).json()) as { activity: Activity[] }).activity.map(({ id, kind }) => ({ id, kind }));
+  expect(await heard(admin)).toEqual([{ id: reply * 2, kind: 'reply' }]);
+  expect(await heard(other)).toEqual([{ id: mine * 2, kind: 'comment' }]);
+  await t.env.db.prepare('UPDATE accounts SET board_seen = 0').run();
+  expect(await (await t.get('session', admin.cookie)).json()).toMatchObject({ session: { unreadBoard: 1 } });
+  expect(await (await t.get('session', other.cookie)).json()).toMatchObject({ session: { unreadBoard: 1 } });
+  const { results: plan } = await t.env.db.prepare(`EXPLAIN QUERY PLAN SELECT ${UNREAD_BOARD} FROM accounts WHERE id = ?`).bind(admin.id).all<{ detail: string }>();
+  expect(plan.map(({ detail }) => detail).filter((detail) => /^SCAN (c|p|parent)\b/.test(detail))).toEqual([]);
 });
 
 it('takes 신고 on posts and comments into the inbox, once per reporter and target, and resolves one without a reply', async () => {
