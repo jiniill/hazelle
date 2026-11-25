@@ -55,10 +55,14 @@ describe('ElevenLabs', () => {
     expect(voices.parse({})).toBeNull();
   });
 
-  it("meters the period's characters left, until the reset it names", () => {
+  it("meters the period's characters left, until the reset it names unless that is past", () => {
     const [meter] = elevenlabs.meters!;
-    expect(meter!.parse({ character_count: 1200, character_limit: 30000, next_character_count_reset_unix: 1_790_000_000, tier: 'creator' })).toEqual([
-      { kind: 'left', label: '크레딧', unit: 'credit', amount: 28800, limit: 30000, resets: { at: 1_790_000_000_000 } },
+    const reset = Math.floor(Date.now() / 1000) + 86_400;
+    expect(meter!.parse({ character_count: 1200, character_limit: 30000, next_character_count_reset_unix: reset, tier: 'creator' })).toEqual([
+      { kind: 'left', label: '크레딧', unit: 'credit', amount: 28800, limit: 30000, resets: { at: reset * 1000 } },
+    ]);
+    expect(meter!.parse({ character_count: 54, character_limit: 10000, next_character_count_reset_unix: 1_744_459_160, tier: 'free' })).toEqual([
+      { kind: 'left', label: '크레딧', unit: 'credit', amount: 9946, limit: 10000, resets: null },
     ]);
     expect(meter!.plan!({ tier: 'creator' })).toBe('creator');
   });

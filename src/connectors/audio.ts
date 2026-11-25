@@ -1,13 +1,13 @@
 import type { Spoken } from './types';
 
-// One file of a reading's stretches, read in turn. MP3 is a run of frames, so stretches join end to end; a WAV
+// One file of a reading's stretches, read in turn. MP3 is a run of frames, so stretches' frames join end to end; a WAV
 // stretch is its header and its samples, so the samples join under the first one's header. null: stretches of differing
 // types, a WAV that is not plain PCM in one data chunk, or a type neither.
 export function joinAudio(parts: readonly Spoken[]): Spoken | null {
   const [first] = parts;
   if (!first || parts.some(({ type }) => type !== first.type)) return null;
   if (parts.length === 1) return first;
-  if (first.type === 'audio/mpeg') return { bytes: concat(parts.map(({ bytes }) => bytes)), type: first.type };
+  if (first.type === 'audio/mpeg') return { bytes: concat(parts.map(({ bytes }) => mp3Frames(bytes))), type: first.type };
   if (first.type !== 'audio/wav') return null;
   const read = parts.map(({ bytes }) => wav(bytes));
   if (read.some((each) => each === null || !same(each.format, read[0]!.format))) return null;
@@ -38,6 +38,23 @@ function concat(chunks: readonly Uint8Array[]): Uint8Array<ArrayBuffer> {
     at += chunk.byteLength;
   }
   return joined;
+}
+
+// An MP3 stretch may open with an ID3 tag and an Info frame that counts its own frames (ElevenLabs's do), which a player
+// can take for the joined file's length: only the frames after them join. MPEG-1 Layer III bitrates (kbps) and rates.
+const BITRATES = [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320];
+const RATES = [44100, 48000, 32000];
+
+function mp3Frames(bytes: Uint8Array): Uint8Array {
+  let at = bytes.byteLength >= 10 && tag(bytes, 0).startsWith('ID3') ? 10 + ((bytes[6]! & 0x7f) << 21 | (bytes[7]! & 0x7f) << 14 | (bytes[8]! & 0x7f) << 7 | (bytes[9]! & 0x7f)) + (bytes[5]! & 0x10 ? 10 : 0) : 0;
+  const [sync = 0, version = 0, rates = 0, mode = 0] = bytes.subarray(at, at + 4);
+  const bitrate = BITRATES[rates >> 4];
+  const rate = RATES[(rates >> 2) & 3];
+  if (sync === 0xff && (version & 0xfe) === 0xfa && bitrate && rate) {
+    const side = (mode >> 6 === 3 ? 17 : 32) + (version & 1 ? 0 : 2);
+    if (['Xing', 'Info'].includes(tag(bytes, at + 4 + side))) at += Math.floor((144_000 * bitrate) / rate) + ((rates >> 1) & 1);
+  }
+  return bytes.subarray(at);
 }
 
 // A streamed WAV may give its data chunk a size past the file's end; the samples are what the file holds.

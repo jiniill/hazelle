@@ -28,8 +28,10 @@ function meters(payload: unknown): Meter[] | null {
   const used = count(payload.character_count);
   const limit = count(payload.character_limit);
   if (used === null || limit === null) return [];
+  // A free account's names one long past (2026-11-25), which is no reset to come.
   const reset = count(payload.next_character_count_reset_unix);
-  return [{ kind: 'left', label: '크레딧', unit: 'credit', amount: Math.max(limit - used, 0), limit, resets: reset === null ? null : { at: reset * 1000 } }];
+  const at = reset === null ? null : reset * 1000;
+  return [{ kind: 'left', label: '크레딧', unit: 'credit', amount: Math.max(limit - used, 0), limit, resets: at === null || at <= Date.now() ? null : { at } }];
 }
 
 export const elevenlabs: ConnectionType = {

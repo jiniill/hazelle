@@ -27,6 +27,17 @@ describe('joinAudio', () => {
     expect(joinAudio([{ bytes: new Uint8Array([1, 2]), type: 'audio/mpeg' }, { bytes: new Uint8Array([3]), type: 'audio/mpeg' }])).toEqual({ bytes: new Uint8Array([1, 2, 3]), type: 'audio/mpeg' });
   });
 
+  it('joins MP3 stretches without their ID3 tags and the Info frames that count only their own frames', () => {
+    const frame = (fill: number) => [0xff, 0xfb, 0x50, 0xc0, fill, fill];
+    const stretch = (fill: number) => {
+      const info = new Uint8Array(208);
+      info.set(frame(0).slice(0, 4));
+      info.set(Uint8Array.from('Info', (char) => char.charCodeAt(0)), 4 + 17);
+      return new Uint8Array([...Uint8Array.from('ID3', (char) => char.charCodeAt(0)), 4, 0, 0, 0, 0, 0, 2, 7, 7, ...info, ...frame(fill)]);
+    };
+    expect(joinAudio([{ bytes: stretch(1), type: 'audio/mpeg' }, { bytes: stretch(2), type: 'audio/mpeg' }])).toEqual({ bytes: new Uint8Array([...frame(1), ...frame(2)]), type: 'audio/mpeg' });
+  });
+
   it("joins WAV stretches' samples under one header", () => {
     expect(joinAudio([{ bytes: wav([1, 2]), type: 'audio/wav' }, { bytes: wav([3, 4]), type: 'audio/wav' }])).toEqual({ bytes: wav([1, 2, 3, 4]), type: 'audio/wav' });
   });
