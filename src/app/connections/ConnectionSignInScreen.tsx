@@ -1,5 +1,4 @@
 import { ExternalLink } from 'lucide-react';
-import { useState } from 'react';
 import type { ConnectionType, SignIn } from '../../connectors/types';
 import { providerConnection } from '../../runtime/models/connections';
 import { ACTS } from '../common/acts';
@@ -9,12 +8,12 @@ import { backBar } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { Button, Callout, CodeCard, GuideMark, Intro, NavBar, Screen, Text } from '../ui';
 import { connect } from './connect';
+import { TokenPaste } from './TokenPaste';
 import { useDeviceSignIn } from './useDeviceSignIn';
 
 export function ConnectionSignInScreen({ type, signIn, back }: { type: ConnectionType; signIn: SignIn; back: Back }) {
   const session = useSession();
-  const [attempt, setAttempt] = useState(0);
-  const { stage, openSite } = useDeviceSignIn(signIn, attempt, (secret, name, signal) => connect(session, providerConnection(type, secret, name), signal));
+  const { stage, openSite, retry, paste } = useDeviceSignIn(signIn, (secret, name, signal) => connect(session, providerConnection(type, secret, name), signal));
 
   const top = <NavBar title={`${type.label} 연결`} {...backBar(back)} />;
 
@@ -23,7 +22,7 @@ export function ConnectionSignInScreen({ type, signIn, back }: { type: Connectio
       <Screen
         top={top}
         actions={
-          <Button icon={ACTS.retry.icon} onClick={() => setAttempt((count) => count + 1)}>
+          <Button icon={ACTS.retry.icon} onClick={retry}>
             {ACTS.retry.label}
           </Button>
         }
@@ -32,6 +31,7 @@ export function ConnectionSignInScreen({ type, signIn, back }: { type: Connectio
         <Callout tone="warn" alert>
           {stage.message}
         </Callout>
+        <TokenPaste signIn={signIn} onToken={paste} />
       </Screen>
     );
   }
@@ -56,6 +56,7 @@ export function ConnectionSignInScreen({ type, signIn, back }: { type: Connectio
       >
         <Intro title={`${signIn.site}에서 이 코드를 입력해 주세요`}>승인하면 자동으로 연결돼요.</Intro>
         <CodeCard label="코드" code={code.userCode} />
+        <TokenPaste signIn={signIn} onToken={paste} />
       </Screen>
     );
   }

@@ -1,5 +1,6 @@
 import { codeRequest, parseCode, parsePoll, pollRequest, type DeviceCode } from '../../connectors/device-code';
 import type { SignIn } from '../../connectors/types';
+import { noteStep } from '../diagnostics/auto-diagnosis';
 import { pause } from '../pause';
 import { relayJson, relayOAuth, type RelayFailure } from '../models/relay';
 
@@ -7,7 +8,14 @@ import { relayJson, relayOAuth, type RelayFailure } from '../models/relay';
 export type SignInFailure = RelayFailure | { kind: 'bad-answer' } | { kind: 'refused'; code: string };
 type Result<T> = ({ ok: true } & T) | { ok: false; failure: SignInFailure };
 
-export async function requestCode(signIn: SignIn, signal: AbortSignal): Promise<Result<{ code: DeviceCode }>> {
+const noted = <T>(step: string, result: Result<T>): Result<T> => {
+  noteStep(`sign-in:${result.ok ? step : result.failure.kind}`);
+  return result;
+};
+
+export const requestCode = async (signIn: SignIn, signal: AbortSignal) => noted('code', await askCode(signIn, signal));
+
+async function askCode(signIn: SignIn, signal: AbortSignal): Promise<Result<{ code: DeviceCode }>> {
   const answer = await relayOAuth(codeRequest(signIn), signal);
   if (!answer.ok) return answer;
   const code = parseCode(answer.data);
@@ -16,7 +24,9 @@ export async function requestCode(signIn: SignIn, signal: AbortSignal): Promise<
 
 // Asks until the user approves on the provider's site, refuses, or the code runs out. A dropped
 // connection only skips one round: a phone suspends the page while the user is away approving.
-export async function awaitApproval(signIn: SignIn, code: DeviceCode, signal: AbortSignal): Promise<Result<{ secret: string }>> {
+export const awaitApproval = async (signIn: SignIn, code: DeviceCode, signal: AbortSignal) => noted('approved', await approval(signIn, code, signal));
+
+async function approval(signIn: SignIn, code: DeviceCode, signal: AbortSignal): Promise<Result<{ secret: string }>> {
   const deadline = Date.now() + code.expiresIn * 1000;
   let interval = code.interval;
   for (;;) {
@@ -35,7 +45,9 @@ export async function awaitApproval(signIn: SignIn, code: DeviceCode, signal: Ab
   }
 }
 
-export async function accountName(signIn: SignIn, secret: string, signal: AbortSignal): Promise<Result<{ name: string }>> {
+export const accountName = async (signIn: SignIn, secret: string, signal: AbortSignal) => noted('account', await account(signIn, secret, signal));
+
+async function account(signIn: SignIn, secret: string, signal: AbortSignal): Promise<Result<{ name: string }>> {
   const answer = await relayJson(signIn.account.request(secret), signal);
   if (!answer.ok) return answer;
   const name = signIn.account.parse(answer.data);
