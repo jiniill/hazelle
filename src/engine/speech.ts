@@ -1,6 +1,7 @@
 // What 음성 reads of a message (design §6.19): the text the screen shows, without its markup.
 
-const DROPPED = /<(style|script|template|head)\b[^>]*>[\s\S]*?<\/\1\s*>|<!--[\s\S]*?-->/gi;
+// A code block is the bot's own box (a status window, a log), not the story: skipped, quotes inside it too.
+const DROPPED = /<(style|script|template|head|pre)\b[^>]*>[\s\S]*?<\/\1\s*>|<!--[\s\S]*?-->|^ {0,3}(`{3,}|~{3,})[^\n]*\n[\s\S]*?(?:^ {0,3}\2[^\n]*$|(?![\s\S]))/gim;
 const BREAKS = /<\/?(br|p|div|li|tr|h[1-6]|blockquote|section|article|details|summary)\b[^>]*>/gi;
 const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
 
@@ -32,35 +33,36 @@ export function speechText(shown: string, quotes: boolean): string {
 }
 
 // The first stretch is small so the reading starts soon; each after it may be twice the one before, up to most, the
-// provider's limit. A stretch ends between lines, else between sentences, else at most.
-const FIRST = 300;
+// provider's limit. A stretch ends between paragraphs; a paragraph longer than the stretch it starts is cut between
+// sentences, else between words, else at the size.
+const FIRST = 120;
 
 export function speechParts(text: string, most: number): string[] {
-  const pieces = text.split('\n').flatMap((line) => (line.length <= most ? [line] : sentences(line, most)));
   const parts: string[] = [];
   let part = '';
   let size = Math.min(FIRST, most);
-  for (const piece of pieces) {
-    if (part && part.length + 1 + piece.length > size) {
-      parts.push(part);
-      part = '';
-      size = Math.min(size * 2, most);
+  const close = () => {
+    parts.push(part);
+    part = '';
+    size = Math.min(size * 2, most);
+  };
+  for (const paragraph of text.split('\n')) {
+    if (part && part.length + 1 + paragraph.length > size) close();
+    let rest = paragraph;
+    while (rest.length > size) {
+      const at = cutAt(rest, size);
+      part = rest.slice(0, at).trim();
+      rest = rest.slice(at).trim();
+      close();
     }
-    part = part ? `${part}\n${piece}` : piece;
+    if (rest) part = part ? `${part}\n${rest}` : rest;
   }
   if (part) parts.push(part);
   return parts;
 }
 
-function sentences(line: string, most: number): string[] {
-  const cut: string[] = [];
-  let rest = line;
-  while (rest.length > most) {
-    const window = rest.slice(0, most);
-    const end = Math.max(...[...window.matchAll(/[.!?。…](?=\s)/g)].map((match) => match.index + 1), 0);
-    const at = end > 0 ? end : most;
-    cut.push(rest.slice(0, at).trim());
-    rest = rest.slice(at).trim();
-  }
-  return rest ? [...cut, rest] : cut;
+function cutAt(line: string, size: number): number {
+  const window = line.slice(0, size + 1);
+  const last = (pattern: RegExp) => Math.max(0, ...[...window.matchAll(pattern)].map((match) => match.index + match[0].length));
+  return last(/[.!?。…]+["'”’」』)]*(?=\s)/g) || last(/\S(?=\s)/g) || size;
 }

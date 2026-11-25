@@ -11,7 +11,7 @@ import { Speaker, type Player } from './speech';
 const server = testServer();
 
 const audio = (...bytes: number[]) => new Response(new Uint8Array(bytes), { headers: { 'x-relay': 'upstream', 'content-type': 'audio/mpeg' } });
-const REPLY = `${'ㄱ'.repeat(200)}\n\n${'ㄴ'.repeat(200)}`;
+const REPLY = `${'ㄱ'.repeat(100)}\n\n${'ㄴ'.repeat(200)}`;
 
 function listener() {
   const heard: Spoken[] = [];
@@ -46,7 +46,7 @@ describe('Speaker', () => {
       await vi.waitFor(() => expect(speaker.snapshot().size).toBe(0));
 
       expect(sent.map(({ sent }) => [sent.url, JSON.parse(sent.body!)])).toEqual([
-        ['https://api.elevenlabs.io/v1/text-to-speech/voice-1?output_format=mp3_44100_64', { text: 'ㄱ'.repeat(200), model_id: 'eleven_v3' }],
+        ['https://api.elevenlabs.io/v1/text-to-speech/voice-1?output_format=mp3_44100_64', { text: 'ㄱ'.repeat(100), model_id: 'eleven_v3' }],
         ['https://api.elevenlabs.io/v1/text-to-speech/voice-1?output_format=mp3_44100_64', { text: 'ㄴ'.repeat(200), model_id: 'eleven_v3' }],
       ]);
       expect(heard.map(({ bytes }) => [...bytes])).toEqual([[1, 2], [3]]);
