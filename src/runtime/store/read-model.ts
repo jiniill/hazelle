@@ -4,7 +4,7 @@ import type { ChatScope } from '../../engine/render';
 import { chatTitle, originTitle, shown, standing, type Chat, type ChatSummary, type Message } from '../../model/chat';
 import { placeOf, withMarks, withoutMarks } from '../../model/illustration';
 import type { Illustrating, Illustrator } from '../tasks/illustrate';
-import type { Kind, Stored, StoreRead, Values } from '../../model/kinds';
+import { byName, type Kind, type Stored, type StoreRead } from '../../model/kinds';
 import { indexFolders, nest, type FolderIndex, type FolderTree } from '../../model/folders';
 import { isLive, live, shelve, type CharacterShelf, type Shelf } from '../../model/library';
 import type { Memory } from '../../model/memory';
@@ -41,14 +41,6 @@ export type ChatScopeRead = { state: ScopeState; error: ApiFailure | null };
 export type OpenDisplay = Pick<ScriptDisplay, 'display' | 'subscribe'>;
 export const plainDisplay = (store: ObjectStore): OpenDisplay => ({ display: (id, chat, messages, screen, signal) => evaluateChat({ store }, id, chat, messages, screen, signal), subscribe: () => () => {} });
 
-// Sort listed kinds by name, not store write order: edits must not move items in their lists.
-const NAMED: { [K in Kind]?: (value: Values[K]) => string } = {
-  connection: (value) => value.label,
-  module: (value) => value.name,
-  persona: (value) => value.name,
-  profile: (value) => value.name,
-  prompt: (value) => value.name,
-};
 const memo = <K, V>(map: Map<K, V>, key: K, make: () => V): V => {
   let value = map.get(key);
   if (value === undefined) map.set(key, (value = make()));
@@ -103,9 +95,7 @@ export class ReadModels {
   }
 
   private listed<K extends Kind>(kind: K): Stored<K>[] {
-    const name = NAMED[kind] as ((value: Values[K]) => string) | undefined;
-    const list = this.store.list(kind);
-    return name ? list.sort((a, b) => name(a.value).localeCompare(name(b.value), 'ko') || a.id.localeCompare(b.id)) : list;
+    return byName(kind, this.store.list(kind));
   }
 
   kind<K extends Kind>(kind: K): Snapshot<Stored<K>[]> {

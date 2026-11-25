@@ -9,7 +9,7 @@ import type { IllustrationInput, RanAway } from '../../engine/pipeline';
 import { fold, shown, standing, type Chat, type Receipt } from '../../model/chat';
 import { without } from '../../model/fields';
 import { paragraphsOf, pictureCount, type Attached, type Illustration, type Scene } from '../../model/illustration';
-import type { Stored } from '../../model/kinds';
+import { byName, type Stored } from '../../model/kinds';
 import { live } from '../../model/library';
 import { likenessId, type Portrait } from '../../model/likeness';
 import type { IllustratePrompt } from '../../model/prompt';
@@ -72,7 +72,7 @@ export async function attachIllustration(
 // The added models that draw: their output holds an image and their connection's type fills draws. The first is the
 // image model of a chat whose switches name none.
 export const drawingModels = (connections: readonly Stored<'connection'>[]): ImageRoute[] =>
-  connections.flatMap((connection) => {
+  byName('connection', connections).flatMap((connection) => {
     const draws = resolveConnection(connection.value)?.type?.draws;
     return draws ? connection.value.starred.filter(({ output }) => output?.includes('image')).map((model) => ({ connection, model, draws })) : [];
   });

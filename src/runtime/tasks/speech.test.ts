@@ -6,7 +6,7 @@ import { takeTurn } from '../chat/turn';
 import { setSpeech } from '../library/characters';
 import type { Session } from '../session';
 import { answerable, inTurn, saying, stubRelay, testServer } from '../testing';
-import { Speaker, type Player } from './speech';
+import { Speaker, speakingModels, type Player } from './speech';
 
 const server = testServer();
 
@@ -32,6 +32,12 @@ async function replied(session: Session) {
   const message = fold(session.store.children('entry', chat)).at(-1)!;
   return { chat, connection: voice.data.id, message: message.id, version: shown(message).id };
 }
+
+it('lists the speaking models by connection name, as 연결 does, so the first is one wherever it is read', () => {
+  const stored = (id: string, type: string, label: string) => ({ id, kind: 'connection' as const, parent: null, rev: 1, value: { type, label, baseUrl: null, protocol: null, accounts: [], turns: null, starred: [] } });
+  const routes = speakingModels([stored('a', 'google', 'Google'), stored('b', 'elevenlabs', 'ElevenLabs')]);
+  expect(routes.map(({ connection }) => connection.id)).toEqual(['b', 'b', 'b', 'a', 'a']);
+});
 
 describe('Speaker', () => {
   it('reads the shown reply in stretches, each heard as it comes, and keeps them as one file the next listen plays without a call', () =>

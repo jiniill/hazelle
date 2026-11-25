@@ -4,7 +4,7 @@ import { resolveConnection } from '../../connectors/registry';
 import type { Model, Speaks, Spoken, Voice } from '../../connectors/types';
 import { speechParts, speechText } from '../../engine/speech';
 import { shown } from '../../model/chat';
-import type { Stored } from '../../model/kinds';
+import { byName, type Stored } from '../../model/kinds';
 import type { Speech } from '../../model/speech';
 import type { ApiFailure } from '../api';
 import type { ReplyError } from '../models/generate';
@@ -24,7 +24,7 @@ export type SpeechRoute = { connection: Stored<'connection'>; model: Model; spea
 
 // Every speech model of every connection whose type speaks; the first reads where no 음성 모델 is picked.
 export const speakingModels = (connections: readonly Stored<'connection'>[]): SpeechRoute[] =>
-  connections.flatMap((connection) => {
+  byName('connection', connections).flatMap((connection) => {
     const speaks = resolveConnection(connection.value)?.type?.speaks;
     return speaks ? speaks.models.map((model) => ({ connection, model, speaks })) : [];
   });

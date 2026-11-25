@@ -267,3 +267,18 @@ export const isValue = <K extends Kind>(kind: K, value: unknown): value is Value
 
 // pending orders unanswered tab-local writes; rev remains the replaced confirmed revision (0 for creates).
 export type Stored<K extends Kind> = { id: string; kind: K; parent: string | null; rev: number; value: Values[K]; pending?: number };
+
+// Lists show these kinds by name, not store write order: edits must not move items in their lists, and the first of a
+// list (the first 음성 모델 or 이미지 모델) is the same one wherever it is read.
+const NAMED: { [K in Kind]?: (value: Values[K]) => string } = {
+  connection: (value) => value.label,
+  module: (value) => value.name,
+  persona: (value) => value.name,
+  profile: (value) => value.name,
+  prompt: (value) => value.name,
+};
+
+export function byName<K extends Kind>(kind: K, list: readonly Stored<K>[]): Stored<K>[] {
+  const name = NAMED[kind] as ((value: Values[K]) => string) | undefined;
+  return name ? [...list].sort((a, b) => name(a.value).localeCompare(name(b.value), 'ko') || a.id.localeCompare(b.id)) : [...list];
+}
