@@ -3,7 +3,7 @@ import { FEATURE_LABS, FEATURE_STARTS, FEATURES, type Feature, type FeatureSwitc
 import { without } from '../../model/fields';
 import { labOn, type Settings } from '../../model/settings';
 import type { ApiResult } from '../api';
-import { illustrateSwitches, translateSwitches, type IllustrateSetup, type TranslateSetup } from '../library/characters';
+import { illustrateSwitches, speechSwitches, translateSwitches, type IllustrateSetup, type SpeechSetup, type TranslateSetup } from '../library/characters';
 import { chatPrompt } from '../library/prompts';
 import type { ObjectStore } from '../store/store';
 import { accountSettings, changeSettings } from '../account-settings';
@@ -82,4 +82,9 @@ export function chatTranslate(store: Reader, chat: Place): TranslateSetup {
 export function chatIllustrate(store: Reader, chat: Place): IllustrateSetup {
   const switches = illustrateSwitches(store, chat.character);
   return featuresOf(store, chat).illustrate ? switches : { ...switches, auto: false };
+}
+
+export function chatSpeech(store: Reader, chat: Place): SpeechSetup {
+  const switches = speechSwitches(store, chat.character);
+  return featuresOf(store, chat).speech ? switches : { ...switches, auto: false };
 }

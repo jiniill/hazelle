@@ -6,6 +6,7 @@ import type { Asset, Avatar, Character, Inlay, Lore, Module, Original, TextFile 
 import type { Illustration } from './illustration';
 import type { Likeness } from './likeness';
 import type { Remark } from './mascot';
+import type { Speech } from './speech';
 import { ORDER_ID, type Order } from './order';
 import type { Memory, Vectors } from './memory';
 import type { Persona } from './persona';
@@ -46,6 +47,7 @@ export type Values = {
   vectors: Vectors;
   cacheprint: CachePrint;
   illustration: Illustration;
+  speech: Speech;
   remark: Remark;
   connection: Connection;
   settings: Settings;
@@ -89,6 +91,7 @@ export const KINDS = {
   vectors: { parent: ['chat', 'character'] },
   cacheprint: { parent: 'chat' },
   illustration: { parent: 'chat', file: true },
+  speech: { parent: 'chat', file: true },
   remark: { parent: 'chat' },
   inlay: { parent: 'chat', file: true },
   textfile: { parent: 'chat' },
@@ -235,6 +238,7 @@ const SHAPES = {
       model: shape(all(str, 'connection', 'model')),
       sent: shape({ prompt: str, negative: str, characters: listOf(shape({ prompt: str, negative: str, center: shape(all(num, 'x', 'y')) })), ...all(num, 'width', 'height', 'seed') }),
     })(value)),
+  speech: shape({ ...all(str, 'message', 'version', 'type'), of: (value) => value === 'text' || value === 'translation', file: shape({ id: str, key: str }), size: num, at: num }),
   remark: shape({ ...all(str, 'message', 'version', 'mascot', 'expression', 'line'), receipt: isRecord, model: shape(all(str, 'connection', 'model')), at: num }),
   connection: shape({
     type: str,

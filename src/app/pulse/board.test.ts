@@ -64,5 +64,5 @@ it('marks a move against the earlier places counted by the same rules, and nothi
 
 it('tells a week by its Monday in KST, and an hour by its replies first, then the roles it had', () => {
   expect(weekText(Date.UTC(2026, 9, 11, 15))).toBe('10월 12일 주');
-  expect(hourDetail({ chat: 120, aux: 0, image: 10, embedding: 0 })).toBe('응답 120번 · 이미지 10번');
+  expect(hourDetail({ chat: 120, aux: 0, image: 10, embedding: 0, speech: 3 })).toBe('응답 120번 · 이미지 10번 · 음성 3번');
 });

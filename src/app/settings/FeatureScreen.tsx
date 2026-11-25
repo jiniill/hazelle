@@ -2,7 +2,7 @@ import type { ComponentType } from 'react';
 import type { Feature } from '../../model/features';
 import type { PromptSort } from '../../model/prompt';
 import type { PrereadParts } from '../../model/settings';
-import { illustrateSwitches, setIllustrate, setTranslate, setTranslatorNote, translateSwitches } from '../../runtime/library/characters';
+import { illustrateSwitches, setIllustrate, setSpeech, setTranslate, setTranslatorNote, speechSwitches, translateSwitches } from '../../runtime/library/characters';
 import { SHARED_CHAT, availableFeatures, setFeatureAt, sharedFeatures } from '../../runtime/tasks/features';
 import { setAgentAt } from '../../runtime/tasks/agents';
 import { briefsWithChatModel, briefWriterOf, PREREAD_STARTS, prereadSetup, setPreread } from '../../runtime/tasks/preread';
@@ -16,6 +16,7 @@ import { AgentSwitches } from '../common/AgentSwitches';
 import { aliased } from '../common/alias';
 import { DetailFold } from '../common/DetailFold';
 import { IllustrateRows } from '../common/IllustrateRows';
+import { SpeechRows } from '../common/SpeechRows';
 import { Missing } from '../common/Missing';
 import { AccountTaskModel, appliesTo, TaskPromptMenu, type PromptDoor } from '../common/TaskPrompt';
 import { taskRuns } from '../common/taskRuns';
@@ -41,9 +42,9 @@ function FeatureSwitch({ feature }: { feature: Feature }) {
   return <Switch variant="labeled" label="채팅에서 쓰기" checked={sharedFeatures(store)[feature]} onChange={(on) => toast.settled(setFeatureAt(store, { kind: 'settings' }, feature, on), SAVE_FAILED)} />;
 }
 
-// Over a chat whose character keeps 번역 or 삽화 of its own (캐릭터별 설정), this page's values do not reach that chat:
+// Over a chat whose character keeps 번역, 삽화 or 음성 of its own (캐릭터별 설정), this page's values do not reach that chat:
 // said here, since a change made for it would seem to do nothing.
-const APART = { translate: translateSwitches, illustrate: illustrateSwitches };
+const APART = { translate: translateSwitches, illustrate: illustrateSwitches, speech: speechSwitches };
 function Apart({ feature }: { feature: keyof typeof APART }) {
   const store = useStore();
   const { under } = useAddress();
@@ -130,6 +131,15 @@ function IllustrateDefaults() {
       />
     </IllustrateRows>
   );
+}
+
+function SpeechDefaults() {
+  const store = useStore();
+  const toast = useToast();
+  // speechSwitches reads these.
+  useSettings();
+  useConnections();
+  return <SpeechRows speech={speechSwitches(store, null)} card={null} opens="down" onChange={(change) => toast.settled(setSpeech(store, null, change))} />;
 }
 
 // Where a picture stands is 디스플레이's, on this device; the 삽화 page only leads there.
@@ -276,4 +286,4 @@ function StatusDefaults() {
   );
 }
 
-const DEFAULTS: Record<Feature, ComponentType> = { translate: TranslateDefaults, illustrate: IllustrateDefaults, memory: MemoryDefaults, mascot: MascotDefaults, preread: PrereadDefaults, agents: AgentDefaults, status: StatusDefaults };
+const DEFAULTS: Record<Feature, ComponentType> = { translate: TranslateDefaults, illustrate: IllustrateDefaults, speech: SpeechDefaults, memory: MemoryDefaults, mascot: MascotDefaults, preread: PrereadDefaults, agents: AgentDefaults, status: StatusDefaults };

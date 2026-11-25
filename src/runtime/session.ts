@@ -17,6 +17,7 @@ import { Costs } from './models/cost';
 import { Credentials } from './models/credential';
 import { Files } from './files/files';
 import { Illustrator } from './tasks/illustrate';
+import { pagePlayer, Speaker } from './tasks/speech';
 import { Likenesses } from './tasks/likeness';
 import { Commentator } from './tasks/mascot';
 import { cutStatus, StatusWriter } from './tasks/status';
@@ -79,6 +80,7 @@ export type Session = {
   cues: Cues;
   memory: Rememberer;
   illustrator: Illustrator;
+  speaker: Speaker;
   likenesses: Likenesses;
   commentator: Commentator;
   statusWriter: StatusWriter;
@@ -176,6 +178,7 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
   const scriptReach = new ScriptReach({ tokens, store, read, credentials, log, costs }, scriptInteractions, scriptClosing.signal);
   const likenesses = new Likenesses({ tokens, store, credentials, log, files, catalogs });
   const illustrator = new Illustrator({ tokens, store, credentials, log, files, likenesses });
+  const speaker = new Speaker({ store, read, credentials, files, player: pagePlayer() });
   const commentator = new Commentator({ tokens, store, credentials, log });
   const statusWriter = new StatusWriter({ tokens, store, credentials, log, costs });
   const polisher = new Polisher({ tokens, store, credentials, log });
@@ -278,6 +281,7 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
     translator.close();
     memory.close();
     illustrator.close();
+    speaker.close();
     likenesses.close();
     commentator.close();
     statusWriter.close();
@@ -290,7 +294,7 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
     assets.close();
     store.close();
   };
-  const session: Session = { transport, tools, username, store, files, pictures, assets, unfound, talk, log, costs, usage, tokens, translator, cues, memory, illustrator, likenesses, commentator, statusWriter, polisher, briefs, additions, drafts, streams, scriptInteractions, scriptJournal, scriptTurns, scriptPreview, scriptCommands, scriptPages, credentials, catalogs, read, display, finder, close, startBackground };
+  const session: Session = { transport, tools, username, store, files, pictures, assets, unfound, talk, log, costs, usage, tokens, translator, cues, memory, illustrator, speaker, likenesses, commentator, statusWriter, polisher, briefs, additions, drafts, streams, scriptInteractions, scriptJournal, scriptTurns, scriptPreview, scriptCommands, scriptPages, credentials, catalogs, read, display, finder, close, startBackground };
   return { ok: true, data: session };
 }
 

@@ -126,7 +126,7 @@ type Asker = 'forecast' | 'memory' | 'view';
 
 // Kinds a forecast never reads. Projections and summaries reach it only through the chat's verdict, which refuses it
 // (evaluation GATES), so a batch of these alone forecasts again only when the verdict came or went.
-const UNFORECAST = new Set(['remark', 'illustration', 'projection', 'summary']);
+const UNFORECAST = new Set(['remark', 'illustration', 'speech', 'projection', 'summary']);
 
 export function forecastChanges(store: Pick<ObjectStore, 'subscribe'> & { projections: Pick<ChatProjections, 'verdict'> }, chat: string, changed: () => void) {
   const stuck = () => store.projections.verdict(chat) !== null;

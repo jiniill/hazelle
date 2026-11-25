@@ -1,4 +1,4 @@
-import { Bookmark, Bot, Info, Languages, Pin, PinOff, SquarePen } from 'lucide-react';
+import { Bookmark, Bot, Info, Languages, Pin, PinOff, Square, SquarePen } from 'lucide-react';
 import { memo, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { resolveAssets, type PictureUrl } from '../../engine/assets';
 import { storyHtml } from '../../engine/display';
@@ -8,7 +8,7 @@ import type { Stored } from '../../model/kinds';
 import { runs } from '../../runtime/tasks/illustrate';
 import { ACTS, newOf } from '../common/acts';
 import { MASCOT_PICTURES } from '../common/mascots';
-import { BOOKMARK, TURN_FAILED, REPLY_INFO, RETRANSLATE, TRANSLATE_FAILED } from '../common/words';
+import { BOOKMARK, TURN_FAILED, REPLY_INFO, RETRANSLATE, STOP, TRANSLATE_FAILED } from '../common/words';
 import { describeFailedReply, describeTranslateFailure } from '../common/failure';
 import { languageLabel } from '../common/languages';
 import { withParticle } from '../common/particles';
@@ -57,6 +57,7 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
   const { canTranslate, awaited, flipped, showOriginal, shownTranslation } = row.translation.value;
   const { placed, pictures, drawing, canIllustrate, pictureSizes } = row.illustration.value;
   const { remark, fresh } = row.mascot.value;
+  const { canSpeak, reading, kept } = row.speech.value;
   const { badges, toolActions } = row.tools.value;
   const { hosted, offered } = row.status.value;
   const { polishing, agents } = row.agents.value;
@@ -231,6 +232,16 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
     canTranslate && !empty && !failed && <IconButton icon={Languages} size="sm" label="번역" disabled={translatingText !== null} onClick={translateHere} />
   );
   const translateAgain = canTranslate && translation && !sentTranslated && <MenuItem label={RETRANSLATE} disabled={translatingText !== null} onClick={translateHere} />;
+  const listening = reading !== null && reading.failure === null;
+  const speaks = canSpeak && !mine && !empty && !failed;
+  const listenTool = speaks && (listening ? (
+    <IconButton icon={Square} size="sm" label={`${ACTS.listen.label} ${STOP}`} pressed onClick={actions.stopListening} />
+  ) : (
+    <IconButton icon={ACTS.listen.icon} size="sm" label={ACTS.listen.label} onClick={() => actions.listen(message.id, version.id, flipped)} />
+  ));
+  // What 듣기 plays now: the translation shown, else the text.
+  const keptNow = kept.includes(translation && !flipped ? 'translation' : 'text');
+  const listenAgain = speaks && keptNow && <MenuItem label="음성 다시 만들기" disabled={listening} onClick={() => actions.listen(message.id, version.id, flipped, true)} />;
   // The language it went out in, not the setting now.
   const mark = !translation || editing !== null ? undefined : sentTranslated ? `${withParticle(languageLabel(translation.sentIn!), '으로/로')} 보냄` : flipped ? '원문' : '번역';
 
@@ -315,11 +326,13 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
     <>
       {wide && switcher}
       {translateTool}
+      {listenTool}
       {!empty && <IconButton icon={ACTS.copy.icon} size="sm" label={ACTS.copy.label} onClick={() => actions.copy(text)} />}
       {statusTool}
-      {translateAgain && (
+      {(translateAgain || listenAgain) && (
         <MoreMenu of="메시지" place="end">
           {translateAgain}
+          {listenAgain}
         </MoreMenu>
       )}
     </>
@@ -330,12 +343,14 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
       {wide && switcher}
       {!mine && !greeting && !failed && !busy && <IconButton icon={ACTS.regenerate.icon} size="sm" label={ACTS.regenerate.label} onClick={() => actions.regenerate(message)} />}
       {translateTool}
+      {listenTool}
       {!failed && <IconButton ref={editButton} icon={SquarePen} size="sm" label="수정" onClick={() => actions.edit(message, selected?.part ?? null)} />}
       {!empty && <IconButton icon={ACTS.copy.icon} size="sm" label={ACTS.copy.label} onClick={() => actions.copy(text)} />}
       {bookmarked && <IconButton icon={Bookmark} size="sm" label={BOOKMARK} pressed onClick={() => actions.bookmark(message.id)} />}
       {!failed ? (
         <MoreMenu of="메시지" place="end">
           {translateAgain}
+          {listenAgain}
           {canIllustrate && !mine && !empty && (
             <MenuItem label="삽화" disabled={running} onClick={() => actions.draw(message.id, version.id)} />
           )}

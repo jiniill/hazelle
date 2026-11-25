@@ -4,7 +4,7 @@
 // The page's address and name, which the server also writes into the page's link preview (server/static.ts).
 export const PULSE_PAGE = { path: '/now', title: '헤이젤 나우' } as const;
 
-export const PULSE_ROLES = ['chat', 'aux', 'image', 'embedding'] as const;
+export const PULSE_ROLES = ['chat', 'aux', 'image', 'embedding', 'speech'] as const;
 export type PulseRole = (typeof PULSE_ROLES)[number];
 
 // Generic connections report 직접 연결, never their addresses.

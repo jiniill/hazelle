@@ -50,6 +50,13 @@ export function messageRow(chat: OpenChat, index: number) {
       canIllustrate: chat.features.illustrate,
       pictureSizes: chat.pictureSizes,
     }, { pictures: sameItems(Object.is), drawing: Object.is, pictureSizes: Object.is }),
+    speech: rowPart({
+      canSpeak: chat.features.speech,
+      // The shown version's reading under way or failed, null with none.
+      reading: chat.readings.get(message.id)?.version === version ? chat.readings.get(message.id)! : null,
+      // What of the shown version is kept read: its text, its translation.
+      kept: chat.keptOf(version),
+    }, { reading: Object.is, kept: sameItems(Object.is) }),
     mascot: rowPart({
       // The shown version's 마스코트 line, null with none or with the 기능 off; fresh until opened once on this page.
       remark,

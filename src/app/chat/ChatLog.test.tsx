@@ -49,7 +49,7 @@ const frame = (messages: OpenChat['messages'], item: OpenChat['item'] = null) =>
   decor: { bot: true, css: '', buttons: 'inert' },
   agents: { pre: false, post: true }, features: { translate: true, illustrate: true, mascot: false }, translate: { original: false },
   awaited: () => false, flipped: new Set(), shownTranslation: plain,
-  pictures: new Map([['old', [picture]]]), placed: new Map(), illustrating: new Map(), pictureSizes: pictureSizes({}),
+  pictures: new Map([['old', [picture]]]), placed: new Map(), illustrating: new Map(), pictureSizes: pictureSizes({}), readings: new Map(), keptOf: () => [],
   remarks: new Map(), polishing: new Map(), badges: new Map([['old', ['badge']]]), messageTools,
   hosted: (index: number) => index === 0 ? [{ id: 'status', script: 0, html: status, at: 'top', message: 0 }] : [],
   offered: () => [{ id: 'status', name: 'Status', marked: true }],

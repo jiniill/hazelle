@@ -319,24 +319,22 @@ export async function drawPicture(credentials: Deps['credentials'], { connection
     if (error instanceof ConnectorError) return { kind: 'undrawn', error: { kind: 'refused', code: error.code } };
     throw error;
   }
-  const picked = await credentials.pool.pick(connection.value);
-  if (!picked.ok) return { kind: 'undrawn', error: picked.failure };
+  const held = await credentials.use(connection.value, signal);
+  if (!held.ok) return held.failure.kind === 'stopped' ? { kind: 'stopped' } : { kind: 'undrawn', error: held.failure };
+  const { credential, resolved } = held;
   const failed = (error: Exclude<ReplyError, { kind: 'pool' }>): Undrawn | Stopped => {
     if (error.kind === 'stopped') return { kind: 'stopped' };
-    credentials.pool.stale(connection.value, picked.account);
+    held.stale();
     return { kind: 'undrawn', error };
   };
-  const resolved = resolveConnection(connection.value)!;
-  const credential = await credentials.get(resolved, picked.account.secret, signal);
-  if (!credential.ok) return failed(credential.failure);
   if (!spend) {
     if (!draws.free) return { kind: 'costs', why: 'unknown' };
-    const asked = await relayJson(draws.free.request(credential.credential), signal, undefined, undefined, resolved.type);
+    const asked = await relayJson(draws.free.request(credential), signal, undefined, undefined, resolved.type);
     if (!asked.ok) return failed(asked.failure);
     const why = draws.free.costs(asked.data, picture);
     if (why) return { kind: 'costs', why };
   }
-  const answer = await relayBytes({ ...request, headers: { ...request.headers, ...draws.authHeaders(credential.credential) } }, signal, callLabel('image', connection.value, picture.model.id), resolved.type, chat);
+  const answer = await relayBytes({ ...request, headers: { ...request.headers, ...draws.authHeaders(credential) } }, signal, callLabel('image', connection.value, picture.model.id), resolved.type, chat);
   if (!answer.ok) return failed(answer.failure);
   return (await draws.parse(answer.bytes, answer.type)) ?? { kind: 'not-a-picture' };
 }

@@ -38,7 +38,7 @@ export interface DeviceCache {
   forget(): Promise<void>;
 }
 
-export const SCOPED = new Set<string>(['entry', 'memory', 'illustration', 'inlay', 'textfile', 'toolchat', 'cacheprint', 'remark']);
+export const SCOPED = new Set<string>(['entry', 'memory', 'illustration', 'speech', 'inlay', 'textfile', 'toolchat', 'cacheprint', 'remark']);
 // Never held: read only by walking their parent (ObjectStore.walk), which caches them under it as a chat scope is.
 export const WALKED = new Set<string>(['ledger', 'original']);
 // The kinds the feed carries without their bodies.

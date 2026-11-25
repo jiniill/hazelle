@@ -12,6 +12,7 @@ import type { AccountFacts, Standing } from '../runtime/account/account';
 import type { Memory } from '../model/memory';
 import type { Files } from '../runtime/files/files';
 import type { Illustrating } from '../runtime/tasks/illustrate';
+import type { Readings } from '../runtime/tasks/speech';
 import type { Commenting } from '../runtime/tasks/mascot';
 import type { StatusWriting } from '../runtime/tasks/status';
 import type { Polishing } from '../runtime/tasks/agents';
@@ -236,7 +237,7 @@ export function useBin() {
   return useMemo(() => ({ modules: binned(modules), prompts: binned(prompts), personas: binned(personas), profiles: binned(profiles) }), [modules, prompts, personas, profiles]);
 }
 // parent null is a chat not saved yet, which has none.
-export function useChildren<K extends 'lore' | 'asset' | 'illustration' | 'remark' | 'toolchat' | 'inlay'>(kind: K, parent: string | null): Stored<K>[] {
+export function useChildren<K extends 'lore' | 'asset' | 'illustration' | 'speech' | 'remark' | 'toolchat' | 'inlay'>(kind: K, parent: string | null): Stored<K>[] {
   const { read } = useSession();
   return useRead(parent === null ? null : read.children(kind, parent), snapshotNone);
 }
@@ -340,6 +341,11 @@ export function useChatMemory(id: string | null): Memory | null {
 export function useIllustrating(): Illustrating {
   const { illustrator } = useSession();
   return useSyncExternalStore(illustrator.subscribe, illustrator.snapshot);
+}
+
+export function useReadings(): Readings {
+  const { speaker } = useSession();
+  return useSyncExternalStore(speaker.subscribe, speaker.snapshot);
 }
 
 export function useStatusWriting(): StatusWriting {

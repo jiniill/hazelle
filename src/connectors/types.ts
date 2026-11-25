@@ -298,6 +298,7 @@ type TypeHooks = {
   // the lookup answers 404.
   settle?: { request(secret: string, id: string): HttpRequest; parse(payload: unknown): Cost | null };
   draws?: Draws;
+  speaks?: Speaks;
   // In place of its codec's (Vertex AI). null: the type serves no embeddings, or its codec's embeddings were not verified
   // against it (design §4, docs research/embeddings-spike.md).
   embeds?: Embeds | null;
@@ -378,6 +379,25 @@ export type Draws = {
   // Check cost with stored credentials before every draw. Only known-free pictures bypass user consent;
   // without this hook every picture requires consent.
   free?: { request(secret: string): HttpRequest; costs(payload: unknown, picture: PictureRequest): Costs | null };
+};
+
+// A voice a speech model reads in. about: the provider's own words on it, where it lists any.
+export type Voice = { id: string; name: string; about: string | null };
+export type SpeechRequest = { model: Model; voice: string; text: string };
+export type Spoken = { bytes: Uint8Array<ArrayBuffer>; type: string };
+export type VoicePage = { voices: Voice[]; next: string | null };
+
+// Reading text aloud (design §6.19). The speech models are the type's own list: no catalog the app reads marks one.
+export type Speaks = {
+  models: readonly Model[];
+  // The provider's limit on one request's text, in characters.
+  most(model: Model): number;
+  // The type's fixed voices, or the account's own, read a page at a time with its credential.
+  voices: readonly Voice[] | { request(secret: string, after: string | null): HttpRequest; parse(payload: unknown): VoicePage | null };
+  request(speech: SpeechRequest): HttpRequest;
+  authHeaders(secret: string): Record<string, string>;
+  // null when the answer holds no audio.
+  parse(body: Uint8Array<ArrayBuffer>, contentType: string | null): Spoken | null;
 };
 
 // plan: no free pictures on the plan. size, steps: the picture is past the free band. allowance: the free allowance
