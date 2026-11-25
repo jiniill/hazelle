@@ -68,12 +68,12 @@ export class DisplayPass {
     this.value = { texts, boxes, drawn: rendered.drawn, css: this.css(), picture: main ? assetUrl(main.id) : null, background: background.join('\n').trim(), pass: this.missing.size > 0, unfound: [...rendered.unfound!], sized: rendered.sized!.read, stopped: rendered.stopped ?? this.ownStop };
   }
 
-  patch(items: { version: string; text: string }[]): DisplayPatch {
+  patch(items: { version: string; text: string; wrote: [string, string][] }[]): DisplayPatch {
     const rows: DisplayPatch['rows'] = [];
-    for (const { version, text } of items) {
+    for (const { version, text, wrote } of items) {
       const index = this.byVersion.get(version);
       if (index === undefined) continue;
-      const next = this.rendered.finish!(index, text);
+      const next = this.rendered.finish!(index, text, wrote);
       if (next.stopped) this.rendered.failures.display.set(index, next.stopped);
       else this.rendered.failures.display.delete(index);
       this.textStyles[index] = [];

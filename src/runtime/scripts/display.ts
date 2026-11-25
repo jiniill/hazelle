@@ -3,20 +3,22 @@ import type { Display } from '../../engine/display';
 import type { DisplayBatch, Displayed, Script } from '../../engine/lua/run';
 import type { Snapshot } from '../../engine/lua/state';
 import type { ChatScope, Missed } from '../../engine/render';
-import type { Chat, Message } from '../../model/chat';
+import { shown, type Chat, type Message, type Writes } from '../../model/chat';
 import type { UnfoundAssets } from '../files/assets';
 import { EvaluationStopped, EvaluationStuck } from '../evaluation/evaluation';
+import { noteStep } from '../diagnostics/auto-diagnosis';
 
 import { luaSnapshot, luaStanding } from './lua/snapshot';
 import { scriptsOf } from './selection';
 import type { ScriptExecution } from './execution';
-import type { ScriptEffects } from './effects';
+import { onLast, type ScriptEffects } from './effects';
+import { noOutcome } from './binding';
 import type { ToolUnit } from '../../model/tool';
 import type { ObjectStore } from '../store/store';
 import { packsOf, pinned, scopeOf } from '../chat/chat-context';
 
 // tools: those that may answer showing, run over each stretch after the Lua (ScriptExecution.showing).
-type Pass = { revision: number; generation: number; scripts: Script[]; tools: ToolUnit[]; scope: ChatScope; snapshot: Snapshot; items: Missed[]; remaining: number; installed: boolean; view: Display; signal?: AbortSignal };
+type Pass = { revision: number; generation: number; scripts: Script[]; tools: ToolUnit[]; chat: Chat; messages: Message[]; scope: ChatScope; snapshot: Snapshot; items: Missed[]; remaining: number; installed: boolean; view: Display; signal?: AbortSignal };
 // generation: the number its passes are stamped with, new whenever the basis is or reloadDisplay asks, and never used
 // twice, so a stretch begun under an older one lands as a last result and never as a fresh one.
 type Basis = { parts: string[]; generation: number };
@@ -25,6 +27,11 @@ type Basis = { parts: string[]; generation: number };
 // 2026-10-02), so a pass is cut into stretches of about this long, sized by how the last one went.
 const STRETCH_MS = 200;
 const STRETCH_MOST = 512;
+// How many times running a chat's passes may keep what they wrote with none between that wrote nothing: a listener
+// that writes anew on every pass (a counter) would otherwise save, be passed again and save without end.
+const KEPT_RUN = 3;
+
+const same = (one: unknown, other: unknown) => JSON.stringify(one) === JSON.stringify(other);
 
 // The open chats' displays with the bot's Lua editDisplay pass laid over them (design §6.8). Pending rows keep their
 // last result until a new pass lands; rows with no result wait empty when the bot listens. Completion patches only
@@ -44,6 +51,10 @@ export class ScriptDisplay {
   private readonly listens = new Map<string, boolean>();
   // The displays asked for and not answered yet, by chat.
   private readonly asked = new Map<string, number>();
+  // What the passes of the rows that show a chat's present state (its last message, its greeting) wrote, by version,
+  // until settle keeps it; and how many times running each chat's were kept.
+  private readonly wrote = new Map<string, Map<string, Writes>>();
+  private readonly kept = new Map<string, number>();
 
   private readonly stopReload: () => void;
 
@@ -53,7 +64,7 @@ export class ScriptDisplay {
     private readonly report: (chat: string, result: Displayed | unknown) => void,
     private readonly unfound: UnfoundAssets,
     private readonly tools: Pick<ScriptExecution, 'showers' | 'showing'>,
-    effects: Pick<ScriptEffects, 'subscribeReload'>,
+    private readonly effects: Pick<ScriptEffects, 'subscribeReload' | 'event'>,
   ) {
     this.stopReload = effects.subscribeReload((chat) => this.stale(chat));
   }
@@ -84,6 +95,8 @@ export class ScriptDisplay {
     if (pass) void this.runner?.then((runner) => runner.forgetDisplay(chat, pass.revision));
     this.passes.delete(chat);
     this.bases.delete(chat);
+    this.wrote.delete(chat);
+    this.kept.delete(chat);
     this.characters.delete(chat);
     this.store.evaluation.forget({ asker: 'screen', chat });
   }
@@ -127,11 +140,51 @@ export class ScriptDisplay {
     const generation = this.generation(id, [String(all.length), ...all.map(({ code }) => code), String(tools.length), ...tools.map(({ module, tool }) => `${module}:${tool.file.id}`), ...standing.globals.flat(), character.name, character.description, character.firstMessage, persona.name, persona.description, standing.note]);
     const { display, work } = await this.store.evaluation.display({ asker: 'screen', chat: id }, scope, take, signal, { waits, generation, revision });
     if (!this.listeners.has(id) || signal?.aborted) return this.told(id, display);
+    const wrote = this.wrote.get(id);
+    if (wrote) for (const item of work?.items ?? []) wrote.delete(item.version);
+    this.settle(id, chat, messages, scope);
     if (work) {
-      this.passes.set(id, { revision, generation, scripts, tools, scope, snapshot: luaSnapshot(scope, standing, work.staged, work.start), items: work.items, remaining: work.items.length, installed: false, view: display, signal });
+      this.passes.set(id, { revision, generation, scripts, tools, chat, messages, scope, snapshot: luaSnapshot(scope, standing, work.staged, work.start), items: work.items, remaining: work.items.length, installed: false, view: display, signal });
       this.drain(id);
     } else this.passes.delete(id);
     return this.told(id, display);
+  }
+
+  // Risu keeps what editDisplay writes at once, in the chat's one bag, and bots set their state up there (a greeting's
+  // picker that the same message's CBS then reads). Here a write stands on a message, so only the rows that show the
+  // present state keep theirs, where a press's stand: on the last message, the last message's before the greeting's.
+  // Not before the store holds what the pass read: a reply still being written is no message yet, and a press saved
+  // since has the last word.
+  private settle(id: string, chat: Chat, messages: Message[], scope: ChatScope) {
+    const held = this.wrote.get(id);
+    if (!held) return;
+    const present = new Set([scope.messages.at(-1)?.id, scope.greeting === null ? undefined : scope.messages[0]?.id]);
+    for (const version of held.keys()) if (!present.has(version)) held.delete(version);
+    if (!held.size) return;
+    const writes = [...present].flatMap((version) => held.get(version!) ?? []);
+    if (!writes.length) {
+      this.wrote.delete(id);
+      this.kept.delete(id);
+      return;
+    }
+    if (!this.stored(id, chat, messages)) return;
+    this.wrote.delete(id);
+    const run = (this.kept.get(id) ?? 0) + 1;
+    this.kept.set(id, run);
+    noteStep(run > KEPT_RUN ? 'display-writes:held' : 'display-writes:kept', writes.length);
+    if (run > KEPT_RUN) return;
+    void this.effects.event(id, scope, { ...noOutcome(), writes }, onLast(scope), null);
+  }
+
+  // Whether the store's chat is the one read, as far as its state goes: the same versions shown, with the same writes.
+  private stored(id: string, chat: Chat, messages: Message[]): boolean {
+    if (this.store.scopeState(id) !== 'loaded') return false;
+    const now = this.store.foldedChat(id).messages;
+    const state = (message: Message) => {
+      const { id, before, after, byHand } = shown(message);
+      return [id, before, after, byHand, message.after];
+    };
+    return same(this.store.get('chat', id)?.value.variables, chat.variables) && now.length === messages.length && now.every((message, at) => same(state(message), state(messages[at]!)));
   }
 
   private told(chat: string, shown: Display): Display {
@@ -173,7 +226,7 @@ export class ScriptDisplay {
         const began = performance.now();
         let batch: DisplayBatch;
         try {
-          if (pass.scripts.every(({ code }) => this.listens.get(code) === false)) batch = { texts: items.map((item) => item.text), listening: pass.scripts.map(() => false), errors: [], missing: [], from, remaining: from };
+          if (pass.scripts.every(({ code }) => this.listens.get(code) === false)) batch = { texts: items.map((item) => item.text), writes: [], listening: pass.scripts.map(() => false), errors: [], missing: [], from, remaining: from };
           else {
             const runner = await (this.runner ??= this.open());
             if (!pass.installed) {
@@ -184,6 +237,16 @@ export class ScriptDisplay {
           }
           this.report(chat, batch);
           batch.listening.forEach((listening, at) => this.listens.set(pass.scripts[at]!.code, listening));
+          if (this.passes.get(chat) === pass) {
+            const { messages, greeting } = pass.scope;
+            const present = new Set([messages.at(-1)?.id, greeting === null ? undefined : messages[0]?.id]);
+            const wrote = this.wrote.get(chat) ?? new Map<string, Writes>();
+            batch.writes.forEach((writes, at) => {
+              const { version } = items[at]!;
+              if (present.has(version)) this.wrote.set(chat, wrote.set(version, writes));
+            });
+            this.settle(chat, pass.chat, pass.messages, pass.scope);
+          }
           if (pass.tools.length) {
             const lua = batch;
             batch = { ...lua, texts: await this.tools.showing(chat, pass.tools, pass.scope, pass.items.slice(lua.from, lua.from + lua.texts.length).map((item, at) => ({ version: item.version, text: lua.texts[at]! }))) };
@@ -192,11 +255,11 @@ export class ScriptDisplay {
           // A pass that cannot be made shows the texts as they were, rather than nothing.
           this.report(chat, error);
           pass.installed = false;
-          batch = { texts: items.map((item) => item.text), listening: [], errors: [], missing: [], from, remaining: from };
+          batch = { texts: items.map((item) => item.text), writes: [], listening: [], errors: [], missing: [], from, remaining: from };
         }
         size = Math.min(STRETCH_MOST, Math.max(1, Math.round((STRETCH_MS * items.length) / Math.max(1, performance.now() - began))));
         pass.remaining = batch.remaining;
-        const rows = pass.items.slice(batch.from, batch.from + batch.texts.length).map((item, at) => ({ version: item.version, text: item.text, stamp: item.stamp, shown: batch.texts[at]! }));
+        const rows = pass.items.slice(batch.from, batch.from + batch.texts.length).map((item, at) => ({ version: item.version, text: item.text, stamp: item.stamp, shown: batch.texts[at]!, wrote: batch.writes[at] ?? [] }));
         try {
           const patch = await this.store.evaluation.patch({ asker: 'screen', chat }, pass.revision, pass.generation, rows);
           if (!patch || pass.signal?.aborted || this.passes.get(chat) !== pass || !this.listeners.has(chat)) continue;

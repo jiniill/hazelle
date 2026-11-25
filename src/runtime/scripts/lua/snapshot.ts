@@ -15,7 +15,7 @@ function cbsScope({ card, persona, prompt, promptOut, note, lore, loreFolders, l
 export function luaSnapshot(scope: ChatScope, standing: LuaStanding, staged: string[], variables: [string, string][]): Snapshot {
   const greeting = scope.greeting === null ? 0 : 1;
   return {
-    messages: scope.messages.slice(greeting).map(({ role, time }, index) => ({ role: role === 'user' ? 'user' : 'char', data: staged[index + greeting]!, time: time ?? 0 })),
+    messages: scope.messages.slice(greeting).map(({ role, time, message }, index) => ({ role: role === 'user' ? 'user' : 'char', data: staged[index + greeting]!, time: time ?? 0, chatId: message })),
     variables,
     ...standing,
     scope: cbsScope(scope),

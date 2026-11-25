@@ -10,7 +10,7 @@ const labels = (text: string, place: 'code' | 'string' = 'code') => language.com
 describe('Lua code editor', () => {
   it('makes each argument but id a stop, and awaits what returns a promise', () => {
     expect(callTemplate(api('setChatVar'))).toBe('setChatVar(id, ${1:이름}, ${2:값})${0}');
-    expect(callTemplate(api('alertInput'))).toBe('alertInput(id, ${1:질문}):await()${0}');
+    expect(callTemplate(api('alertInput'))).toBe('alertInput(id, ${1:질문}, ${2:기본값}):await()${0}');
   });
 
   it('offers the code’s own names, never a name only called, which is a typo of the API', () => {

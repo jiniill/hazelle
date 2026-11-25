@@ -13,7 +13,7 @@ import { applyTail, type Tail } from './history-delta';
 import { tokenizer } from './tokenizer';
 import type { Sign } from '../worker';
 
-type LuaText = { text: string; stamp: string; shown: string };
+type LuaText = { text: string; stamp: string; shown: string; wrote: [string, string][] };
 const stamped = (generation: number, stamp: string) => `${generation}/${stamp}`;
 export type EvaluationJob =
   | { kind: 'cache-diagnosis'; input: CacheComparison }
@@ -103,9 +103,9 @@ export class Evaluator {
       const current = this.displays.get(input.lane);
       if (!current) return null;
       const held = this.held.get(input.lane)!;
-      for (const item of input.patch.items) held.set(item.version, { text: item.text, stamp: stamped(input.patch.generation, item.stamp), shown: item.shown });
+      for (const item of input.patch.items) held.set(item.version, { text: item.text, stamp: stamped(input.patch.generation, item.stamp), shown: item.shown, wrote: item.wrote });
       if (current.revision !== input.patch.revision) return null;
-      const patch = current.pass.patch(input.patch.items.map(({ version, shown }) => ({ version, text: shown })));
+      const patch = current.pass.patch(input.patch.items.map(({ version, shown, wrote }) => ({ version, text: shown, wrote })));
       if (!patch.pass) this.displays.delete(input.lane);
       return patch;
     }
@@ -195,7 +195,7 @@ export class Evaluator {
     if (lua) this.held.set(lane, held);
     const edited: LuaDisplay | undefined = lua && ((version, text, stamp) => {
       const had = held.get(version);
-      return had ? { text: had.shown, fresh: had.text === text && had.stamp === stamped(lua.generation, stamp) } : lua.waits ? null : { text, fresh: false };
+      return had ? { text: had.shown, wrote: had.wrote, fresh: had.text === text && had.stamp === stamped(lua.generation, stamp) } : lua.waits ? null : { text, wrote: [], fresh: false };
     });
     // CBS can read later messages and threads variables forward: always display the whole chat, never only its tail.
     const pass = new DisplayPass(scope, job.take, edited);

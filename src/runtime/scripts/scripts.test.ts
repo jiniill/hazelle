@@ -363,6 +363,65 @@ describe("the display with the bot's Lua", () => {
       leave();
     }));
 
+  it('keeps what the present rows\' editDisplay wrote, for the same message\'s CBS and the presses after it', () =>
+    server.withSession(async (session) => {
+      const { chat, messages } = await chatWith(
+        session,
+        `listenEdit('editDisplay', function(id, value)
+          if getChatVar(id, 'setup') == 'null' then setChatVar(id, 'setup', '0') end
+          return value .. ' <{{getvar::setup}}>'
+        end)
+        function pick(id) setChatVar(id, 'setup', getChatVar(id, 'setup') .. '1') end`,
+      );
+      const opening = { chat: session.store.get('chat', chat)!.value, messages: messages() };
+      const screen = session.read.screen(chat, session.talk, session.illustrator, opening, session.display);
+      const leave = screen.subscribe(() => {});
+      screen.setInputs(opening, { width: 1200, height: 800 });
+      await expect.poll(() => screen.snapshot().display.texts).toEqual(['어서 와. <0>']);
+      expect(messages()[0]!.after).toEqual([['setup', '0']]);
+      await session.scriptCommands.press(chat, { trigger: 'pick', id: '' }).answered;
+      await expect.poll(() => screen.snapshot().display.texts).toEqual(['어서 와. <01>']);
+      expect(messages()[0]!.after).toEqual([['setup', '0'], ['setup', '01']]);
+      leave();
+    }));
+
+  it('reads in a message\'s own CBS what its editDisplay wrote, kept or not', () =>
+    server.withSession(async (session) => {
+      const { chat, messages } = await chatWith(session, `listenEdit('editDisplay', function(id, value, meta)
+        if meta.index == 0 then setChatVar(id, 'mark', 'x') end
+        return value .. ' <{{getvar::mark}}>'
+      end)`);
+      stubRelay(() => saying('왔구나'));
+      await takeTurn(session, chat, { kind: 'send', text: '안녕' });
+      const opening = { chat: session.store.get('chat', chat)!.value, messages: messages() };
+      const screen = session.read.screen(chat, session.talk, session.illustrator, opening, session.display);
+      const leave = screen.subscribe(() => {});
+      screen.setInputs(opening, { width: 1200, height: 800 });
+      await expect.poll(() => screen.snapshot().display.texts).toEqual(['어서 와. <null>', '안녕 <x>', '왔구나 <null>']);
+      expect(messages().some((message) => message.after)).toBe(false);
+      leave();
+    }));
+
+  it('stops keeping the writes of a listener that writes anew on every pass', () =>
+    server.withSession(async (session) => {
+      const { chat, messages } = await chatWith(session, `listenEdit('editDisplay', function(id, value)
+        setChatVar(id, 'n', tostring((tonumber(getChatVar(id, 'n')) or 0) + 1))
+        return value .. ' <{{getvar::n}}>'
+      end)`);
+      const lua = luaDisplays();
+      const opening = { chat: session.store.get('chat', chat)!.value, messages: messages() };
+      const screen = session.read.screen(chat, session.talk, session.illustrator, opening, session.display);
+      const leave = screen.subscribe(() => {});
+      screen.setInputs(opening, { width: 1200, height: 800 });
+      await expect.poll(() => lua.display.mock.calls.length).toBe(4);
+      await expect.poll(() => screen.snapshot().pending).toBeUndefined();
+      // The fourth pass's write is read by its own message and kept by no one.
+      expect(screen.snapshot().display.texts).toEqual(['어서 와. <4>']);
+      expect(messages()[0]!.after).toEqual([['n', '1'], ['n', '2'], ['n', '3']]);
+      lua.display.mockRestore();
+      leave();
+    }));
+
   it('shows a screen that takes a chat over from another in one commit', () =>
     server.withSession(async (session) => {
       const { chat, messages } = await chatWith(session, '');

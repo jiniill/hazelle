@@ -145,7 +145,7 @@ it('gives a sign of life per stage of each message, per CBS read, script and fin
   try {
     const pass = new DisplayPass({ ...scope, messages: [message('a', 'user', 'one'), message('b', 'assistant', 'two')] }, new Set(), () => null);
     expect(signs.splice(0).join(' ')).toBe('message cbs show cbs regex finish message cbs regex show cbs regex finish cbs regex styles');
-    pass.patch([{ version: 'b', text: 'done' }]);
+    pass.patch([{ version: 'b', text: 'done', wrote: [] }]);
     expect(signs.join(' ')).toBe('show cbs regex finish styles');
   } finally {
     onProgress(() => {});
@@ -160,14 +160,14 @@ it('finishes newest-first Lua patches like a full display, including variable hi
   const runaway = '{{settempvar::x::ab}}' + '{{settempvar::x::{{gettempvar::x}}{{gettempvar::x}}}}'.repeat(24);
   const values = new Map<string, string>([['b', runaway]]);
   const complete = new Set<string>();
-  const lua: LuaDisplay = (id) => values.has(id) ? { text: values.get(id)!, fresh: complete.has(id) } : null;
+  const lua: LuaDisplay = (id) => values.has(id) ? { text: values.get(id)!, wrote: [], fresh: complete.has(id) } : null;
   const take = new Set([1]);
   const pass = new DisplayPass(changed, take, lua);
   expect(pass.value.stopped).not.toBeNull();
   for (const [version, text] of [['b', '<style>.last { color: blue }</style>BOX {{getvar::hp}}'], ['a', '<style>.first { color: red }</style>BOX {{getvar::hp}}']]) {
     values.set(version!, text!);
     complete.add(version!);
-    pass.patch([{ version: version!, text: text! }]);
+    pass.patch([{ version: version!, text: text!, wrote: [] }]);
     expect(pass.value).toEqual(display(changed, take, lua));
   }
   expect(pass.value.texts[0]).toContain('8');

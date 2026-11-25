@@ -8,7 +8,8 @@ import { NO_AUTOFILL } from '../foundation/noAutofill';
 import { Hint, type Help } from '../overlays/Hint';
 import styles from './AskCard.module.css';
 
-export type AskAnswer = { kind: 'line' } | { kind: 'choices'; choices: { label: string; value: string | null; primary?: boolean }[] };
+// filled: what the line starts with.
+export type AskAnswer = { kind: 'line'; filled?: string } | { kind: 'choices'; choices: { label: string; value: string | null; primary?: boolean }[] };
 
 type Props = {
   from: { name: string; face: string | null };
@@ -35,7 +36,7 @@ export function AskCard({ from, text, help, answer, onAnswer }: Props) {
         </div>
       )}
       {answer.kind === 'line' ? (
-        <Line onSubmit={onAnswer} />
+        <Line filled={answer.filled ?? ''} onSubmit={onAnswer} />
       ) : (
         <div className={`${styles.answer} ${styles.choices}`}>
           {answer.choices.map(({ label, value, primary }, index) => (
@@ -49,8 +50,8 @@ export function AskCard({ from, text, help, answer, onAnswer }: Props) {
   );
 }
 
-function Line({ onSubmit }: { onSubmit: (value: string) => void }) {
-  const [draft, setDraft] = useState('');
+function Line({ filled, onSubmit }: { filled: string; onSubmit: (value: string) => void }) {
+  const [draft, setDraft] = useState(filled);
   return (
     <div className={styles.answer}>
       <input

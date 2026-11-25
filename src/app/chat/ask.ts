@@ -12,7 +12,7 @@ export const isConsent = (question: ScriptQuestion['question']) => question.kind
 export function asking(question: ScriptQuestion['question'], asker: Asker): { text?: string; help?: string; answer: AskAnswer } {
   switch (question.kind) {
     case 'input':
-      return { text: question.text, answer: { kind: 'line' } };
+      return { text: question.text, answer: { kind: 'line', ...(question.filled !== undefined && { filled: question.filled }) } };
     case 'confirm':
       return { text: question.text, answer: { kind: 'choices', choices: [{ label: '예', value: 'yes', primary: true }, { label: '아니요', value: null }] } };
     case 'select':

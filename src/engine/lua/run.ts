@@ -19,7 +19,8 @@ export type Script = Pick<Extract<ScriptUnit, { kind: 'lua' }>, 'kind' | 'name' 
 export type DisplayItem = { index: number; text: string; variables: [string, string][] };
 // listening: false for a script whose engine holds no editDisplay listener, which has no part in any pass.
 export type Displayed = { texts: string[]; listening: boolean[]; errors: ScriptError[]; missing: string[]; trace?: HookTrace };
-export type DisplayBatch = Displayed & { from: number; remaining: number };
+// writes: what each item's listeners wrote, over the state as of it.
+export type DisplayBatch = Displayed & { writes: [string, string][][]; from: number; remaining: number };
 type DisplaySession = { revision: number; scripts: Script[]; snapshot: Snapshot; items: DisplayItem[]; variables: Map<string, string>; undo: [string, string | undefined][][]; remaining: number; messages: Working[]; globals: Map<string, string> };
 
 // Only idle worksets count toward this budget. Splitting an active script set loses globals and thrashes every pass.
@@ -59,7 +60,7 @@ type Workset = { engines: Map<string, Promise<Engine>>; codes: Set<string>; held
 
 const failure = (run: Run | null, error: unknown): Failure => (run?.ranAway ? { runaway: true } : { message: errorMessage(error) });
 const roleOf = (value: unknown): Working['role'] => (value === 'user' ? 'user' : 'char');
-const view = ({ role, data, time }: Working) => ({ role, data, time });
+const view = ({ role, data, time, chatId }: Working) => ({ role, data, time, chatId });
 
 const handler = (event: string) => `on${event[0]!.toUpperCase()}${event.slice(1)}`;
 // A press named for one of these calls its handler, as Risu's risu-trigger="input" calls onInput.
@@ -235,7 +236,7 @@ export class Lua {
   }
 
   // Each item's text after every script's editDisplay listeners, in order; an item a script fails on keeps the text
-  // it had. Stretches start newest-first, but each stretch threads its input variable deltas oldest-first.
+  // it had. No item reads what another's listeners wrote. Stretches start newest-first, but each stretch threads its input variable deltas oldest-first.
   async display(owner: string, revision: number, size: number): Promise<DisplayBatch> {
     const session = this.displays.get(owner);
     if (!session || session.revision !== revision) throw new Error('Display session expired');
@@ -256,6 +257,7 @@ export class Lua {
       const trace: HookTrace = { entries: [], omitted: 0 };
       const missing = new Set<string>();
       const texts = items.map((item) => item.text);
+      const writes = items.map((): [string, string][] => []);
       const listening = scripts.map(() => true);
       for (const [place, script] of scripts.entries()) {
         const engine = await this.engine(workset, script);
@@ -283,6 +285,7 @@ export class Lua {
             } finally {
               entry.duration = performance.now() - began;
               entry.changed = texts[at] !== before;
+              writes[at]!.push(...run.written);
               // A display pass runs once per shown message; a quiet run kept here would push the turn's hooks out of
               // the page log's bound.
               if (entry.logs.length || entry.errors.length) keepTrace(trace, entry);
@@ -293,7 +296,7 @@ export class Lua {
         });
       }
       if (from === 0 && this.displays.get(owner) === session) this.displays.delete(owner);
-      return { texts, listening, errors, missing: [...missing], trace, from, remaining: from };
+      return { texts, writes, listening, errors, missing: [...missing], trace, from, remaining: from };
     } finally {
       this.release(workset);
     }
@@ -527,14 +530,20 @@ export class Lua {
     act('addChat', (run, role: unknown, value: unknown) => add(run, roleOf(role), text(value)));
     act('insertChat', (run, index: number, role: unknown, value: unknown) => void run.messages.splice(index, 0, { origin: null, role: roleOf(role), data: text(value), time: Date.now(), first: '' }));
 
-    // The messages given take the chat's place. One at the place of a message of its role is that message, edited;
-    // any other is new, and a message no longer at its place is removed.
+    // The messages given take the chat's place. One that names a message of its role by chatId is that message, edited,
+    // wherever it now stands, as in Risu, so one taken out of the middle costs the later ones nothing; one that names
+    // none is the message at its place, when that is of its role and no other took it. Any other is new, and a message
+    // no longer among them is removed.
     act('setFullChatMain', (run, value: string) => {
-      const given = (JSON.parse(value) as { role?: unknown; data?: unknown }[]).map((message) => ({ role: roleOf(message.role), data: text(message.data) }));
+      const given = (JSON.parse(value) as { role?: unknown; data?: unknown; chatId?: unknown }[]).map((message) => ({ role: roleOf(message.role), data: text(message.data), chatId: message.chatId }));
       const had = run.messages;
-      run.messages = given.map(({ role, data }, index) => {
-        const at = had[index];
-        return at && at.origin !== null && at.role === role ? { ...at, data } : { origin: null, role, data, time: Date.now(), first: '' };
+      const named = new Map(had.flatMap((message): [string, Working][] => (message.chatId === undefined ? [] : [[message.chatId, message]])));
+      const taken = new Set<Working>();
+      run.messages = given.map(({ role, data, chatId }, index) => {
+        const at = typeof chatId === 'string' ? named.get(chatId) : had[index];
+        if (!at || at.origin === null || at.role !== role || taken.has(at)) return { origin: null, role, data, time: Date.now(), first: '' };
+        taken.add(at);
+        return { ...at, data };
       });
     });
 
@@ -565,7 +574,7 @@ export class Lua {
     act('stopChat', (run) => void (run.stop = true));
     act('alertNormal', (run, value: unknown) => run.host.say('normal', text(value), run.owner));
     act('alertError', (run, value: unknown) => run.host.say('error', text(value), run.owner));
-    act('alertInput', (run, value: unknown) => run.host.ask({ kind: 'input', text: text(value) }, run.owner).then((answer) => answer ?? ''));
+    act('alertInput', (run, value: unknown, filled: unknown) => run.host.ask({ kind: 'input', text: text(value), ...(typeof filled === 'string' && { filled }) }, run.owner).then((answer) => answer ?? ''));
     act('alertConfirm', (run, value: unknown) => run.host.ask({ kind: 'confirm', text: text(value) }, run.owner).then((answer) => answer !== null));
     act('alertSelect', (run, options: unknown) => run.host.ask({ kind: 'select', options: Object.values((options ?? {}) as Record<string, unknown>).map(text) }, run.owner).then((answer) => answer ?? ''));
     act('reloadDisplay', (run) => void (run.reload = true));

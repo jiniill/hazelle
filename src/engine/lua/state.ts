@@ -5,8 +5,9 @@ import { evaluate, Runaway } from '../cbs/evaluate';
 import { TOGGLE_GLOBAL, unsetValue } from '../cbs/tags';
 import { contexts, defaultVariables, type ChatScope } from '../render';
 
-// A message as a script reads it: role and data are Risu's names, which bots index by.
-export type LuaMessage = { role: 'user' | 'char'; data: string; time: number };
+// A message as a script reads it: role, data and chatId are Risu's names, which bots index by. chatId: the message's
+// id, which setFullChat knows it by again.
+export type LuaMessage = { role: 'user' | 'char'; data: string; time: number; chatId: string };
 
 // Snapshot excludes greeting; messages are post-script, variables are story-local, globals carry toggles.
 // scope omits non-worker data and fields scripts cannot read (packs, cast, duplicate toggles).
@@ -20,9 +21,10 @@ export type Snapshot = {
   note: string;
 };
 
-export type Working = { origin: number | null; role: 'user' | 'char'; data: string; time: number; first: string };
+// chatId: none for a message the run itself added, as Risu's has none.
+export type Working = { origin: number | null; role: 'user' | 'char'; data: string; time: number; chatId?: string; first: string };
 
-// Quiet display runs discard writes/external effects. Overlay writes in written; never mutate variables.
+// Quiet display runs discard external effects. Overlay writes in written; never mutate variables.
 // ranAway carries a CBS stop because the Lua boundary converts Runaway to Error.
 // chat parents local lore writes, which replace entries by name.
 export type Run = {

@@ -21,11 +21,11 @@ export const LUA_API: readonly LuaFunction[] = [
   fn('setState(id, 이름, 값)', '테이블이나 숫자를 JSON으로 채팅 변수에 저장해요.'),
   fn('setStateChanged(id, 이름, 값)', 'setState와 같지만 값이 달라질 때만 저장하고, 저장했으면 true예요.'),
 
-  fn('getChat(id, 번호)', '해당 번호의 메시지를 { role, data, time } 테이블로 가져와요. 번호는 0부터 시작하며 -1은 마지막 메시지예요.'),
+  fn('getChat(id, 번호)', '해당 번호의 메시지를 { role, data, time, chatId } 테이블로 가져와요. 번호는 0부터 시작하며 -1은 마지막 메시지예요.'),
   fn('getChatData(id, 번호)', '해당 메시지의 텍스트예요.'),
   fn('getChatRole(id, 번호)', '해당 메시지를 보낸 역할이에요. user 또는 char예요.'),
   fn('getChatLength(id)', '메시지 개수예요. 첫인사는 세지 않아요.'),
-  fn('getFullChat(id)', '모든 메시지를 { role, data, time } 배열로 가져와요.'),
+  fn('getFullChat(id)', '모든 메시지를 { role, data, time, chatId } 배열로 가져와요.'),
   fn('getRecentChats(id, 개수)', '마지막 메시지들을 개수만큼 읽어요.'),
   fn('getCharacterLastMessage(id)', '캐릭터의 마지막 메시지예요. 없으면 첫인사예요.'),
   fn('getUserLastMessage(id)', '내가 보낸 마지막 메시지예요.'),
@@ -51,7 +51,7 @@ export const LUA_API: readonly LuaFunction[] = [
 
   fn('alertNormal(id, 글)', '알림을 띄워요.'),
   fn('alertError(id, 글)', '오류 알림을 띄워요.'),
-  fn('alertInput(id, 질문)', '사용자에게 텍스트를 입력받아요. 창을 닫으면 빈 문자열을 반환해요.', true),
+  fn('alertInput(id, 질문, 기본값)', '사용자에게 텍스트를 입력받아요. 기본값을 주면 입력란에 미리 채워져요. 창을 닫으면 빈 문자열을 반환해요.', true),
   fn('alertConfirm(id, 질문)', '사용자에게 확인 창을 띄워요. 예를 누르면 true를 반환해요.', true),
   fn('alertSelect(id, 선택지들)', '선택지 중 하나를 선택하게 해요. 선택한 번호(0부터 시작)를 문자열로 반환하고, 창을 닫으면 빈 문자열을 반환해요.', true),
   fn('reloadDisplay(id)', '화면을 다시 그려요.'),

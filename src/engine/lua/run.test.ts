@@ -278,6 +278,28 @@ describe('Lua runs', () => {
     expect(outcome).toMatchObject({ edits: [{ index: 0, text: 'hello!' }], removed: [1], added: [{ role: 'user', text: 'again' }, { role: 'char', text: 'new' }] });
   });
 
+  it('knows a message handed back to setFullChat by its chatId, so one taken out of the middle costs the later ones nothing', async () => {
+    const outcome = await run(
+      `function onOutput(id)
+        local all = getFullChat(id)
+        setChatVar(id, 'first', all[1].chatId .. getChat(id, 1).chatId)
+        table.remove(all, 1)
+        all[1].data = all[1].data .. '!'
+        all[2] = { role = 'char', data = 'new', chatId = all[1].chatId }
+        setFullChat(id, all)
+      end`,
+      { kind: 'output' },
+    );
+    expect(outcome.errors).toEqual([]);
+    expect(outcome).toMatchObject({ writes: [['first', 'm1m2']], edits: [{ index: 1, text: 'hi there!' }], removed: [0], added: [{ role: 'char', text: 'new' }] });
+  });
+
+  it('hands alertInput\'s default to the host as what the line starts with', async () => {
+    const asked: unknown[] = [];
+    await run(`onStart = async(function(id) alertInput(id, 'name?', 'Jin'):await() alertInput(id, 'age?'):await() end)`, { kind: 'start' }, { ask: async (question) => { asked.push(question); return ''; } });
+    expect(asked).toEqual([{ kind: 'input', text: 'name?', filled: 'Jin' }, { kind: 'input', text: 'age?' }]);
+  });
+
   it("writes the chat's own lorebook by name with Risu's defaults, and reads its writes back in the same run", async () => {
     const chat = 'lore-chat';
     const own = { id: 'own', parent: chat, value: { ...SNAPSHOT.scope.lore[0]!.value, content: 'old' } };
@@ -360,7 +382,7 @@ describe('Lua display', () => {
     expect((await lua.display('refused', 1, 1)).texts).toEqual(['a:promise:nil']);
   });
 
-  it('edits each message with the state as of it and keeps none of its writes or acts', async () => {
+  it('edits each message with the state as of it, hands back its writes and keeps none of its acts', async () => {
     const code = `listenEdit('editDisplay', function(id, value, meta)
         log(value)
         alertNormal(id, 'never')
@@ -374,7 +396,7 @@ describe('Lua display', () => {
       { index: 1, text: 'b', variables: [['hp', '4']] },
     ]);
     const shown = await lua.display('display', 1, 2);
-    expect(shown).toMatchObject({ texts: ['a:0:10:hello', 'b:1:4:hello'], listening: [true], errors: [], missing: [], from: 0, remaining: 0 });
+    expect(shown).toMatchObject({ texts: ['a:0:10:hello', 'b:1:4:hello'], writes: [[['hp', 'changed']], [['hp', 'changed']]], listening: [true], errors: [], missing: [], from: 0, remaining: 0 });
     expect(shown.trace?.entries.map(({ stage, logs, writes, changed }) => ({ stage, logs, writes, changed }))).toEqual(['a', 'b'].map((text) => ({ stage: 'editDisplay', logs: [JSON.stringify(text)], writes: [['hp', 'changed']], changed: true })));
   });
 
@@ -411,7 +433,7 @@ describe('Lua display', () => {
     await lua.installDisplay('held', 1, scripts, SNAPSHOT, items);
     expect((await lua.display('held', 1, 2)).texts).toEqual(['b:2hello:hi therehi there:2', 'c:2hello:hi therehi there:2']);
     expect((await lua.display('held', 1, 2)).texts).toEqual(['a:2hello:hi therehi there:2']);
-    await lua.installDisplay('held', 2, scripts, { ...SNAPSHOT, messages: [{ role: 'user', data: 'again', time: 3 }] }, items.slice(0, 1));
+    await lua.installDisplay('held', 2, scripts, { ...SNAPSHOT, messages: [{ role: 'user', data: 'again', time: 3, chatId: 'm3' }] }, items.slice(0, 1));
     expect((await lua.display('held', 2, 1)).texts).toEqual(['a:1again:againagain:4']);
     const event = await run(`function onOutput(id) local before = getFullChat(id)[1].data setChat(id, 0, 'x') setChat(id, 1, before .. getFullChat(id)[1].data) end`, { kind: 'output' });
     expect(event.edits).toEqual([{ index: 0, text: 'x' }, { index: 1, text: 'hellox' }]);

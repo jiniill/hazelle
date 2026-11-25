@@ -126,7 +126,7 @@ it('does not let an older Lua patch cancel a newer whole-input revision', async 
   const first = await evaluation.display(screen(), { ...scope, messages: [message('a', 'one')] }, new Set(), undefined, { revision: 1, generation: 1, waits: true });
   const item = first.work!.items[0]!;
   const next = evaluation.display(screen(), { ...scope, messages: [message('a', 'two')] }, new Set(), undefined, { revision: 2, generation: 2, waits: true });
-  const old = evaluation.patch(screen(), 1, 1, [{ version: 'a', text: item.text, stamp: item.stamp, shown: 'obsolete' }]);
+  const old = evaluation.patch(screen(), 1, 1, [{ version: 'a', text: item.text, stamp: item.stamp, shown: 'obsolete', wrote: [] }]);
   expect((await next).display.texts).toEqual(['']);
   expect(await old).toBeNull();
   evaluation.close();

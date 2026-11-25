@@ -53,7 +53,8 @@ declare namespace Hazelle {
   // Display snapshot includes offscreen/hidden bodies and boxes, but no pictures.
   // html follows body order; css is the whole-chat bot sheet; text is rendered body text.
   type Rendered = { html: string; css: string; text: string };
-  type Question = { kind: 'input'; text: string } | { kind: 'confirm'; text: string } | { kind: 'select'; text?: string; options: string[] };
+  // filled: what the line to type starts with.
+  type Question = { kind: 'input'; text: string; filled?: string } | { kind: 'confirm'; text: string } | { kind: 'select'; text?: string; options: string[] };
   type Settings = Record<string, string | number | boolean>;
   // The chat's character card. id: the character's, the same in every chat with it. greeting: the card's first
   // message, null when it has none; alternates: its greetings after the first, at their places. scripts: its regex

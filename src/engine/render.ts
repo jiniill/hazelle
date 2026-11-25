@@ -67,8 +67,9 @@ export type ChatBasis = Omit<ChatScope, 'messages'>;
 
 // The bot's Lua editDisplay pass over the display, when its card listens for one (design §6.8): what a version's text
 // became, as far as the pass has run. fresh: it was run on this text at this state; otherwise it is the last one made,
-// shown until the new one lands. null: never run, and the message shows nothing until it is.
-export type LuaDisplay = (version: string, text: string, stamp: string) => { text: string; fresh: boolean } | null;
+// shown until the new one lands. null: never run, and the message shows nothing until it is. wrote: what the pass
+// wrote, which the message's own display stage reads over the state as of it, as Risu's CBS reads its Lua's writes.
+export type LuaDisplay = (version: string, text: string, stamp: string) => { text: string; wrote: [string, string][]; fresh: boolean } | null;
 
 export const authorNote = (note: string | null, prompt: ConversationPrompt) => note ?? prompt.authorNote;
 const marked = (prompt: ConversationPrompt, mark: 'main' | 'globalNote') => prompt.blocks.find((block): block is TextBlock => block.kind === 'text' && block.mark === mark)?.text ?? '';
@@ -120,7 +121,7 @@ export function renderChat(
   take: ReadonlySet<number> = new Set(),
   lua?: LuaDisplay,
   trace?: VariableTrace,
-): { texts: string[]; staged: string[]; wrote: [string, string][][]; start: [string, string][]; variables: Map<string, string>; drawn: number[][]; boxes: Box[][]; missed: Missed[]; unfound: Set<string> | null; sized: CbsContext['sized']; stopped: Runaway | null; finish: ((index: number, text: string) => ReturnType<typeof renderStage>) | null; failures: { input: Map<number, Runaway>; display: Map<number, Runaway> }; scripts: Scripts } {
+): { texts: string[]; staged: string[]; wrote: [string, string][][]; start: [string, string][]; variables: Map<string, string>; drawn: number[][]; boxes: Box[][]; missed: Missed[]; unfound: Set<string> | null; sized: CbsContext['sized']; stopped: Runaway | null; finish: ((index: number, text: string, wrote: [string, string][]) => ReturnType<typeof renderStage>) | null; failures: { input: Map<number, Runaway>; display: Map<number, Runaway> }; scripts: Scripts } {
   const unfound = stage === 'display' ? new Set<string>() : null;
   const sized = stage === 'display' ? { read: false } : null;
   const context = contexts(scope, stage, null, '', unfound, sized);
@@ -162,6 +163,7 @@ export function renderChat(
   };
   const shownAt = (index: number, place: number, version: string, replayed: string, stamp: string) => {
     let edited = replayed;
+    let wrote: [string, string][] | undefined;
     if (lua) {
       const held = lua(version, replayed, stamp);
       if (!held?.fresh) {
@@ -169,8 +171,9 @@ export function renderChat(
         variables.changed!.clear();
       }
       edited = held?.text ?? '';
+      wrote = held?.wrote;
     }
-    const shown = renderStage(stage, scripts, context, scope, index, edited, variables, take);
+    const shown = renderStage(stage, scripts, context, scope, index, edited, variables, take, wrote);
     if (shown.stopped) { stopped ??= shown.stopped; failures.display.set(index, shown.stopped); }
     return shown;
   };
@@ -224,12 +227,13 @@ export function renderChat(
     drawn[0] = shown.drawn;
     boxes[0] = shown.boxes;
   }
-  return { texts, staged: past, wrote, start, variables, drawn, boxes, missed, unfound, sized, stopped, finish: states ? (index, text) => renderStage(stage, scripts, context, scope, index, text, index === 0 && later ? variables : states.at(index), take) : null, failures, scripts };
+  return { texts, staged: past, wrote, start, variables, drawn, boxes, missed, unfound, sized, stopped, finish: states ? (index, text, wrote) => renderStage(stage, scripts, context, scope, index, text, index === 0 && later ? variables : states.at(index), take, wrote) : null, failures, scripts };
 }
 
-function renderStage(stage: Stage, scripts: Scripts, context: ReturnType<typeof contexts>, { inlays, textfiles, messages, keepsThoughts }: Pick<ChatScope, 'inlays' | 'textfiles' | 'messages' | 'keepsThoughts'>, index: number, text: string, variables: ReadonlyMap<string, string>, take: ReadonlySet<number>) {
+function renderStage(stage: Stage, scripts: Scripts, context: ReturnType<typeof contexts>, { inlays, textfiles, messages, keepsThoughts }: Pick<ChatScope, 'inlays' | 'textfiles' | 'messages' | 'keepsThoughts'>, index: number, text: string, variables: ReadonlyMap<string, string>, take: ReadonlySet<number>, wrote: [string, string][] = []) {
   progressed('show', index, null, text.length);
   const read = new Map(variables);
+  for (const [name, value] of wrote) read.set(name, value);
   let stopped: Runaway | null = null;
   let result: { text: string; drawn: number[]; boxes: Box[] };
   try {

@@ -6,8 +6,8 @@ export const OWNER = { kind: 'character', id: 'character' } as const;
 
 export const SNAPSHOT: Snapshot = {
   messages: [
-    { role: 'user', data: 'hello', time: 1 },
-    { role: 'char', data: 'hi there', time: 2 },
+    { role: 'user', data: 'hello', time: 1, chatId: 'm1' },
+    { role: 'char', data: 'hi there', time: 2, chatId: 'm2' },
   ],
   variables: [['hp', '10']],
   globals: [['toggle_hard', '1']],

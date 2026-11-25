@@ -9,7 +9,7 @@ import { LuaWorker, type Down, type Up } from './client';
 import { luaStanding } from './snapshot';
 
 const snapshot: Snapshot = {
-  messages: [{ role: 'user', data: 'first', time: 0 }, { role: 'char', data: 'last', time: 1 }], variables: [], globals: [],
+  messages: [{ role: 'user', data: 'first', time: 0, chatId: 'a' }, { role: 'char', data: 'last', time: 1, chatId: 'b' }], variables: [], globals: [],
   character: { name: '', description: '', firstMessage: '' }, persona: { name: '', description: '' }, note: '',
   scope: { card: null, persona: null, prompt: null, promptOut: false, note: null, lore: [], loreFolders: {}, loreScan: { scanDepth: 5, tokenBudget: 800, recursive: true, fullWordMatching: false }, variables: [], greeting: null, model: null, axModel: null, clock: { now: 0, timeZone: 'UTC' }, assets: [], inlays: [], textfiles: [], modules: [], faces: { char: null, user: null }, screen: null, pick: 'chat', messages: [
     { id: 'a', message: 'a', seed: 'a', role: 'user', text: 'first', time: 0 }, { id: 'b', message: 'b', seed: 'b', role: 'assistant', text: 'last', time: 1 },
@@ -27,7 +27,7 @@ it('installs history deltas once per revision and sends only revision/size for s
     onmessage: ((event: { data: Up }) => void) | null = null;
     postMessage(message: Down) {
       sent.push(structuredClone(message));
-      if ('id' in message) queueMicrotask(() => this.onmessage?.({ data: { kind: 'done', id: message.id, result: message.kind === 'install-display' ? null : { texts: [], listening: [], errors: [], missing: [], from: 0, remaining: 0 } } }));
+      if ('id' in message) queueMicrotask(() => this.onmessage?.({ data: { kind: 'done', id: message.id, result: message.kind === 'install-display' ? null : { texts: [], writes: [], listening: [], errors: [], missing: [], from: 0, remaining: 0 } } }));
     }
     terminate() {}
   });
