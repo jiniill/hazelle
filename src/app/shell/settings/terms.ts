@@ -17,7 +17,7 @@ const TERMS: Record<SettingsPage, string[]> = {
   models: [DEFAULT_MODELS, SCOPE.default, ...Object.values(MODEL_ROLES), STARRED, IDLE_MODELS, MODEL_SETTINGS, '기능별 모델', PROMPT_MODELS, '모델 이름', '모델 ID', '이미지 설정', PICTURE_INPUT, HOST],
   // Its rows are 대화's and the features' own labels, each a page here.
   features: [],
-  connections: ['모델', '계정', '계정 추가', '그룹', '전환일', '사용량과 한도', RETRY_COUNT, '사용 내역', '연결 이름', '키 변경', '모델 ID로 추가'],
+  connections: ['모델', '계정', '계정 추가', '그룹', '전환일', '사용량과 한도', RETRY_COUNT, '사용 내역', '연결 이름', '키 보기·변경', '토큰 보기', '모델 ID로 추가'],
   chat: [...Object.values(CHAT_DETAIL), MODEL_ROLES.main, RETRY_COUNT, '모델 도구 호출 횟수', ANSWER_INSTRUCTION_LABEL, ...Object.values(LORE_SCAN_WORDS).map(({ label }) => label)],
   translate: [TRANSLATE_SWITCHES.replies, '응답 번역 언어', TRANSLATE_SWITCHES.input, '내 메시지 번역 언어', '원문 함께 보기', TRANSLATE_SWITCHES.reverse, TRANSLATOR_NOTE, '번역 프롬프트', TASK_MODELS.translate],
   illustrate: ['자동 삽화', IMAGE_MODEL, '페르소나 시점', '만화 형식', '유료 생성 시 확인 생략', '삽화 프롬프트', TASK_MODELS.illustrate, '삽화 수', PICTURE_PLACE],

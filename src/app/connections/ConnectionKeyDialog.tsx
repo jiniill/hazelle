@@ -7,9 +7,10 @@ import { useSession } from '../session';
 import { useToast } from '../toast';
 import { Button, Callout, Dialog } from '../ui';
 import { KeyField } from './KeyField';
+import { StoredKey } from './StoredKey';
 
-// The stored key is never shown, so the field starts empty.
-export function ConnectionKeyDialog({ id, type, onClose }: { id: string; type: ConnectionType | null; onClose: () => void }) {
+// secret: the stored key, shown covered above an empty field for a new one. A 직접 연결 may hold none.
+export function ConnectionKeyDialog({ id, type, secret: stored, onClose }: { id: string; type: ConnectionType | null; secret: string; onClose: () => void }) {
   const session = useSession();
   const toast = useToast();
   const [key, setKey] = useState('');
@@ -30,7 +31,7 @@ export function ConnectionKeyDialog({ id, type, onClose }: { id: string; type: C
 
   return (
     <Dialog
-      title="키 변경"
+      title="키"
       onClose={onClose}
       onSubmit={submit}
       actionsLayout="full"
@@ -40,6 +41,7 @@ export function ConnectionKeyDialog({ id, type, onClose }: { id: string; type: C
         </Button>
       }
     >
+      {stored && <StoredKey label="저장된 키" secret={stored} lines={type?.keyForm?.lines} />}
       <KeyField type={type} value={key} onChange={setKey} />
       {failure && (
         <Callout tone="warn" alert>

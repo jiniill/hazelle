@@ -178,7 +178,7 @@ export function ConnectionModelsScreen({ stored, back }: { stored: Stored<'conne
     of: '연결',
     items: (
       <>
-        {!connection.turns && resolved && <MenuItem icon={KeyRound} label="키 변경" onClick={() => setKeying(true)} />}
+        {!connection.turns && resolved && <MenuItem icon={KeyRound} label="키 보기·변경" onClick={() => setKeying(true)} />}
         <MenuItem icon={ACTS.remove.icon} label={ACTS.remove.label} tone="warn" onClick={() => void remove()} />
       </>
     ),
@@ -239,7 +239,7 @@ export function ConnectionModelsScreen({ stored, back }: { stored: Stored<'conne
           onChange={(retries) => toast.settled(setRetries(store, id, retries))}
         />
       </DetailFold>
-      {keying && resolved && <ConnectionKeyDialog id={id} type={resolved.type} onClose={() => setKeying(false)} />}
+      {keying && resolved && <ConnectionKeyDialog id={id} type={resolved.type} secret={connection.accounts[0]!.secret} onClose={() => setKeying(false)} />}
       {copying && <NameDialog title={addOf(copying.name)} value={`${copying.name} ${entriesOf(connection, copying.id).length + 1}`} hint="이미 추가한 모델이에요. 이름과 모델 설정을 따로 두고 하나 더 추가해요." onSave={(label) => copy(copying, label)} onClose={() => setCopying(null)} />}
       {adding && <NameDialog title={BY_ID} field="모델 ID" value="" hint="목록에 없는 새 모델도 제공자가 쓰는 ID로 추가할 수 있어요." onSave={addById} onClose={() => setAdding(false)} />}
     </Screen>
