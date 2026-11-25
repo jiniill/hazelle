@@ -2,6 +2,7 @@ import type { Assignment, ModelRef } from '../connectors/assignment';
 import type { TranslateSwitches } from './chat';
 import type { FeatureSwitches } from './features';
 import type { IllustrateSwitches } from './illustration';
+import type { SpeechSwitches } from './speech';
 import type { MemorySettings } from './memory';
 import type { ToggleValues } from './prompt';
 
@@ -91,6 +92,7 @@ export type Settings = {
   toolOrder?: string[];
   translate?: TranslateSwitches;
   illustrate?: IllustrateSwitches;
+  speech?: SpeechSwitches;
   profile?: string;
   memory?: Partial<MemorySettings>;
   // Always-on modules, in activation order; missing modules read as off.

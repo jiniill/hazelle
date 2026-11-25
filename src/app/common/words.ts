@@ -304,7 +304,7 @@ export const statusEdit = (name: string) => `${name} 수정`;
 export const STATUS_RANGE = (min: number, max: number) => `${min}에서 ${max} 사이로 적어 주세요.`;
 export const STATUS_DONE = '끝낸 것';
 export const STATUS_HELP = '봇이나 프롬프트가 정해 둔 상태(호감도, 장소 등)를 응답마다 기록해요. 만드는 중인 기능이라 아직 일부만 동작해요.';
-export const FEATURE_NAMES: Record<Feature, string> = { translate: '번역', illustrate: '삽화', memory: '장기 기억', mascot: '마스코트', preread: PRE_READ, agents: AGENTS, status: STATUS };
+export const FEATURE_NAMES: Record<Feature, string> = { translate: '번역', illustrate: '삽화', speech: '음성', memory: '장기 기억', mascot: '마스코트', preread: PRE_READ, agents: AGENTS, status: STATUS };
 // A feature's own model row; an agent's model is its prompt's.
 export const TASK_MODELS = { translate: '번역 모델', illustrate: '장면 모델', memory: '기억 모델', mascot: '대사 모델', preread: `${PRE_READ} 모델`, status: `${STATUS} 모델` } as const satisfies Partial<Record<Feature, string>>;
 
@@ -340,6 +340,11 @@ export const FINDINGS = '고칠 곳';
 export const NOT_PICKED = '지정 안 함';
 export const IMAGE_MODEL = '이미지 모델';
 export const NO_IMAGE_MODEL = `연결된 ${IMAGE_MODEL}이 없어요.`;
+export const SPEECH_MODEL = '음성 모델';
+export const NO_SPEECH_MODEL = `연결된 ${SPEECH_MODEL}이 없어요.`;
+export const VOICE = '목소리';
+export const AUTO_SPEECH = '자동 읽기';
+export const QUOTES_ONLY = '대사만 읽기';
 // A table's column of where a thing is used.
 export const USED_IN = '사용처';
 

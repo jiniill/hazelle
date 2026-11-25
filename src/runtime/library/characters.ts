@@ -5,6 +5,7 @@ import { unfiled } from '../../engine/import/status';
 import { UNSUPPORTED_KINDS, type Card, type Imported, type Pack, type Picture, type Unsupported } from '../../engine/import/types';
 import type { Translation, TranslateSwitches } from '../../model/chat';
 import type { IllustrateSwitches, Rung } from '../../model/illustration';
+import type { SpeechSwitches } from '../../model/speech';
 import type { Stored, Values } from '../../model/kinds';
 import { readableTexts, STARTER_AVATAR_ID, STARTER_CHARACTER_ID, type Asset, type Avatar, type Backdrop, type Character, type Lore, type Pictures } from '../../model/library';
 import { likenessId, type Likeness } from '../../model/likeness';
@@ -291,12 +292,13 @@ export const setToolOrder = (store: ObjectStore, sequence: string[]) =>
 const TRANSLATE_DEFAULTS = { replies: false, input: false, reverse: false, original: false, replyLanguage: 'Korean', inputLanguage: 'English' };
 
 // 번역's and 삽화's switches: shared by every chat (Settings), or a character's own copy in their place (캐릭터별 설정).
-const OWN = { translate: 'ownTranslate', illustrate: 'ownIllustrate' } as const;
+const OWN = { translate: 'ownTranslate', illustrate: 'ownIllustrate', speech: 'ownSpeech' } as const;
 type Scoped = keyof typeof OWN;
-type SwitchesOf = { translate: TranslateSwitches; illustrate: IllustrateSwitches };
+type SwitchesOf = { translate: TranslateSwitches; illustrate: IllustrateSwitches; speech: SpeechSwitches };
 const FILL: { [S in Scoped]: (saved: SwitchesOf[S] | undefined, change?: Partial<SwitchesOf[S]>) => SwitchesOf[S] } = {
   translate: (saved, change = {}) => ({ replies: TRANSLATE_DEFAULTS.replies, input: TRANSLATE_DEFAULTS.input, ...saved, ...change }),
   illustrate: (saved, change = {}) => ({ ...saved, ...change }),
+  speech: (saved, change = {}) => ({ ...saved, ...change }),
 };
 
 function scoped<S extends Scoped>(store: Pick<ObjectStore, 'get'>, character: string | null, scope: S): { switches: SwitchesOf[S] | undefined; own: boolean } {
@@ -347,6 +349,18 @@ export function illustrateSwitches(store: Pick<ObjectStore, 'get'>, character: s
 export const setIllustrate = (store: ObjectStore, character: string | null, change: Partial<IllustrateSwitches>) => setScoped(store, character, 'illustrate', change);
 
 export const setOwnIllustrate = (store: ObjectStore, character: string, own: boolean) => setOwnScoped(store, character, 'illustrate', own);
+
+// A chat reads them through 기능 (runtime/tasks/features chatSpeech).
+export type SpeechSetup = Omit<SpeechSwitches, 'auto' | 'quotes'> & { auto: boolean; quotes: boolean; own: boolean };
+
+export function speechSwitches(store: Pick<ObjectStore, 'get'>, character: string | null): SpeechSetup {
+  const { switches, own } = scoped(store, character, 'speech');
+  return { ...switches, auto: switches?.auto ?? false, quotes: switches?.quotes ?? false, own };
+}
+
+export const setSpeech = (store: ObjectStore, character: string | null, change: Partial<SpeechSwitches>) => setScoped(store, character, 'speech', change);
+
+export const setOwnSpeech = (store: ObjectStore, character: string, own: boolean) => setOwnScoped(store, character, 'speech', own);
 
 // Append global then character note. Trim only on read: autosave trimming would eat a newline still being typed.
 export function translatorNotes(store: ObjectStore, character: string | null): string {

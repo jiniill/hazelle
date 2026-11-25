@@ -1,7 +1,7 @@
 import { ACTS, importOf, newOf } from '../../common/acts';
 import { LABS } from '../../common/labs';
 import { NUMBER, PROFILE_LABELS, PROFILE_ROWS } from '../../common/settingWords';
-import { AUTO_DIAGNOSIS, ANSWER_INSTRUCTION_LABEL, CALL_ROUTE, BIN, BOARD, CHAT_DETAIL, DEFAULT_MODELS, DIRECT_CONNECTION, CHAT_LOOK, FEATURE_NAMES, FEATURES_TITLE, FINDINGS, IDLE_MODELS, PICTURE_PLACE, LORE_SCAN_WORDS, MODEL_ROLES, MODEL_SETTINGS, NETWORK, NOTICES, PAGES, PICTURE_INPUT, HOST, IMAGE_MODEL, COST_ESTIMATE, PRE_READ, PULSE, RETRY_COUNT, SCOPE, SCRIPTS, SET_DEFAULT, SHARE, STAGE_NAMES, STARRED, TASK_MODELS, TOOL, TRANSLATOR_NOTE, PROMPT_MODELS } from '../../common/words';
+import { AUTO_DIAGNOSIS, ANSWER_INSTRUCTION_LABEL, CALL_ROUTE, BIN, BOARD, CHAT_DETAIL, DEFAULT_MODELS, DIRECT_CONNECTION, CHAT_LOOK, FEATURE_NAMES, FEATURES_TITLE, FINDINGS, IDLE_MODELS, PICTURE_PLACE, LORE_SCAN_WORDS, MODEL_ROLES, MODEL_SETTINGS, NETWORK, NOTICES, PAGES, PICTURE_INPUT, HOST, IMAGE_MODEL, SPEECH_MODEL, VOICE, AUTO_SPEECH, QUOTES_ONLY, COST_ESTIMATE, PRE_READ, PULSE, RETRY_COUNT, SCOPE, SCRIPTS, SET_DEFAULT, SHARE, STAGE_NAMES, STARRED, TASK_MODELS, TOOL, TRANSLATOR_NOTE, PROMPT_MODELS } from '../../common/words';
 import type { Settings } from '../../../model/settings';
 import { BIN_PLACE, type Route, type SettingsPage } from '../routes';
 import { ROLES_TITLE } from '../../settings/setup';
@@ -21,6 +21,7 @@ const TERMS: Record<SettingsPage, string[]> = {
   chat: [...Object.values(CHAT_DETAIL), MODEL_ROLES.main, RETRY_COUNT, '모델 도구 호출 횟수', ANSWER_INSTRUCTION_LABEL, ...Object.values(LORE_SCAN_WORDS).map(({ label }) => label)],
   translate: [TRANSLATE_SWITCHES.replies, '응답 번역 언어', TRANSLATE_SWITCHES.input, '내 메시지 번역 언어', '원문 함께 보기', TRANSLATE_SWITCHES.reverse, TRANSLATOR_NOTE, '번역 프롬프트', TASK_MODELS.translate],
   illustrate: ['자동 삽화', IMAGE_MODEL, '페르소나 시점', '만화 형식', '유료 생성 시 확인 생략', '삽화 프롬프트', TASK_MODELS.illustrate, '삽화 수', PICTURE_PLACE],
+  speech: [AUTO_SPEECH, SPEECH_MODEL, VOICE, QUOTES_ONLY],
   memory: ['새 채팅에서 켜기', TASK_MODELS.memory, '기록', '임베딩 모델로 찾는 기록', '정리 대기 중인 대화', '원문으로 보낼 최근 대화'],
   mascot: [TASK_MODELS.mascot, '마스코트 프롬프트'],
   preread: [TASK_MODELS.preread, '요약할 대상', '원문으로 유지할 최근 대화', '한 번에 요약할 분량', '추론 최소화', `${PRE_READ} 프롬프트`],

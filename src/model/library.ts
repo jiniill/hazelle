@@ -9,6 +9,7 @@ import type { Card, LoreEntry, Pack } from '../engine/import/types';
 import type { Translation, TranslateSwitches } from './chat';
 import type { FeatureSwitches } from './features';
 import type { IllustrateSwitches } from './illustration';
+import type { SpeechSwitches } from './speech';
 import type { Stored } from './kinds';
 import type { StateShown } from './status';
 import type { ToggleValues } from './prompt';
@@ -35,6 +36,8 @@ export type Character = Mark & {
   translatorNote?: string;
   // 이 캐릭터만 따로: its chats' 삽화 switches in place of the shared Settings.illustrate.
   ownIllustrate?: IllustrateSwitches;
+  // 이 캐릭터만 따로: its chats' 음성 switches, its voice among them, in place of the shared Settings.speech.
+  ownSpeech?: SpeechSwitches;
   // 봇 스타일: false shows the chats' messages without the bot's HTML and CSS. Absent is on.
   decor?: boolean;
   // Whether the bot's Lua may call models, which costs the user. Absent: not asked yet, and the first call asks.

@@ -9,7 +9,7 @@ import type { TooLong } from '../../engine/prompt-budget';
 import { fold, shown, type Chat } from '../../model/chat';
 import { live } from '../../model/library';
 import type { Stored } from '../../model/kinds';
-import { chatIllustrate, chatTranslate, featuresOf } from '../tasks/features';
+import { chatIllustrate, chatSpeech, chatTranslate, featuresOf } from '../tasks/features';
 import type { Session } from '../session';
 import type { ApiFailure } from '../api';
 import type { Halted } from '../scripts/turns';
@@ -104,6 +104,7 @@ export async function receiveReply(session: Session, chat: string, reply: Writte
   const received = shownReceived(session, chat, message);
   if (!received) return;
   if (chatIllustrate(session.store, received.chat).auto) session.illustrator.draw(chat, received.message, received.version, { auto: true });
+  if (chatSpeech(session.store, received.chat).auto) session.speaker.play(chat, received.message, received.version);
   if (featuresOf(session.store, received.chat).mascot) session.commentator.comment(chat, received.message, received.version);
   session.statusWriter.write(chat, received.message, received.version);
 }

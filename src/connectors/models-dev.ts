@@ -36,6 +36,12 @@ export const CONNECTOR_MODELS = {
     { id: 'nai-diffusion-4-5-curated', name: 'NovelAI Diffusion V4.5 Curated' },
   ],
   voyage: ['voyage-4-lite', 'voyage-4', 'voyage-4-large'].map((id) => ({ id, name: id })),
+  // The ones that read Korean (elevenlabs.io/docs/models, 2026-11-25).
+  elevenlabs: [
+    { id: 'eleven_v3', name: 'Eleven v3' },
+    { id: 'eleven_multilingual_v2', name: 'Eleven Multilingual v2' },
+    { id: 'eleven_flash_v2_5', name: 'Eleven Flash v2.5' },
+  ],
 } as const satisfies Record<string, readonly { id: string; name: string }[]>;
 
 // models.dev's words for what a model takes and gives, as the app's Modality names them; any other word is dropped.

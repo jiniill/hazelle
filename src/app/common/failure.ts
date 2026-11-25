@@ -10,6 +10,7 @@ import type { ApiFailure } from '../../runtime/api';
 import type { RouteFailure } from '../../runtime/models/assignment';
 import type { CatalogFailure } from '../../runtime/models/catalog';
 import type { IllustrateFailure } from '../../runtime/tasks/illustrate';
+import type { SpeechFailure } from '../../runtime/tasks/speech';
 import type { LikenessFailure } from '../../runtime/tasks/likeness';
 import type { MascotFailure } from '../../runtime/tasks/mascot';
 import type { StatusFailure } from '../../runtime/tasks/status';
@@ -31,7 +32,7 @@ import { SHARE_LIMITS } from '../../contracts/shares';
 import { count } from './typedNumber';
 import { withParticle } from './particles';
 import { SORT_PROMPT, defaultPrompt } from './prompt-words';
-import { ADDITIONAL_TEXT, BIN, BOT_STUCK, DISCOUNT, HOST, inFeature, inSettings, MODEL_ROLES, MODEL_SETTINGS, NO_IMAGE_MODEL, NEEDS_ACCOUNT, CALL_ROUTE, PAGES, NO_PICTURES, PRE_READ, SHARE, TASK_MODELS, UNREADABLE_IMAGE, BAD_PICTURE, PURGE_FREES } from './words';
+import { ADDITIONAL_TEXT, BIN, BOT_STUCK, DISCOUNT, HOST, inFeature, inSettings, MODEL_ROLES, MODEL_SETTINGS, NO_IMAGE_MODEL, NO_SPEECH_MODEL, NEEDS_ACCOUNT, CALL_ROUTE, PAGES, NO_PICTURES, PRE_READ, SHARE, TASK_MODELS, UNREADABLE_IMAGE, BAD_PICTURE, PURGE_FREES } from './words';
 
 export const RELOAD_RETRY = '새로고침한 뒤 다시 시도해 주세요.';
 
@@ -523,6 +524,35 @@ export function describeIllustrateFailure(failure: IllustrateFailure): string {
       return `삽화를 저장하지 못했어요. ${describeFailure(failure.failure)}`;
   }
   return describeTask(failure, featureTask('illustrate', '장면을 정하기 전에'));
+}
+
+export function describeSpeechFailure(failure: SpeechFailure): string {
+  switch (failure.kind) {
+    case 'no-speech-model':
+      return `${NO_SPEECH_MODEL} ${inSettings('connections')}에서 ElevenLabs나 Google을 연결해 주세요.`;
+    case 'speech-model-gone':
+      return '선택한 음성 모델이 연결에 없어요. 채팅의 음성 메뉴에서 다시 선택해 주세요.';
+    case 'no-voice':
+      return '선택한 목소리가 없어요. 채팅의 음성 메뉴에서 목소리를 선택해 주세요.';
+    case 'empty':
+      return failure.quotes ? '따옴표 안의 대사가 없어서 읽을 게 없어요.' : '읽을 내용이 없는 메시지예요.';
+    case 'unspoken':
+      return describeReplyError(failure.error);
+    case 'not-audio':
+      return '음성이 아닌 응답을 받았어요.';
+    case 'unjoined':
+      return '음성을 한 파일로 합치지 못해서 저장하지 않았어요.';
+    case 'file-refused':
+      return '서버에서 음성 저장을 거절했어요.';
+    case 'unsaved':
+      return `음성을 저장하지 못했어요. ${describeFailure(failure.failure)}`;
+    case 'blocked':
+      return '브라우저가 소리를 막았어요. 화면을 한 번 누른 다음 다시 들어 주세요.';
+    case 'unplayable':
+      return '이 브라우저에서 재생할 수 없는 음성이에요.';
+    case 'gone':
+      return GONE_MESSAGE;
+  }
 }
 
 // The profiles are written by the 장면 모델, so its failures read as the scene's.

@@ -25,6 +25,7 @@ import { ChatCache } from './ChatCache';
 import { ChatModel } from './ChatModel';
 import { composerTool } from './ChatComposerTools';
 import { illustrateTool } from './ChatIllustrate';
+import { speechTool } from './ChatSpeech';
 import { noteTool } from './ChatNote';
 import { ChatPinnedToggles, PinnedTogglesLayout } from './ChatPinnedToggles';
 import { personaTool } from './ChatPersonaPicker';
@@ -85,6 +86,7 @@ export function ChatComposer({ chat, fold }: { chat: OpenChat; fold: ComposerFol
       onEditCharacter: shelf ? () => actions.side({ kind: 'character', id: shelf.id, part: 'instructions' }) : undefined,
     })] : []),
     ...(chat.features.illustrate ? [illustrateTool({ id: chat.id, illustrate: chat.illustrate, note: chat.illustrateNote, card: chat.card, onChange: actions.setIllustrate, onOwnChange: actions.setOwnIllustrate, onSaveNote: actions.setIllustrateNote, sceneWriter: chat.sceneWriter, onEditPrompt: editPrompt })] : []),
+    ...(chat.features.speech ? [speechTool({ speech: chat.speech, card: chat.card, onChange: actions.setSpeech, onOwnChange: actions.setOwnSpeech })] : []),
     ...chat.composerTools.map((tool) => composerTool({
       tool,
       running: chat.toolInput,

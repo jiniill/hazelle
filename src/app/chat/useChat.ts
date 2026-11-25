@@ -47,6 +47,7 @@ import { useMessageEdit } from './useMessageEdit';
 import { useNewChat } from './useNewChat';
 import { useChatBookmarks } from './useChatBookmarks';
 import { useChatIllustrations } from './useChatIllustrations';
+import { useChatSpeech } from './useChatSpeech';
 import { useChatRemarks } from './useChatRemarks';
 import { useChatState } from './useChatState';
 import { useChatPolishing } from './useChatPolishing';
@@ -137,6 +138,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   };
   const { actions: translationActions, ...translation } = useChatTranslation(chatId, chat, messages, texts, translate);
   const { actions: illustrationActions, ...illustration } = useChatIllustrations(chatId, id, chat, messages);
+  const { actions: speechActions, ...speech } = useChatSpeech(chatId, id, chat);
   const { actions: remarkActions, ...remark } = useChatRemarks(chatId, id);
   const polishing = useChatPolishing(chatId);
   const toolData = useChildren('toolchat', id);
@@ -391,7 +393,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
     panelActions.closeDialog();
   }
 
-  return joinParts(status, translation, illustration, remark, attaching, panels, {
+  return joinParts(status, translation, illustration, speech, remark, attaching, panels, {
     displayPending, displayError, retryDisplay, stuck,
     id,
     // The id a new chat will be saved under.
@@ -452,7 +454,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
     scroll,
     keys: story.keys,
     stops: story.stops,
-    actions: joinParts(story.actions, searchActions, statusActions, editActions, translationActions, illustrationActions, remarkActions, stateActions, bookmarkActions, settingActions, attachActions, panelActions, toggleActions, {
+    actions: joinParts(story.actions, searchActions, statusActions, editActions, translationActions, illustrationActions, speechActions, remarkActions, stateActions, bookmarkActions, settingActions, attachActions, panelActions, toggleActions, {
       send: () => void send(),
       sendSkipping: () => skippable && sendSkipping(skippable),
       say,

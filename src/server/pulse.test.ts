@@ -180,7 +180,7 @@ it('merges one model across lists by its name and ranks 대화 by the last 24 ho
   at(NOON + HOUR);
   const answer = (await board())!;
   expect(answer.replies).toBe(20);
-  expect(answer.hours.at(-1)).toEqual({ at: NOON, calls: { chat: 20, aux: 0, image: 0, embedding: 0 } });
+  expect(answer.hours.at(-1)).toEqual({ at: NOON, calls: { chat: 20, aux: 0, image: 0, embedding: 0, speech: 0 } });
   expect(answer.ranking.chat).toEqual({
     merged: [
       { key: 'glm 5.2', model: 'GLM-5.2', share: 14 / 19, people: 5, replies: 10 },
@@ -342,7 +342,7 @@ it('marks the other roles against the 7 days a week earlier by people, unless th
   await t.env.db.prepare("INSERT INTO models_dev (list, model, name) VALUES ('openrouter', 'x', 'X'), ('openrouter', 'y', 'Y')").run();
   const cookies = await people(11);
   await seen(cookies.slice(0, 10));
-  expect((await board())!.before).toEqual({ chat: EMPTY, aux: null, image: null, embedding: null });
+  expect((await board())!.before).toEqual({ chat: EMPTY, aux: null, image: null, embedding: null, speech: null });
   for (const cookie of cookies.slice(0, 5)) await call(cookie, 'aux', 'openrouter', 'x');
   for (const cookie of cookies.slice(5)) await call(cookie, 'aux', 'openrouter', 'y');
   at(NOON + WEEK);
@@ -352,6 +352,7 @@ it('marks the other roles against the 7 days a week earlier by people, unless th
     aux: { merged: [{ key: 'y' }, { key: 'x' }], split: [{ key: 'y', type: 'openrouter' }, { key: 'x', type: 'openrouter' }] },
     image: EMPTY,
     embedding: EMPTY,
+    speech: EMPTY,
   });
 });
 
@@ -374,11 +375,12 @@ it('lists the earlier weeks and answers each by its people, against the week bef
       aux: { merged: [], split: [{ key: 'x', model: 'X', type: 'openai', share: 1, people: 5 }] },
       image: EMPTY,
       embedding: EMPTY,
+      speech: EMPTY,
     },
-    before: { chat: { merged: [{ key: '' }, { key: 'a' }], split: [] }, aux: EMPTY, image: EMPTY, embedding: EMPTY },
+    before: { chat: { merged: [{ key: '' }, { key: 'a' }], split: [] }, aux: EMPTY, image: EMPTY, embedding: EMPTY, speech: EMPTY },
   };
   expect(await found.json()).toEqual(answer);
-  expect(((await (await week(older)).json()) as { before: unknown }).before).toEqual({ chat: null, aux: null, image: null, embedding: null });
+  expect(((await (await week(older)).json()) as { before: unknown }).before).toEqual({ chat: null, aux: null, image: null, embedding: null, speech: null });
   // A past week is answered once.
   await t.env.db.prepare('DELETE FROM pulse_week_models').run();
   expect(await (await week(last)).json()).toEqual(answer);

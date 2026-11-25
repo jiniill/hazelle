@@ -2,9 +2,9 @@ import { CONNECTION_TYPES } from '../../connectors/registry';
 import { DIRECT_TYPE, PULSE_FLOORS, PULSE_ROLES, type PulseOrder, type PulsePlace, type PulseRanking, type PulseRole } from '../../contracts/pulse';
 import { count } from '../common/typedNumber';
 import type { Ranked } from '../ui';
-import { DIRECT_CONNECTION, ROLE_TAGS } from '../common/words';
+import { DIRECT_CONNECTION, FEATURE_NAMES, ROLE_TAGS } from '../common/words';
 
-export const PULSE_ROLE_NAMES: Record<PulseRole, string> = { chat: ROLE_TAGS.main, aux: ROLE_TAGS.aux, image: '이미지', embedding: ROLE_TAGS.embed };
+export const PULSE_ROLE_NAMES: Record<PulseRole, string> = { chat: ROLE_TAGS.main, aux: ROLE_TAGS.aux, image: '이미지', embedding: ROLE_TAGS.embed, speech: FEATURE_NAMES.speech };
 
 // null: a type this build does not list, which a newer client may label; its row is left out rather than named wrong.
 export function providerName(type: string): string | null {

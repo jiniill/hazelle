@@ -6,6 +6,7 @@ import { cerebras } from './cerebras';
 import { copilot } from './copilot';
 import { deepinfra } from './deepinfra';
 import { deepseek } from './deepseek';
+import { elevenlabs } from './elevenlabs';
 import { destination } from './destination';
 import { readExtra, withExtra } from './extra';
 import { featherless } from './featherless';
@@ -62,6 +63,7 @@ export const CONNECTION_TYPES: readonly ConnectionType[] = [
   upstage,
   voyage,
   novelai,
+  elevenlabs,
   copilot,
 ];
 

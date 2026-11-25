@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, CopyPlus, Copy, Download, Flag, MessageSquarePlus, Pencil, Plus, RefreshCw, RotateCcw, RotateCw, Save, Star, Trash2, Upload, type LucideIcon } from 'lucide-react';
+import { ArrowDown, ArrowUp, CopyPlus, Copy, Download, Flag, MessageSquarePlus, Pencil, Plus, RefreshCw, RotateCcw, RotateCw, Save, Star, Trash2, Upload, Volume2, type LucideIcon } from 'lucide-react';
 import { EXPORT } from './words';
 
 // Keep action icons synchronized across screens (lint-enforced). Retry, regenerate and restore are distinct acts.
@@ -25,6 +25,8 @@ export const ACTS = {
   moveDown: { label: '아래로 옮기기', icon: ArrowDown },
   // A chat marked to be found again; a message's mark is 북마크, a record's or a toggle's 고정.
   star: { label: '즐겨찾기', icon: Star },
+  // A message read aloud (음성).
+  listen: { label: '듣기', icon: Volume2 },
 } satisfies Record<string, Act>;
 
 // 새 X makes a thing of its own; X 추가 puts an entry into the list that owns it.

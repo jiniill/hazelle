@@ -1,7 +1,7 @@
-import type { Resolved } from '../../connectors/registry';
-import { ConnectorError, type Token } from '../../connectors/types';
+import { resolveConnection, type Resolved } from '../../connectors/registry';
+import { ConnectorError, type Connection, type Token } from '../../connectors/types';
 import type { HttpRequest } from '../../contracts/http';
-import { Pool } from './pool';
+import { Pool, type PoolFailure } from './pool';
 import { transportProblem, relayJson, type RelayFailure } from './relay';
 
 export type CredentialFailure = RelayFailure | { kind: 'no-token' } | { kind: 'refused'; code: string };
@@ -39,6 +39,21 @@ export class Credentials {
     if (!token) return { ok: false, failure: { kind: 'no-token' } };
     this.tokens.set(key, token);
     return { ok: true, credential: token.value };
+  }
+
+  // One call's credential, from the account the pool picks. stale: the call failed, so that account's meters are read
+  // again before the next pick; a credential that failed did so already.
+  async use(connection: Connection, signal: AbortSignal): Promise<{ ok: true; credential: string; resolved: Resolved; stale: () => void } | { ok: false; failure: PoolFailure | CredentialFailure }> {
+    const picked = await this.pool.pick(connection);
+    if (!picked.ok) return picked;
+    const stale = () => this.pool.stale(connection, picked.account);
+    const resolved = resolveConnection(connection)!;
+    const credential = await this.get(resolved, picked.account.secret, signal);
+    if (!credential.ok) {
+      if (credential.failure.kind !== 'stopped') stale();
+      return credential;
+    }
+    return { ok: true, credential: credential.credential, resolved, stale };
   }
 
   close() {

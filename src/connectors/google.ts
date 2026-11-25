@@ -1,8 +1,10 @@
-import { inputUsage } from './chat-completions';
+import { bareModel, inputUsage } from './chat-completions';
 import { decisionOf } from './decide';
 import { streamError } from './errors';
-import type { BatchAnswer, Batches, ConnectionType, DecideQuestion, Decides, Decision } from './types';
+import { gemini } from './gemini';
+import type { BatchAnswer, Batches, ConnectionType, DecideQuestion, Decides, Decision, Model, Speaks, Spoken, Voice } from './types';
 import { count, jsonObject, list } from './values';
+import { fromBase64 } from '../base64';
 import { isRecord } from '../record';
 
 // Inline batch operation; match state suffixes because guide/reference use JOB_STATE_/BATCH_STATE_
@@ -65,6 +67,48 @@ const decides: Decides = {
   },
 };
 
+// Its speech models, as its models page lists them (aistudio.google.com/docs/models, 2026-11-25); the earlier previews end
+// on 2026-12-18.
+const SPEECH_MODELS: Model[] = [
+  { id: 'gemini-3.8-flash-tts', name: 'Gemini 3.8 Flash TTS' },
+  { id: 'gemini-3.8-flash-lite-tts', name: 'Gemini 3.8 Flash-Lite TTS' },
+].map(({ id, name }) => ({ ...bareModel(id), name, input: ['text'], output: ['audio'] }));
+
+// The prebuilt voices of its speech page (aistudio.google.com/docs/speech-generation, 2026-11-25).
+const VOICES: Voice[] = [
+  'Zephyr', 'Puck', 'Charon', 'Kore', 'Fenrir', 'Leda', 'Orus', 'Aoede', 'Callirrhoe', 'Autonoe', 'Enceladus', 'Iapetus', 'Umbriel', 'Algieba', 'Despina',
+  'Erinome', 'Algenib', 'Rasalgethi', 'Laomedeia', 'Achernar', 'Alnilam', 'Schedar', 'Gacrux', 'Pulcherrima', 'Achird', 'Zubenelgenubi', 'Vindemiatrix', 'Sadachbia', 'Sadaltager', 'Sulafat',
+].map((name) => ({ id: name, name, about: null }));
+
+// The Interactions API's answer (same page): the last audio item of the model's output, base64, a WAV file unless asked
+// otherwise.
+function spokenIn(body: Uint8Array<ArrayBuffer>): Spoken | null {
+  const payload = jsonObject(new TextDecoder().decode(body));
+  const audio = list(payload?.steps)
+    .filter((step) => isRecord(step) && step.type === 'model_output')
+    .flatMap((step) => list((step as Record<string, unknown>).content))
+    .filter((item): item is Record<string, unknown> => isRecord(item) && item.type === 'audio' && typeof item.data === 'string')
+    .at(-1);
+  if (!audio) return null;
+  const bytes = fromBase64(audio.data as string);
+  return bytes.byteLength ? { bytes, type: typeof audio.mime_type === 'string' ? audio.mime_type : 'audio/wav' } : null;
+}
+
+const speaks: Speaks = {
+  models: SPEECH_MODELS,
+  // 8,192 input tokens; a Korean character can take more than one.
+  most: () => 4_000,
+  voices: VOICES,
+  request: ({ model, voice, text }) => ({
+    url: 'https://generativelanguage.googleapis.com/v1beta/interactions',
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ model: model.id, input: [{ type: 'user_input', content: [{ type: 'text', text }] }], response_format: { type: 'audio' }, generation_config: { speech_config: [{ voice }] } }),
+  }),
+  authHeaders: gemini.authHeaders,
+  parse: spokenIn,
+};
+
 export const google: ConnectionType = {
   browser: {},
   id: 'google',
@@ -79,4 +123,5 @@ export const google: ConnectionType = {
   // Model eligibility is unknown (Gemini pricing, 2026-10-12).
   discount: { lane: 'batch', batches, accepted: null, rates: { input: 0.5, output: 0.5, cacheRead: 1, cacheWrite: 1 } },
   decides,
+  speaks,
 };
