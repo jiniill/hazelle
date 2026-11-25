@@ -16,6 +16,7 @@ import { useSession } from '../session';
 import { useToast } from '../toast';
 import { Button, Callout, ChipButton, CodeCard, Link, List, ListItem, Menu, MenuItem, MoreMenu, NumberInput, Panel, Row, Section, Stack, Text, useMenuClose } from '../ui';
 import { MeterGauge, USAGE, useMeters } from './ConnectionMeters';
+import { TokenPaste } from './TokenPaste';
 import { useDeviceSignIn } from './useDeviceSignIn';
 
 // Who serves a reply: the current group's first account with allowance left (runtime/models/pool).
@@ -223,8 +224,7 @@ function DayForm({ day, onSave }: { day: number; onSave: (day: number) => void }
 }
 
 function AccountSignIn({ signIn, again, onClose, onApproved }: { signIn: SignIn; again: Account | null; onClose: () => void; onApproved: (secret: string, name: string) => void }) {
-  const [attempt, setAttempt] = useState(0);
-  const { stage, openSite } = useDeviceSignIn(signIn, attempt, async (secret, name) => {
+  const { stage, openSite, retry, paste } = useDeviceSignIn(signIn, async (secret, name) => {
     onApproved(secret, name);
     return null;
   });
@@ -232,7 +232,7 @@ function AccountSignIn({ signIn, again, onClose, onApproved }: { signIn: SignIn;
   return (
     <Section level={3} title={title}>
       {stage.step === 'failed' ? (
-        <Callout tone="warn" alert action={{ label: ACTS.retry.label, onClick: () => setAttempt((count) => count + 1) }}>
+        <Callout tone="warn" alert action={{ label: ACTS.retry.label, onClick: retry }}>
           {stage.message}
         </Callout>
       ) : stage.step === 'code' ? (
@@ -245,6 +245,7 @@ function AccountSignIn({ signIn, again, onClose, onApproved }: { signIn: SignIn;
       ) : (
         <Text variant="note">{stage.step === 'starting' ? '코드를 받는 중…' : `${signIn.site} 계정을 확인하는 중…`}</Text>
       )}
+      {(stage.step === 'code' || stage.step === 'failed') && <TokenPaste signIn={signIn} onToken={paste} />}
       <Row kind="actions">
         <Button variant="ghost" size="sm" onClick={onClose}>
           취소
