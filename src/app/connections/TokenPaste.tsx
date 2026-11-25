@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { SignIn } from '../../connectors/types';
 import { Button, Disclosure, TextField } from '../ui';
+import { tokenOf } from './connect';
 
 // In place of the code: a token the person already signed in for elsewhere, so moving between apps needs no new sign-in.
 export function TokenPaste({ signIn, onToken }: { signIn: SignIn; onToken: (token: string) => void }) {
@@ -9,7 +10,7 @@ export function TokenPaste({ signIn, onToken }: { signIn: SignIn; onToken: (toke
   return (
     <Disclosure label="토큰으로 연결">
       <TextField
-        label={`${signIn.site} 토큰`}
+        label={tokenOf(signIn)}
         kind="key"
         value={token}
         onChange={setToken}

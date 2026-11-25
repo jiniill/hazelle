@@ -116,7 +116,7 @@ export const GUIDES: Guide[] = [
     ],
     faq: [
       { question: '무료로 쓸 수 있나요?', answer: 'OpenRouter의 무료 모델과 Google의 무료 등급은 결제 없이 일일 한도 안에서 쓸 수 있어요.' },
-      { question: '키를 잃어버렸어요.', answer: '제공자의 키 페이지에서 새로 만들고, 헤이젤의 연결 메뉴(「⋯」)에서 「키 변경」을 눌러 바꿔요.' },
+      { question: '키를 잃어버렸어요.', answer: '제공자의 키 페이지에서 새로 만들고, 헤이젤의 연결 메뉴(「⋯」)에서 「키 보기·변경」을 눌러 바꿔요.' },
       { question: '키를 입력했는데 연결이 안 돼요.', answer: '키를 끝까지 복사했는지, 크레딧이 남아 있는지 확인해요.' },
     ],
     end: { title: '키를 받았으면 연결해요', line: '키를 연결하고 모델을 추가하면 대화할 수 있어요.', link: '/connections/new', label: 'API 키 연결하기' },

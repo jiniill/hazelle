@@ -1,5 +1,5 @@
 import { GENERIC } from '../../connectors/registry';
-import type { Connection, ConnectionType, Protocol } from '../../connectors/types';
+import type { Connection, ConnectionType, Protocol, SignIn } from '../../connectors/types';
 import { addConnection, newAccount } from '../../runtime/models/connections';
 import type { Session } from '../../runtime/session';
 import { describeKeyFailure } from '../common/failure';
@@ -16,6 +16,8 @@ export async function connect(session: Session, connection: Connection, signal: 
 
 // A key whose type its form told, pasted into 새 연결's search or anywhere in the app.
 export const keyOf = (type: ConnectionType) => `${type.label} 키`;
+// An account's secret where it signed in, pasted in or read back.
+export const tokenOf = (signIn: SignIn) => `${signIn.site} 토큰`;
 export const KEY_OPTIONAL = '키가 필요 없으면 비워 둬도 돼요.';
 export const CONNECT_KEY = `이 키로 연결하고 ${PICK_MODEL}`;
 

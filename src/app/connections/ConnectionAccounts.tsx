@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, ExternalLink, LogIn, UserMinus } from 'lucide-react';
+import { ArrowDown, ArrowUp, ExternalLink, KeyRound, LogIn, UserMinus } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { resolveConnection } from '../../connectors/registry';
 import type { Account, Connection, Group, SignIn, Turns } from '../../connectors/types';
@@ -14,8 +14,10 @@ import { monthDay } from '../common/time';
 import { readTyped } from '../common/typedNumber';
 import { useSession } from '../session';
 import { useToast } from '../toast';
-import { Button, Callout, ChipButton, CodeCard, Link, List, ListItem, Menu, MenuItem, MoreMenu, NumberInput, Panel, Row, Section, Stack, Text, useMenuClose } from '../ui';
+import { Button, Callout, ChipButton, CodeCard, Dialog, Link, List, ListItem, Menu, MenuItem, MoreMenu, NumberInput, Panel, Row, Section, Stack, Text, useMenuClose } from '../ui';
 import { MeterGauge, USAGE, useMeters } from './ConnectionMeters';
+import { tokenOf } from './connect';
+import { StoredKey } from './StoredKey';
 import { TokenPaste } from './TokenPaste';
 import { useDeviceSignIn } from './useDeviceSignIn';
 
@@ -28,6 +30,7 @@ export function ConnectionAccounts({ id, connection, signIn }: { id: string; con
   const toast = useToast();
   const [signing, setSigning] = useState<{ for: Account | null } | null>(null);
   const [renaming, setRenaming] = useState<Group | null>(null);
+  const [reading, setReading] = useState<Account | null>(null);
   const now = Date.now();
   const { timeline, window } = schedule(connection.turns, now);
   const next = timeline[1];
@@ -90,6 +93,7 @@ export function ConnectionAccounts({ id, connection, signIn }: { id: string; con
                       waiting={index > 0}
                       change={turns}
                       onSignIn={() => setSigning({ for: account })}
+                      onRead={() => setReading(account)}
                       onRemove={() => remove(account)}
                     />
                   ) : null;
@@ -108,6 +112,11 @@ export function ConnectionAccounts({ id, connection, signIn }: { id: string; con
           {usagePage && <Link href={usagePage}>{USAGE.page}</Link>}
         </Row>
       </Stack>
+      {reading && (
+        <Dialog title={accountName(reading)} onClose={() => setReading(null)}>
+          <StoredKey label={tokenOf(signIn)} secret={reading.secret} />
+        </Dialog>
+      )}
       {renaming && (
         <NameDialog
           title={`그룹 ${ACTS.rename.label}`}
@@ -148,10 +157,11 @@ type RowProps = {
   waiting: boolean;
   change: (change: (turns: Turns) => Turns | null) => void;
   onSignIn: () => void;
+  onRead: () => void;
   onRemove: () => void;
 };
 
-function AccountRow({ connection, account, group, at, turn, waiting, change, onSignIn, onRemove }: RowProps) {
+function AccountRow({ connection, account, group, at, turn, waiting, change, onSignIn, onRead, onRemove }: RowProps) {
   const { result, retry } = useMeters(connection, account);
   const name = accountName(account);
   const others = connection.turns.groups.filter((entry) => entry.id !== group.id);
@@ -169,6 +179,7 @@ function AccountRow({ connection, account, group, at, turn, waiting, change, onS
             <MenuItem key={other.id} label={`${withParticle(other.name, '으로/로')} 옮기기`} onClick={() => change((turns) => moveAccount(turns, account.id, other.id))} />
           ))}
           <MenuItem icon={ACTS.retry.icon} label="사용량 다시 확인" onClick={retry} />
+          <MenuItem icon={KeyRound} label="토큰 보기" onClick={onRead} />
           <MenuItem icon={LogIn} label="다시 로그인" onClick={onSignIn} />
           <MenuItem icon={UserMinus} label="빼기" tone="warn" disabled={connection.accounts.length === 1} onClick={onRemove} />
         </MoreMenu>
