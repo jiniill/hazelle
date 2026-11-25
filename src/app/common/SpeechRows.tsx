@@ -31,7 +31,7 @@ export function SpeechRows({ speech, card, opens, onChange, children }: Props) {
     <SettingGroup label={FEATURE_NAMES.speech}>
       <SettingRow
         label={AUTO_SPEECH}
-        help="응답을 받을 때마다 소리 내어 읽어요. 읽을 때마다 음성 모델의 사용량이 차감돼요."
+        help="응답이 오면 바로 소리 내어 읽어요. 읽을 때마다 음성 모델 사용량이 차감돼요."
         control={<Switch label={AUTO_SPEECH} checked={speech.auto} onChange={(auto) => onChange({ auto })} />}
       />
       <SettingRow
@@ -74,7 +74,7 @@ function SpeechModelMenu({ routes, speech, card, opens, onChange }: Omit<Props, 
     <Menu
       place={opens === 'up' ? 'above-end' : 'below-end'}
       label={SPEECH_MODEL}
-      trigger={(opener) => <ChipButton variant="field" opens={opens} label={'kind' in choice ? '연결에 없음' : choice.model.name} title={SPEECH_MODEL} tone={'kind' in choice ? 'warn' : 'plain'} {...opener} />}
+      trigger={(opener) => <ChipButton variant="field" opens={opens} label={'kind' in choice ? '연결된 모델에 없음' : choice.model.name} title={SPEECH_MODEL} tone={'kind' in choice ? 'warn' : 'plain'} {...opener} />}
     >
       <MenuHeading>{appliesTo(card, speech.own)}</MenuHeading>
       <MenuItem label={follows(`첫 ${SPEECH_MODEL}`)} description={routes[0]!.model.name} checked={!own} onClick={() => pick(null)} />
@@ -117,7 +117,7 @@ function Voices({ route, current, onPick }: { route: SpeechRoute; current: strin
     });
     return () => abort.abort();
   }, [credentials, route.connection]);
-  if (voices === null) return <Empty variant="menu">목소리를 불러오는 중이에요.</Empty>;
+  if (voices === null) return <Empty variant="menu">목소리를 불러오는 중…</Empty>;
   if (!Array.isArray(voices)) return <Empty variant="menu">{describeSpeechFailure(voices)}</Empty>;
   if (!voices.length) return <Empty variant="menu">이 연결에 목소리가 없어요.</Empty>;
   return <VoiceChoices voices={voices} current={current} onPick={onPick} />;

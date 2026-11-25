@@ -16,7 +16,7 @@ import { useSearch } from '../common/useSearch';
 import { RetriesRow } from '../common/RetriesRow';
 import { followsRetries, NO_PROFILE_VALUES, profileLine } from '../common/settingWords';
 import { useAutosave } from '../common/useAutosave';
-import { MODEL_SETTINGS, searchOf, STARRED } from '../common/words';
+import { KEY_VIEW, MODEL_SETTINGS, searchOf, STARRED } from '../common/words';
 import { MARKS } from '../common/tutorial';
 import { useSession, useSettings } from '../session';
 import { backBar, navigate } from '../shell/router';
@@ -178,7 +178,7 @@ export function ConnectionModelsScreen({ stored, back }: { stored: Stored<'conne
     of: '연결',
     items: (
       <>
-        {!connection.turns && resolved && <MenuItem icon={KeyRound} label="키 보기·변경" onClick={() => setKeying(true)} />}
+        {!connection.turns && resolved && <MenuItem icon={KeyRound} label={KEY_VIEW} onClick={() => setKeying(true)} />}
         <MenuItem icon={ACTS.remove.icon} label={ACTS.remove.label} tone="warn" onClick={() => void remove()} />
       </>
     ),

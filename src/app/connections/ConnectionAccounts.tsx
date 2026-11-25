@@ -11,6 +11,7 @@ import { describeMetersFailure } from '../common/failure';
 import { NameDialog } from '../common/NameDialog';
 import { withParticle } from '../common/particles';
 import { monthDay } from '../common/time';
+import { TOKEN_VIEW } from '../common/words';
 import { readTyped } from '../common/typedNumber';
 import { useSession } from '../session';
 import { useToast } from '../toast';
@@ -179,7 +180,7 @@ function AccountRow({ connection, account, group, at, turn, waiting, change, onS
             <MenuItem key={other.id} label={`${withParticle(other.name, '으로/로')} 옮기기`} onClick={() => change((turns) => moveAccount(turns, account.id, other.id))} />
           ))}
           <MenuItem icon={ACTS.retry.icon} label="사용량 다시 확인" onClick={retry} />
-          <MenuItem icon={KeyRound} label="토큰 보기" onClick={onRead} />
+          <MenuItem icon={KeyRound} label={TOKEN_VIEW} onClick={onRead} />
           <MenuItem icon={LogIn} label="다시 로그인" onClick={onSignIn} />
           <MenuItem icon={UserMinus} label="빼기" tone="warn" disabled={connection.accounts.length === 1} onClick={onRemove} />
         </MoreMenu>

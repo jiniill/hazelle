@@ -21,7 +21,7 @@ export const LUA_API: readonly LuaFunction[] = [
   fn('setState(id, 이름, 값)', '테이블이나 숫자를 JSON으로 채팅 변수에 저장해요.'),
   fn('setStateChanged(id, 이름, 값)', 'setState와 같지만 값이 달라질 때만 저장하고, 저장했으면 true예요.'),
 
-  fn('getChat(id, 번호)', '해당 번호의 메시지를 { role, data, time, chatId } 테이블로 가져와요. 번호는 0부터 시작하며 -1은 마지막 메시지예요.'),
+  fn('getChat(id, 번호)', '해당 번호의 메시지를 { role, data, time, chatId } 테이블로 가져와요. 번호는 0부터 시작하고, -1은 마지막 메시지예요.'),
   fn('getChatData(id, 번호)', '해당 메시지의 텍스트예요.'),
   fn('getChatRole(id, 번호)', '해당 메시지를 보낸 역할이에요. user 또는 char예요.'),
   fn('getChatLength(id)', '메시지 개수예요. 첫인사는 세지 않아요.'),

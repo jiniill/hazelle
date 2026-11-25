@@ -32,7 +32,8 @@ import { SHARE_LIMITS } from '../../contracts/shares';
 import { count } from './typedNumber';
 import { withParticle } from './particles';
 import { SORT_PROMPT, defaultPrompt } from './prompt-words';
-import { ADDITIONAL_TEXT, BIN, BOT_STUCK, DISCOUNT, HOST, inFeature, inSettings, MODEL_ROLES, MODEL_SETTINGS, NO_IMAGE_MODEL, NO_SPEECH_MODEL, NEEDS_ACCOUNT, CALL_ROUTE, PAGES, NO_PICTURES, PRE_READ, SHARE, TASK_MODELS, UNREADABLE_IMAGE, BAD_PICTURE, PURGE_FREES } from './words';
+import { ACTS } from './acts';
+import { ADDITIONAL_TEXT, BIN, BOT_STUCK, DISCOUNT, HOST, inFeature, inSettings, MODEL_ROLES, MODEL_SETTINGS, NO_IMAGE_MODEL, NO_SPEECH_MODEL, SPEECH_MODEL, VOICE, FEATURE_NAMES, NEEDS_ACCOUNT, CALL_ROUTE, PAGES, NO_PICTURES, PRE_READ, SHARE, TASK_MODELS, UNREADABLE_IMAGE, BAD_PICTURE, PURGE_FREES } from './words';
 
 export const RELOAD_RETRY = '새로고침한 뒤 다시 시도해 주세요.';
 
@@ -531,23 +532,23 @@ export function describeSpeechFailure(failure: SpeechFailure): string {
     case 'no-speech-model':
       return `${NO_SPEECH_MODEL} ${inSettings('connections')}에서 ElevenLabs나 Google을 연결해 주세요.`;
     case 'speech-model-gone':
-      return '선택한 음성 모델이 연결에 없어요. 채팅의 음성 메뉴에서 다시 선택해 주세요.';
+      return `선택한 ${SPEECH_MODEL}을 찾을 수 없어요. 채팅의 ${FEATURE_NAMES.speech} 메뉴에서 다시 선택해 주세요.`;
     case 'no-voice':
-      return '선택한 목소리가 없어요. 채팅의 음성 메뉴에서 목소리를 선택해 주세요.';
+      return `선택한 ${VOICE}가 없어요. 채팅의 ${FEATURE_NAMES.speech} 메뉴에서 먼저 선택해 주세요.`;
     case 'empty':
-      return failure.quotes ? '따옴표 안의 대사가 없어서 읽을 게 없어요.' : '읽을 내용이 없는 메시지예요.';
+      return failure.quotes ? '따옴표 안에 읽을 대사가 없어요.' : '읽을 내용이 없는 메시지예요.';
     case 'unspoken':
       return describeReplyError(failure.error);
     case 'not-audio':
       return '음성이 아닌 응답을 받았어요.';
     case 'unjoined':
-      return '음성을 한 파일로 합치지 못해서 저장하지 않았어요.';
+      return '음성을 하나로 합치지 못해 저장하지 못했어요.';
     case 'file-refused':
       return '서버에서 음성 저장을 거절했어요.';
     case 'unsaved':
       return `음성을 저장하지 못했어요. ${describeFailure(failure.failure)}`;
     case 'blocked':
-      return '브라우저가 소리를 막았어요. 화면을 한 번 누른 다음 다시 들어 주세요.';
+      return `브라우저가 소리 재생을 막았어요. 화면을 한 번 누른 뒤 '${ACTS.listen.label}'를 다시 눌러 주세요.`;
     case 'unplayable':
       return '이 브라우저에서 재생할 수 없는 음성이에요.';
     case 'gone':

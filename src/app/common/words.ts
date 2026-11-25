@@ -345,6 +345,8 @@ export const NO_SPEECH_MODEL = `연결된 ${SPEECH_MODEL}이 없어요.`;
 export const VOICE = '목소리';
 export const AUTO_SPEECH = '자동 읽기';
 export const QUOTES_ONLY = '대사만 읽기';
+export const KEY_VIEW = '키 보기·변경';
+export const TOKEN_VIEW = '토큰 보기';
 // A table's column of where a thing is used.
 export const USED_IN = '사용처';
 

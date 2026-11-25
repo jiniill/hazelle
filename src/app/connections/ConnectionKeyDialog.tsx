@@ -3,6 +3,7 @@ import type { ConnectionType } from '../../connectors/types';
 import { changeKey } from '../../runtime/models/connections';
 import { describeKeyFailure } from '../common/failure';
 import { useAttempt } from '../common/useAttempt';
+import { KEY_VIEW } from '../common/words';
 import { useSession } from '../session';
 import { useToast } from '../toast';
 import { Button, Callout, Dialog } from '../ui';
@@ -31,7 +32,7 @@ export function ConnectionKeyDialog({ id, type, secret: stored, onClose }: { id:
 
   return (
     <Dialog
-      title="키"
+      title={KEY_VIEW}
       onClose={onClose}
       onSubmit={submit}
       actionsLayout="full"
