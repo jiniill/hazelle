@@ -10,14 +10,14 @@ export type Pace = { shown: number; total: number; rate: number; gap: number; at
 
 export const startPace = (total: number, now: number): Pace => ({ shown: total, total, rate: 0, gap: FIRST_GAP, at: now, frame: now });
 
+// A step that meets a new arrival moves on first too: a draw slower than the arrivals makes every step one.
 export function pace(current: Pace, total: number, now: number): Pace {
-  if (total !== current.total) {
-    const waited = Math.min(MAX_GAP, Math.max(MIN_GAP, now - current.at));
-    const gap = current.gap * 0.7 + waited * 0.3;
-    const shown = Math.min(current.shown, total);
-    return { shown, total, rate: (total - shown) / gap, gap, at: now, frame: now };
-  }
-  return { ...current, shown: Math.min(total, current.shown + current.rate * (now - current.frame)), frame: now };
+  const moved = Math.min(current.total, current.shown + current.rate * (now - current.frame));
+  if (total === current.total) return { ...current, shown: moved, frame: now };
+  const waited = Math.min(MAX_GAP, Math.max(MIN_GAP, now - current.at));
+  const gap = current.gap * 0.7 + waited * 0.3;
+  const shown = Math.min(moved, total);
+  return { shown, total, rate: (total - shown) / gap, gap, at: now, frame: now };
 }
 
 // A step draws the whole message again, which on a long one and a slow device takes longer than a frame: the next

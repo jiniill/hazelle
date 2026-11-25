@@ -21,6 +21,12 @@ describe('pace', () => {
     expect(current.shown).toBe(2000);
     expect(pace(current, 1500, now).shown).toBe(1500);
   });
+
+  it('moves on at a step that meets a new arrival too, as every step does when a draw takes longer than the gap', () => {
+    let current = startPace(0, 0);
+    for (let now = 60; now <= 3000; now += 60) current = pace(current, Math.floor(now / 50) * 100, now);
+    expect(current.shown).toBeGreaterThan(current.total - 300);
+  });
 });
 
 describe('rested', () => {
