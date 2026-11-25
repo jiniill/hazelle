@@ -115,7 +115,7 @@ export function presenceMemory(): PresenceMemory {
 
 // The page as runtime code reads it: its visibility, and events such as resume (runtime/worker).
 export function stubPage(visibilityState: DocumentVisibilityState) {
-  const page = Object.assign(new EventTarget(), { visibilityState, querySelectorAll: () => [] });
+  const page = Object.assign(new EventTarget(), { visibilityState, querySelectorAll: () => [], documentElement: { classList: { contains: () => false } } });
   vi.stubGlobal('document', page);
   return page;
 }

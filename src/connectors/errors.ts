@@ -12,8 +12,13 @@ export function errorValue(error: unknown): string | null {
 // as JSON. A malformed error event with no value still fails, but has no detail to display.
 export const streamError = (error: unknown): string => errorValue(error) ?? JSON.stringify(error) ?? '';
 
+// A provider's word for its refusal: OpenAI's {error: {code}}, which a connector may tell apart (Discount busy), or
+// Google's {error: {code: 400, status}}, whose number only repeats the HTTP status.
+const errorCode = (error: unknown) => (!isRecord(error) ? null : typeof error.code === 'string' ? error.code : typeof error.status === 'string' ? error.status : null);
+
 export function failedTerminal(error: unknown): Terminal {
-  return { state: 'failed', error: streamError(error), ...(isRecord(error) && typeof error.code === 'string' && { code: error.code }) };
+  const code = errorCode(error);
+  return { state: 'failed', error: streamError(error), ...(code !== null && { code }) };
 }
 
 // A provider's error body in the shapes seen so far: OpenAI and OpenRouter {error: {message}}, Anthropic
@@ -35,7 +40,6 @@ export function providerMessage(text: string): string {
   return text.trim().slice(0, 300);
 }
 
-// OpenAI's shape names its refusal ({error: {code}}), which a connector may tell apart (Discount busy).
 export function providerCode(text: string): string | null {
   let body: unknown;
   try {
@@ -43,5 +47,5 @@ export function providerCode(text: string): string | null {
   } catch {
     return null;
   }
-  return isRecord(body) && isRecord(body.error) && typeof body.error.code === 'string' ? body.error.code : null;
+  return isRecord(body) ? errorCode(body.error) : null;
 }

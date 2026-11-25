@@ -55,6 +55,9 @@ const CALLS = ['server', 'browser', 'proxy'] as const;
 const orNull = <S extends Spec>(spec: S) => ({ orNull: spec });
 const listOf = <S extends Spec>(spec: S) => ({ listOf: spec });
 
+// The id a model was asked by. The server keeps its name only when a list it holds confirms it (server/pulse).
+const MODEL = orNull(new RegExp(`^.{1,${MODEL_MOST}}$`, 's'));
+
 // A word a closed list in the app gave, or a provider's or the server's code. Spaces and sentences cannot pass.
 const WORD = /^[\w:.-]{1,60}$/;
 export const closedWord = (word: string) => (WORD.test(word) ? word : 'other');
@@ -105,8 +108,7 @@ const CHAT = {
   type: orNull(TYPE),
   // Where the account's provider calls leave from.
   calls: CALLS,
-  // The id the model was asked by. The server keeps its name only when a list it holds confirms it (server/pulse).
-  model: orNull(new RegExp(`^.{1,${MODEL_MOST}}$`, 's')),
+  model: MODEL,
   hardContext: orNull('number'),
   context: orNull('number'),
   reply: orNull('number'),
@@ -119,8 +121,9 @@ const CHAT = {
   // them, the CSS, the boxes taken out, and whether its bot was judged stuck.
   shown: orNull({ texts: 'number', chars: 'number', longest: 'number', css: 'number', boxes: 'number', stuck: 'flag' }),
   memory: { on: 'flag', own: 'flag', budget: 'number', clamped: orNull('number'), window: 'number', batch: 'number' },
-  // The model that writes this chat's summaries; the server treats its id as it does model's.
-  aux: { type: orNull(TYPE), model: orNull(new RegExp(`^.{1,${MODEL_MOST}}$`, 's')) },
+  // The model that writes this chat's summaries, and the account's 임베딩 모델 that indexes them.
+  aux: { type: orNull(TYPE), model: MODEL },
+  embed: { type: orNull(TYPE), model: MODEL },
   // How much the chat's memory holds, null while the chat is not loaded.
   stored: orNull({ records: 'number', chapters: 'number', facts: 'number', threads: 'number' }),
   // The summaries still to run on this page, and what stopped them: records in failed, chapters in chapter, the
@@ -264,6 +267,8 @@ const REPORT = {
   // The browser had thrown the tab away and loaded it again.
   discarded: 'flag',
   entered: orNull(['navigate', 'reload', 'back_forward', 'prerender']),
+  // A browser's translation had the page: it cuts and moves the stories' text.
+  translated: 'flag',
   // The page's elements outside the stories' own roots.
   dom: 'number',
   shadow: 'number',

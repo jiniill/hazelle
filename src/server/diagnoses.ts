@@ -22,12 +22,12 @@ export const diagnoses = new Hono<AppEnv>().post('/', async (c) => {
   const { rows } = (await c.env.db.prepare('SELECT COUNT(*) AS rows FROM auto_diagnoses WHERE day = ?').bind(day).first<{ rows: number }>())!;
   if (rows >= ROWS_PER_DAY) return c.body(null, 204);
   const { event, detail, cause, version, place, chat, ...device } = report;
-  const model = chat?.type && chat.model ? (await confirmedModel(c.env.db, chat.type, chat.model)).name : null;
-  const aux = chat?.aux.type && chat.aux.model ? (await confirmedModel(c.env.db, chat.aux.type, chat.aux.model)).name : null;
+  const named = async ({ type, model }: { type: string | null; model: string | null }) => (type && model ? (await confirmedModel(c.env.db, type, model)).name : null);
+  const kept = chat && { ...chat, model: await named(chat), aux: { ...chat.aux, model: await named(chat.aux) }, embed: { ...chat.embed, model: await named(chat.embed) } };
   const person = await dayHash(c.env.db, day, ['diagnosis', visitor, agent]);
   await c.env.db
     .prepare('INSERT INTO auto_diagnoses (day, person, event, detail, version, place, times, at, facts) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?) ON CONFLICT DO UPDATE SET times = times + 1, at = excluded.at, facts = excluded.facts')
-    .bind(day, person, event, detail ?? '', version ?? '', place ?? '', now, JSON.stringify({ ...device, cause, chat: chat && { ...chat, model, aux: { ...chat.aux, model: aux } } }))
+    .bind(day, person, event, detail ?? '', version ?? '', place ?? '', now, JSON.stringify({ ...device, cause, chat: kept }))
     .run();
   return c.body(null, 204);
 });

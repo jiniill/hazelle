@@ -20,6 +20,7 @@ const CHAT: AutoChat = {
   shown: { texts: 25, chars: 900_000, longest: 60_000, css: 40_000, boxes: 2, stuck: false },
   memory: { on: true, own: false, budget: 8000, clamped: 4000, window: 12_000, batch: 4000 },
   aux: { type: 'openrouter', model: 'someone-private/secret-aux' },
+  embed: { type: 'vertex', model: 'someone-private/secret-embed' },
   stored: { records: 4, chapters: 1, facts: 2, threads: 1 },
   work: { left: null, failed: { kind: 'invalid', reason: 'outcome', wrong: { part: 'itself', was: 'null' }, refused: false, call: { state: 'done', cut: 'length', finish: 'MAX_TOKENS', error: null, status: null, code: null, tries: 1, input: 900, cached: null, written: null, output: 400, reasoning: 20, first: 900, total: 4000 } }, chapter: null, index: null },
   last: null,
@@ -30,7 +31,7 @@ const CHAT: AutoChat = {
 };
 const UNIT = { kind: 'regex', stage: 'display', message: 6, script: 11, chars: 4000 } as const;
 const JOB: AutoJob = { asker: 'projection', regex: true, scope: { regex: 12, messages: 7, chars: 9000, longest: 4000, lore: 3, packs: 2, assets: 40, variables: 5 }, waiting: 1, jobs: 0, ran: 4100, signs: 3, units: 90, unit: UNIT, quiet: 3200, spent: [{ kind: 'write', stage: 'display', units: 40, ms: 3100 }, { kind: 'message', stage: null, units: 7, ms: 20 }], slow: [{ ...UNIT, script: 4, ms: 700 }] };
-const REPORT: AutoReport = { event: 'memory-gap', detail: null, cause: null, version: 'v0.6.4', browser: 'chrome', major: 140, os: 'windows', mobile: false, place: null, frames: null, origin: null, screen: 'chat', page: 30, online: true, visible: true, standalone: false, cores: 8, memoryGb: 8, width: 1280, height: 800, language: 'ko-KR', dpr: 2.625, touch: true, reducedMotion: false, heapMb: 310, heapLimitMb: 2048, net: '4g', saveData: false, discarded: false, entered: 'reload', dom: 4200, shadow: 0, errors: 2, stalls: { count: 40, blocked: 9000, worst: 2400 }, trail: [{ word: 'screen:chat', ago: 9000, n: null }, { word: 'frame', ago: 120, n: 2400 }], chat: CHAT, job: null, script: null, frame: null };
+const REPORT: AutoReport = { event: 'memory-gap', detail: null, cause: null, version: 'v0.6.4', browser: 'chrome', major: 140, os: 'windows', mobile: false, place: null, frames: null, origin: null, screen: 'chat', page: 30, online: true, visible: true, standalone: false, cores: 8, memoryGb: 8, width: 1280, height: 800, language: 'ko-KR', dpr: 2.625, touch: true, reducedMotion: false, heapMb: 310, heapLimitMb: 2048, net: '4g', saveData: false, discarded: false, entered: 'reload', translated: false, dom: 4200, shadow: 0, errors: 2, stalls: { count: 40, blocked: 9000, worst: 2400 }, trail: [{ word: 'screen:chat', ago: 9000, n: null }, { word: 'frame', ago: 120, n: 2400 }], chat: CHAT, job: null, script: null, frame: null };
 
 it('refuses anything off the list: a field more or less, a free word, a name where a word goes', () => {
   expect(readAutoReport(REPORT)).toEqual(REPORT);
@@ -112,6 +113,7 @@ it('keeps a person to one row a day, under a hash that changes with the day and 
   expect(today!.times).toBe(2);
   // An id no list confirms stays out: it may carry an organisation or a person.
   expect(today!.facts).not.toContain('secret-model');
+  expect(today!.facts).not.toContain('secret-embed');
   expect(today!.facts).toContain('"dropped":15');
   expect((await send(REPORT, 'Other browser')).status).toBe(204);
   expect((await read())[0]).toMatchObject({ event: 'memory-gap', version: 'v0.6.4', people: 2, times: 3 });

@@ -3,7 +3,7 @@ import { hearServedBuild } from '../../runtime/api';
 import { markSeen } from '../../runtime/chat/chat-context';
 import type { AccountFacts } from '../../runtime/account/account';
 import { Drafts } from '../../runtime/device/drafts';
-import { BUILT_VERSION, PAGE_BUILD, selfHost } from '../../runtime/installation';
+import { BUILT_VERSION, PAGE_BUILD, readRelease, selfHost } from '../../runtime/installation';
 import { openGuestSession, openSession, type Session } from '../../runtime/session';
 import type { ObjectStore, PullProgress } from '../../runtime/store/store';
 import type { Unlocked } from '../account/AccountFlow';
@@ -88,7 +88,16 @@ function Stale() {
     hearServedBuild((served) => {
       if (served !== PAGE_BUILD) toast.show('새 버전이 나왔어요', { stays: true, action: { label: '새로고침', onClick: () => location.reload() } });
     });
-    return () => hearServedBuild(null);
+    // A page the browser kept whole (back, forward) hears nothing before its next screen asks for a chunk that may be
+    // gone, so it asks the server at once.
+    const restored = (event: PageTransitionEvent) => {
+      if (event.persisted) void readRelease();
+    };
+    addEventListener('pageshow', restored);
+    return () => {
+      hearServedBuild(null);
+      removeEventListener('pageshow', restored);
+    };
   }, [toast]);
   return null;
 }

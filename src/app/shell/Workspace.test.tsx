@@ -15,6 +15,8 @@ vi.mock('../../runtime/session', () => ({ openSession: async () => ({ ok: true, 
 vi.mock('../../runtime/device/drafts', () => ({ Drafts: class { persist = async () => {}; close = async () => {}; } }));
 vi.mock('../../runtime/device/device-values', () => ({ carryDeviceValues: () => {} }));
 vi.mock('../../runtime/diagnostics/auto-diagnosis', () => ({ notePlace: () => {}, noteStep: () => {} }));
+const { readRelease } = vi.hoisted(() => ({ readRelease: vi.fn(async () => ({ ok: true, data: { newer: null } })) }));
+vi.mock('../../runtime/installation', async (original) => ({ ...(await original<typeof import('../../runtime/installation')>()), PAGE_BUILD: 'page-build', readRelease }));
 vi.mock('../session', () => ({ SessionProvider: passing, useSession: () => session, useSaves: () => ({}), useHeldLeave: () => null, useSettings: () => ({}), useStore: () => ({}) }));
 vi.mock('../display', () => ({ DisplayProvider: passing, useDisplay: () => ({ display: { chimes: false, chimeSounds: {} } }) }));
 vi.mock('../common/Tutorial', () => ({ TutorialProvider: passing, useTutorials: () => ({}) }));
@@ -58,6 +60,8 @@ it('puts up and takes down the standing notice without drawing the workspace aga
   const none = () => () => {};
   session = { store: { subscribeWaiting: connection.subscribe, waiting: () => waiting, subscribeRewound: none }, startBackground: () => {}, close: () => {}, talk: { subscribe: none }, transport: {}, cues: { subscribe: none } };
   const held = facts();
+  vi.stubGlobal('addEventListener', () => {});
+  vi.stubGlobal('removeEventListener', () => {});
   const root = probeRoot();
   try {
     await act(async () => root.render(workspace(held)));
@@ -75,6 +79,27 @@ it('puts up and takes down the standing notice without drawing the workspace aga
     });
     expect(standing).toEqual(['운영자가 이 계정을 정지했어요']);
     expect(layouts).toBe(1);
+  } finally {
+    await act(() => root.unmount());
+    vi.unstubAllGlobals();
+  }
+});
+
+it('asks the server for its build when the browser brings the page back whole', async () => {
+  const none = () => () => {};
+  session = { store: { subscribeWaiting: none, waiting: () => false, subscribeRewound: none }, startBackground: () => {}, close: () => {}, talk: { subscribe: none }, transport: {}, cues: { subscribe: none } };
+  const page = new EventTarget();
+  vi.stubGlobal('addEventListener', page.addEventListener.bind(page));
+  vi.stubGlobal('removeEventListener', page.removeEventListener.bind(page));
+  const root = probeRoot();
+  const shown = (persisted: boolean) => page.dispatchEvent(Object.assign(new Event('pageshow'), { persisted }));
+  try {
+    await act(async () => root.render(workspace(facts())));
+    readRelease.mockClear();
+    shown(false);
+    expect(readRelease).not.toHaveBeenCalled();
+    shown(true);
+    expect(readRelease).toHaveBeenCalledTimes(1);
   } finally {
     await act(() => root.unmount());
     vi.unstubAllGlobals();

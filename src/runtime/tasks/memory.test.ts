@@ -33,7 +33,7 @@ const summary = (what: string, line: string) =>
 describe('Rememberer', () => {
   it('summarizes what a request cannot hold though it is inside the window, in few calls, until nothing leaves and the last message stays raw', () =>
     server.withSession(async (session) => {
-      const connection = await session.store.create('connection', { ...testConnection, starred: [{ ...testModel, contextLength: 1500 }] });
+      const connection = await session.store.create('connection', { ...testConnection, starred: [{ ...testModel, contextLength: 1600 }] });
       if (!connection.ok) throw new Error(connection.error);
       await setDefaultModel(session.store, 'main', { connection: connection.data.id, model: testModel.id });
       await setDefaultMemory(session.store, { window: 100_000, batch: 300 });

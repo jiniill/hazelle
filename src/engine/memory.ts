@@ -503,7 +503,7 @@ export const memoryFormat = (count: number, target: number) =>
     `${ONE_OBJECT} {"records": [...]}`,
     `The records are about ${target} tokens long in all, so a scene keeps its detail: who did what, what was agreed, what was said.`,
     `The records cover the numbered messages in order, without gaps: each record's "to" is the number of its last message, greater than the "to" before it, and the last record's "to" is ${count}. Start a new record only at a scene break between messages: a message is never split, so when one message holds several scenes, one record tells them all in order, with "when" and "where" naming each scene's.`,
-    `Every record has every field: "to" (a number); "when" and "where" (text, or null when the messages do not say); "who" (a list of the names of those present, one spelling per person); "what" (what happened); "lines" (a list of key lines, each {"speaker": who says the line in the text, not always the author of the message, "text": the line copied word for word from the messages}); "outcome" (text); "state" (a list of only the facts this record changes, each {"about": name, "field": what it is, "value": its new value, or null when the fact no longer holds, such as a healed injury, an item given away or a place left}; one value per field, so merge duplicates of the same about and field into one); "opens" (a list of new unresolved promises, foreshadowing or events, each as text); "closes" (a list of the labels of the open threads it resolves, such as ["T-1a2b3c4d"]). ${EMPTY_LIST}`,
+    `Every record has every field: "to" (a number); "when" and "where" (text, or null when the messages do not say); "who" (a list of the names of those present, one spelling per person); "what" (what happened); "lines" (a list of key lines, each {"speaker": who says the line in the text, not always the author of the message, "text": the line copied word for word from the messages}); "outcome" (text); "state" (a list of only the facts this record changes, each {"about": name, "field": what it is, "value": its new value, or null when the fact no longer holds, such as a healed injury, an item given away or a place left}; one value per field, so merge duplicates of the same about and field into one); "opens" (a list of new unresolved promises, foreshadowing or events, each as text, not an object); "closes" (a list of the labels of the open threads it resolves, such as ["T-1a2b3c4d"]). ${EMPTY_LIST}`,
   ].join('\n');
 
 // The app's own sentence after a memory prompt for a chapter, which overrides what the prompt asks of records:
@@ -628,12 +628,13 @@ function drafted(item: Record<string, unknown>): Drafted | Field {
   const scene = sceneOf(item);
   if (typeof scene === 'string') return scene;
   const { to, state, opens, closes } = item;
-  const change = (value: unknown): value is Change => isRecord(value) && isText(value.about) && isText(value.field) && textOrNull(value.value);
+  // Asked for text, a model still writes a count or a level as a number, which reads as its digits.
+  const change = (value: unknown): value is Omit<Change, 'value'> & { value: Change['value'] | number } => isRecord(value) && isText(value.about) && isText(value.field) && (textOrNull(value.value) || Number.isFinite(value.value));
   if (typeof to !== 'number' || !Number.isInteger(to)) return 'to';
   if (!Array.isArray(state) || !state.every(change)) return 'state';
   if (!textsOf(opens)) return 'opens';
   if (!textsOf(closes)) return 'closes';
-  return { to, ...scene, state: state.map(({ about, field, value }) => ({ about, field, value })), opens, closes };
+  return { to, ...scene, state: state.map(({ about, field, value }) => ({ about, field, value: typeof value === 'number' ? String(value) : value })), opens, closes };
 }
 
 const INSTRUCTIONS = [

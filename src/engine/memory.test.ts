@@ -24,6 +24,10 @@ describe('parseRecords', () => {
     expect(parsed).toMatchObject({ ok: true, records: [{ to: 2, lines: [{ speaker: 'Luna' }] }, { to: 3, state: [{ value: null }] }] });
   });
 
+  it('reads a state value written as a number as its digits', () => {
+    expect(parseRecords(answer([{ ...record(3), state: [{ about: 'Luna', field: 'age', value: 17 }] }]), span)).toMatchObject({ ok: true, records: [{ state: [{ value: '17' }] }] });
+  });
+
   it('reads who written as one comma-separated string', () => {
     expect(parseRecords(answer([{ ...record(3), who: 'Luna, jin' }]), span)).toMatchObject({ ok: true, records: [{ who: ['Luna', 'jin'] }] });
   });
@@ -49,7 +53,7 @@ describe('parseRecords', () => {
     };
     expect(wrong({ state: { Luna: 'SECRET' } })).toEqual(['state', 'itself', 'object']);
     expect(wrong({ state: ['SECRET'] })).toEqual(['state', 'item', 'text']);
-    expect(wrong({ state: [{ about: 'Luna', field: 'age', value: 7 }] })).toEqual(['state', 'value', 'number']);
+    expect(wrong({ state: [{ about: 'Luna', field: 'awake', value: true }] })).toEqual(['state', 'value', 'boolean']);
     expect(wrong({ state: [{ about: 'Luna', value: 'SECRET' }] })).toEqual(['state', 'field', 'missing']);
     expect(wrong({ who: [null] })).toEqual(['who', 'item', 'null']);
     expect(wrong({ who: null })).toEqual(['who', 'itself', 'null']);

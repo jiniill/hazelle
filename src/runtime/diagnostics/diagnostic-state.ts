@@ -5,7 +5,7 @@ import { shown, type Chat, type Receipt } from '../../model/chat';
 import { live } from '../../model/library';
 import { toolId } from '../../model/tool';
 import { accountSettings } from '../account-settings';
-import { chatModel } from '../models/assignment';
+import { chatModel, embedModel, type Route } from '../models/assignment';
 import { callRoute } from '../models/relay';
 import { forecast, prior } from './cache';
 import { diagnoseCache } from './cache-diagnosis';
@@ -97,10 +97,12 @@ export function turnFacts(failure: TurnFailure): AutoChat['turn'] {
   return { reason: inner === null ? null : 'error' in inner ? closedWord(inner.error) : 'kind' in inner ? inner.kind : null, tokens: 'tokens' in failure ? failure.tokens : null, budget: 'budget' in failure ? failure.budget : null };
 }
 
-// The writer's type and model, read with the same word for both reports.
+// A role's connection type and model id, read with the same word for every report.
+const pickFacts = (route: Route | { kind: string }): AutoChat['aux'] => ('kind' in route ? { type: null, model: null } : { type: labelledType(route.connection.value), model: route.model.id });
+
 function auxFacts(store: Reader['store'], chat: Chat): AutoChat['aux'] {
   const writer = memoryWriter(store, chat);
-  return 'kind' in writer ? { type: null, model: null } : { type: labelledType(writer.route.connection.value), model: writer.route.model.id };
+  return pickFacts('kind' in writer ? writer : writer.route);
 }
 
 // The contract's closed shape stands for known() here: every word in it passed closedWord or came off a list of its own.
@@ -288,6 +290,7 @@ export function autoChat({ store, read }: Pick<Session, 'store' | 'read'>, id: s
       : null,
     memory: { on, own, budget, clamped: memoryBudget(budget, promptBudget(store, chat)), window, batch },
     aux: auxFacts(store, chat),
+    embed: pickFacts(embedModel(store)),
     stored: memory && { records: memory.records.length, chapters: memory.chapters.length, facts: memory.state.length, threads: memory.threads.length },
     work: { left: running.get(id)?.left ?? null, failed: failureFacts(failed.get(id)), chapter: failureFacts(chapterFailed.get(id)), index: failureFacts(indexFailed.get(id)) },
     last: receipt ? callFacts(receipt) : null,

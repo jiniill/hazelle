@@ -86,7 +86,7 @@ function shadowed(root: Document | ShadowRoot): number {
 }
 
 // What a report says of the page and the machine, whatever the problem.
-function pageFacts(): Pick<AutoReport, 'screen' | 'page' | 'online' | 'visible' | 'standalone' | 'cores' | 'memoryGb' | 'width' | 'height' | 'language' | 'dpr' | 'touch' | 'reducedMotion' | 'heapMb' | 'heapLimitMb' | 'net' | 'saveData' | 'discarded' | 'entered' | 'dom' | 'shadow' | 'errors' | 'stalls' | 'trail'> {
+function pageFacts(): Pick<AutoReport, 'screen' | 'page' | 'online' | 'visible' | 'standalone' | 'cores' | 'memoryGb' | 'width' | 'height' | 'language' | 'dpr' | 'touch' | 'reducedMotion' | 'heapMb' | 'heapLimitMb' | 'net' | 'saveData' | 'discarded' | 'entered' | 'translated' | 'dom' | 'shadow' | 'errors' | 'stalls' | 'trail'> {
   const nav = navigator as Navigator & { deviceMemory?: number; standalone?: boolean; connection?: { effectiveType?: string; saveData?: boolean } };
   const heap = (performance as Performance & { memory?: { usedJSHeapSize: number; jsHeapSizeLimit: number } }).memory;
   const entry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
@@ -111,6 +111,8 @@ function pageFacts(): Pick<AutoReport, 'screen' | 'page' | 'online' | 'visible' 
     saveData: nav.connection?.saveData ?? null,
     discarded: (document as Document & { wasDiscarded?: boolean }).wasDiscarded === true,
     entered: ENTERED.find((known) => known === entry?.type) ?? null,
+    // Chrome marks <html> while its translation has the page.
+    translated: ['translated-ltr', 'translated-rtl'].some((mark) => document.documentElement.classList.contains(mark)),
     dom: document.querySelectorAll('*').length,
     shadow: shadowed(document),
     errors,
