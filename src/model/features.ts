@@ -7,10 +7,10 @@ export type Feature = (typeof FEATURES)[number];
 export type FeatureSwitches = Partial<Record<Feature, boolean>>;
 
 // What a feature no layer sets reads. 마스코트 and 토큰 절약 start off: each costs one more 보조 call per reply (design
-// §6.11). 음성 starts on as 삽화 does: it reads nothing until a voice is picked and a message is played or 자동 읽기 is on.
+// §6.11). 음성 starts off: its 듣기 on every message and its tool are clutter to whoever has no voice to use.
 // 에이전트 starts on: it runs nothing until a list holds an agent, and one added is meant to run. 상태 starts on
 // as 에이전트 does: it does nothing in a chat whose prompt and packs declare no state (design §6.1).
-export const FEATURE_STARTS: Record<Feature, boolean> = { translate: true, illustrate: true, speech: true, memory: true, mascot: false, preread: false, agents: true, status: true };
+export const FEATURE_STARTS: Record<Feature, boolean> = { translate: true, illustrate: true, speech: false, memory: true, mascot: false, preread: false, agents: true, status: true };
 
 // A feature still an experiment: with its 실험실 switch off it reads off on every layer and no screen shows it.
 export const FEATURE_LABS: Partial<Record<Feature, LabId>> = { preread: 'preread', agents: 'agents', status: 'status' };
