@@ -13,6 +13,8 @@ export const TOOL_LOG_CHARS = 200;
 const encoder = new TextEncoder();
 export const dataBytes = (key: string, value: Json) => encoder.encode(key).byteLength + encoder.encode(JSON.stringify(value)).byteLength;
 export const toolVar = (manifest: Pick<ToolManifest, 'author' | 'name'>, key: string) => `${TOOL_VARIABLES}${manifest.author}/${manifest.name}:${key}`;
+// The most pictures a tool keeps on one message version, each under a slot of its own (Chat.picture).
+export const PICTURE_SLOTS = 8;
 // The most pictures one model call carries (Chat.model).
 export const MODEL_PICTURES = 6;
 export const TOOL_USES = ['model', 'embed', 'decide', 'draw', 'memory', 'network'] as const;

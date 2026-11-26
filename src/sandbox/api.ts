@@ -151,7 +151,7 @@ export function connectApi(port: Port, execute: (code: string, api: Hazelle.Api)
       fetch: (url, { method = 'GET', headers = {}, body, signal } = {}) => call('fetch', [url, { method, headers, body: body ?? null }], event, signal),
       badge: (index, text) => { pending().badges.set(index, text); changed(); },
       // Bound to the chat, not the event: a picture often lands after its event has ended.
-      picture: (at, bytes, options) => call('chat.picture', [header.id, at, bytes, options?.caption ?? null]),
+      picture: (at, bytes, options) => call('chat.picture', [header.id, at, bytes, options?.caption ?? null, options?.paragraph ?? null, options?.slot ?? '']),
       tokens: (text) => call('tokens', [text], event),
       cbs: (text) => call('chat.cbs', [text], event),
       lore: (reserve) => call('lore', [reserve ?? null], event),

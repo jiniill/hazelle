@@ -27,7 +27,8 @@ export type Drawn = Placed & {
   sent: Omit<PictureRequest, 'model' | Tuning> & Partial<Pick<PictureRequest, Tuning>>;
 };
 // Tool pictures have no scene and must never be redrawn. Keep the tool name after module deletion.
-export type Attached = Placed & { paragraph: number; width: number; height: number; tool: { module: string; name: string }; caption?: string };
+// slot: which of its tool's pictures on the version it is, absent for the one a tool puts without naming a slot.
+export type Attached = Placed & { paragraph: number; width: number; height: number; tool: { module: string; name: string }; caption?: string; slot?: string };
 // Told apart by tool, which no drawn picture holds.
 export type Illustration = Drawn | Attached;
 

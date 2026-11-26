@@ -1191,6 +1191,32 @@ it('reads the cards and assets of the chat\'s 등장인물 and the 삽화 프로
   } finally { close(); host.close(); }
 }));
 
+it('puts a tool\'s pictures after the paragraphs it names, one to a slot, and refuses a paragraph the version lacks or a ninth slot', () => withTools(async (session, connect) => {
+  const f = await fixture(session);
+  await appendScripted(session.store, f.chat, { edits: [], removed: [], added: [{ follows: null, ahead: null, messages: [{ role: 'assistant', text: 'The tide turns.\n\nGulls rise.' }] }], vars: null });
+  await session.store.projections.evaluate(f.chat);
+  const bytes = Uint8Array.from(atob(PICTURE), (char) => char.charCodeAt(0));
+  const transport = inProcessTools(() => {});
+  const host = connect(transport.open);
+  const close = host.page(f.module, page(f.chat));
+  // Stored in no order of its own.
+  const placed = () => session.store.children('illustration', f.chat).map(({ value }) => 'tool' in value && [value.slot ?? '', value.paragraph, value.line]).sort();
+  try {
+    await vi.waitFor(() => expect(transport.frames[0]?.api).not.toBeNull());
+    const chat = transport.frames[0]!.api!.page!.chat!;
+    const [, reply] = await chat.messages();
+    await chat.picture(reply!, bytes, { paragraph: 0, slot: 'opening' });
+    await chat.picture(reply!, bytes);
+    expect(placed()).toEqual([['', 1, 'Gulls rise.'], ['opening', 0, 'The tide turns.']]);
+    await chat.picture(reply!, bytes, { paragraph: 1, slot: 'opening' });
+    expect(placed()).toEqual([['', 1, 'Gulls rise.'], ['opening', 1, 'Gulls rise.']]);
+    await expect(chat.picture(reply!, bytes, { paragraph: 2 })).rejects.toThrow('no-paragraph');
+    for (let slot = 0; slot < 6; slot++) await chat.picture(reply!, bytes, { slot: String(slot) });
+    await expect(chat.picture(reply!, bytes, { slot: 'ninth' })).rejects.toThrow('too-many-slots');
+    expect(placed()).toHaveLength(8);
+  } finally { close(); host.close(); }
+}));
+
 it('answers a frame tool\'s unload callbacks while its port stays open, then closes it', () => withTools(async (session, connect) => {
   await answerable(session);
   const parsed = source('1', '');

@@ -169,10 +169,15 @@ declare namespace Hazelle {
     // with its reason, as fetch does.
     fetch(url: string, init?: FetchInit): Promise<FetchAnswer>;
     badge(index: number, text: string | null): void;   // on the version shown now, cut to 10 characters; lands with the outcome
-    // Replaces this tool's picture after the version's last paragraph, with storage's write rate.
+    // Puts this tool's picture after a paragraph of the version, with storage's write rate. paragraph: which, from 0,
+    // counting the lines of the version's raw text that hold words; the last when absent. slot: this picture's name
+    // among the tool's pictures on the version, at most 256 characters: a picture put in a slot replaces the one there,
+    // and a tool keeps at most 8 slots on a version. Without a slot it is the tool's one unnamed picture. Pictures after
+    // the same paragraph show one at a time, the newest first.
     // May save after its event ends; resolves only once saved. caption substitutes where the image is unseen.
-    // Throws for non-PNG/JPEG/GIF/WebP/AVIF bytes, a missing version or a refused file.
-    picture(at: At, bytes: Uint8Array, options?: { caption?: string }): Promise<void>;
+    // Throws for non-PNG/JPEG/GIF/WebP/AVIF bytes, a missing version (gone), a paragraph the version lacks
+    // (no-paragraph), a ninth slot (too-many-slots) or a refused file.
+    picture(at: At, bytes: Uint8Array, options?: { caption?: string; paragraph?: number; slot?: string }): Promise<void>;
     tokens(text: string): Promise<number>;
     // text with its CBS read after the chat's messages, with the variables they leave, as a prompt's text is; its setvar
     // sets nothing.

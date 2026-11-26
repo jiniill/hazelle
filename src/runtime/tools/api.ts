@@ -14,7 +14,7 @@ import { accountSettings } from '../account-settings';
 import { toolId } from '../../model/tool';
 import { isQuestions } from '../../connectors/decide';
 import { isDrawRequest } from '../../engine/illustrate';
-import { MODEL_PICTURES, TOOL_LOG_CHARS, TOOL_PROGRESS_CHARS, TOOL_VARIABLES, toolVar, type Json } from '../../tool-api/manifest';
+import { MODEL_PICTURES, TOOL_KEY_CHARS, TOOL_LOG_CHARS, TOOL_PROGRESS_CHARS, TOOL_VARIABLES, toolVar, type Json } from '../../tool-api/manifest';
 import { imageSize } from '../../engine/import/card';
 import { called, type ChatHeader, type Down, type Message, type ToolOutcome } from '../../tool-api/protocol';
 import { RISU_DECLINED } from '../../tool-api/risu-methods';
@@ -352,12 +352,13 @@ export class ToolApi {
         return read.data;
       }
       case 'chat.picture': {
-        const [, at, bytes, caption] = args;
-        if (typeof first !== 'string' || !isRecord(at) || typeof at.id !== 'string' || typeof at.version !== 'string' || !(bytes instanceof Uint8Array) || (caption !== null && typeof caption !== 'string')) break;
+        const [, at, bytes, caption, paragraph, slot] = args;
+        if (typeof first !== 'string' || !isRecord(at) || typeof at.id !== 'string' || typeof at.version !== 'string' || !(bytes instanceof Uint8Array) || (caption !== null && typeof caption !== 'string')
+          || (paragraph !== null && !(Number.isInteger(paragraph) && (paragraph as number) >= 0)) || typeof slot !== 'string' || slot.length > TOOL_KEY_CHARS) break;
         if (!this.runtime.allowed(first, entry.module)) throw new ToolStopped();
         this.storage.take(entry.module);
         const tool = { module: entry.module, name: live(this.session.store.get('module', entry.module))!.value.name };
-        const saved = await attachIllustration(this.session, first, tool, { message: at.id, version: at.version }, new Uint8Array(bytes), caption);
+        const saved = await attachIllustration(this.session, first, tool, { message: at.id, version: at.version }, new Uint8Array(bytes), { caption, paragraph: paragraph as number | null, slot });
         if (!saved.ok) throw new Error(saved.error);
         return;
       }

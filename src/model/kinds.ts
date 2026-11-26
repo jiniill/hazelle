@@ -231,7 +231,7 @@ const SHAPES = {
   cacheprint: shape({ ...all(str, 'call', 'connection', 'model'), account: orNull(str), messages: listOf(shape({ role: str, hash: str, tokens: num, from: isRecord })) }),
   memory: shape({ records: listOf(shape({ id: str, sources: listOf(isRecord), print: str, what: str, state: listOf(isRecord), opens: listOf(str), closes: listOf(str) })), chapters: listOf(shape({ id: str, sources: listOf(isRecord), print: str, what: str, records: listOf(shape({ id: str, at: num })) })), state: listOf(shape(all(str, 'about', 'field', 'value'))), threads: listOf(shape({ id: str, text: str })) }),
   illustration: (value) => shape({ ...all(str, 'message', 'version', 'type'), file: shape({ id: str, key: str }), size: num, at: num })(value) && (isRecord(value) && 'tool' in value
-    ? shape({ ...all(num, 'paragraph', 'width', 'height'), tool: shape(all(str, 'module', 'name')), caption: optStr })(value)
+    ? shape({ ...all(num, 'paragraph', 'width', 'height'), tool: shape(all(str, 'module', 'name')), caption: optStr, slot: optStr })(value)
     : shape({
       scene: shape({ paragraph: num, shape: str, setting: str, framing: str, characters: listOf(shape({ ...all(str, 'name', 'look', 'outfit', 'action'), x: num, y: num })) }),
       receipt: orNull(isRecord),
