@@ -4,9 +4,10 @@ import { secondInverted } from './memory';
 // One profile per pack at likenessId(owner); regenerate only on explicit request, not per picture.
 
 // metadata: read from NovelAI's own prompt kept in the pack's pictures; vision: a model looked at them; text: written
-// from the description and lorebook alone; user: added or edited by hand, which 다시 만들기 keeps.
+// from the description and lorebook alone; user: added or edited by hand; tool: written by a plugin (Chat.editPortraits).
+// 다시 만들기 keeps the last two, which the app did not build.
 export type BuiltSource = 'metadata' | 'vision' | 'text';
-export type PortraitSource = BuiltSource | 'user';
+export type PortraitSource = BuiltSource | 'user' | 'tool';
 export type Outfit = { name: string; tags: string };
 
 // Match aliases like names; resolve scene outfit names to tags, defaulting to the first outfit.

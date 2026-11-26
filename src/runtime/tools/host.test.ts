@@ -12,6 +12,7 @@ import { SIGNATURE } from '../../engine/assets';
 import { keepAttachments } from '../files/attachments';
 import { appendScripted, appendTranslation, appendUserMessage, editMessage, startChat } from '../chat/chat-log';
 import { setModuleAlways, setModuleDeleted } from '../library/modules';
+import { importPortraits } from '../tasks/likeness';
 import { ToolLate, ToolStuck } from '../scripts/binding';
 import type { Session } from '../session';
 import { answerable, stubRelay, testServer } from '../testing';
@@ -305,6 +306,7 @@ it('refuses undeclared spending and forged event contexts, and isolates module s
   let unnamed = '';
   let drawn: Hazelle.DrawAnswer | null = null;
   let undrawable = '';
+  let unseen = '';
   const transport = inProcessTools((api) => api.on('prompt', async (chat) => {
     answer = await chat.model('aux', [{ role: 'user', content: 'hi' }]);
     fetched = await chat.fetch('https://api.example.com/');
@@ -313,6 +315,7 @@ it('refuses undeclared spending and forged event contexts, and isolates module s
     unnamed = await chat.model('sorter', [{ role: 'user', content: 'hi' }]).then(() => '', (error: Error) => error.message);
     drawn = await chat.draw({ prompt: '1girl' });
     undrawable = await chat.draw({ prompt: '1girl', shape: 'wide' as never }).then(() => '', (error: Error) => error.message);
+    unseen = await chat.model('aux', [{ role: 'system', content: 'look', pictures: [new Uint8Array([137, 80, 78, 71])] }]).then(() => '', (error: Error) => error.message);
     return null;
   }));
   const host = connect(transport.open);
@@ -329,6 +332,7 @@ it('refuses undeclared spending and forged event contexts, and isolates module s
     expect(unnamed).toContain('No model named sorter');
     expect(drawn).toEqual({ ok: false, reason: 'not-declared' });
     expect(undrawable).toContain('Invalid picture');
+    expect(unseen).toContain('Invalid messages');
     expect(model).not.toHaveBeenCalled();
     expect(fetch).not.toHaveBeenCalled();
     expect(decide).not.toHaveBeenCalled();
@@ -339,6 +343,21 @@ it('refuses undeclared spending and forged event contexts, and isolates module s
     if (!other.ok) throw new Error('fixture');
     await setToolData(session, other.data.id, 'secret', 'private');
     expect(await frame.api!.storage.get('secret')).toBeUndefined();
+  } finally { host.close(); }
+}));
+
+it('passes a model call its cache points and nothing else of a message', () => withTools(async (session, connect) => {
+  const f = await fixture(session);
+  const transport = inProcessTools((api) => api.on('prompt', async (chat) => {
+    await chat.model('aux', [{ role: 'system', content: 'rules', cache: true, extra: 1 } as Hazelle.ModelMessage, { role: 'user', content: 'hi' }]);
+    return null;
+  }));
+  const host = connect(transport.open);
+  try {
+    const context = f.context();
+    const model = vi.fn<Host['model']>(() => Promise.resolve({ success: true, result: '' }));
+    await host.run(f.chat, f.tool(), context.scope, { kind: 'prompt', turn: { memory: false } }, { ...context.host, model });
+    expect(model.mock.calls[0]![1]).toEqual([{ role: 'system', content: 'rules', cache: true }, { role: 'user', content: 'hi' }]);
   } finally { host.close(); }
 }));
 
@@ -721,7 +740,7 @@ it('notifies a running tool after pulling a data change written on another devic
   await startChat(account.store, chat, { title: null, character: null, models: {} }, null);
   const changes = vi.fn();
   const transport = inProcessTools((api) => { api.storage.onChange(changes); });
-  const host = new ToolHost(account, { journal: { report: () => {} }, pages: { pageContext: () => null, pageWrite: async () => {}, send: async () => ({ ok: true as const }), rendered: () => null, editCard: async () => ({ ok: true as const }) } }, transport.open);
+  const host = new ToolHost(account, { journal: { report: () => {} }, pages: { pageContext: () => null, pageWrite: async () => {}, send: async () => ({ ok: true as const }), rendered: () => null, editCard: async () => ({ ok: true as const }), editPortraits: async () => ({ ok: true as const, kept: [] }) } }, transport.open);
   try {
     await host.warm(chat);
     const peer = await account.open();
@@ -1050,7 +1069,7 @@ it('reads the chat\'s lorebook by owner, how the chat is set up with its modules
     const account = await api.account();
     expect(account.characters).toEqual([{ id: character, name: 'Mira' }]);
     const setup = await api.page!.chat!.setup();
-    expect(setup).toEqual({ persona: account.personas.find(({ current }) => current)?.id ?? null, limits: { context: null, reply: null }, modules: [{ id: f.module, name: 'test', regex: [bold] }] });
+    expect(setup).toEqual({ illustrate: { auto: false, note: '', pov: false, comic: false }, persona: account.personas.find(({ current }) => current)?.id ?? null, limits: { context: null, reply: null }, modules: [{ id: f.module, name: 'test', regex: [bold] }] });
   } finally { close(); host.close(); }
 }));
 
@@ -1143,6 +1162,80 @@ it('reads the card\'s later greetings, scripts that are on and own assets, and a
     await expect(chat.editCard({ lore: [{ ...entry, name: '' }] })).rejects.toThrow('More than one lore entry is named ');
     await expect(chat.editCard({ lore: [entry, entry] })).rejects.toThrow('More than one lore entry is named Data');
     await expect(chat.editCard({ assets: [{ name: 'x', saved: 'none' }] })).rejects.toThrow('This tool saved no asset named none');
+  } finally { close(); host.close(); }
+}));
+
+it('reads the cards and assets of the chat\'s 등장인물 and the 삽화 프로필 of everyone in it, making none', () => withTools(async (session, connect) => {
+  const f = await fixture(session, undefined, 'Hello.');
+  const character = session.store.get('chat', f.chat)!.value.character!;
+  const guest = await session.store.create('character', { card: { ...blankCard('Noa'), description: 'A pilot' }, folder: null, loreFolders: [] });
+  if (!guest.ok) throw new Error(guest.error);
+  const wing = new Uint8Array([137, 80, 78, 71, 3]);
+  const held = await session.files.save([wing]);
+  if (!held.ok) throw new Error(held.error);
+  await session.store.create('asset', { name: 'wing', type: 'image/png', size: 5, file: held.data[0]! }, { parent: guest.data.id });
+  await session.store.update('chat', f.chat, (chat) => ({ ...chat, cast: [guest.data.id] }));
+  const portrait = { name: 'Noa', aliases: [], look: 'girl, short hair', outfits: [{ name: 'flight', tags: 'flight suit' }], artist: '', source: 'user' as const };
+  await importPortraits(session.store, guest.data.id, [portrait]);
+  const transport = inProcessTools(() => {});
+  const host = connect(transport.open);
+  const close = host.page(f.module, page(f.chat));
+  try {
+    await vi.waitFor(() => expect(transport.frames[0]?.api).not.toBeNull());
+    const chat = transport.frames[0]!.api!.page!.chat!;
+    const cast = await chat.cast();
+    expect(cast).toMatchObject([{ id: guest.data.id, name: 'Noa', description: 'A pilot', assets: [{ name: 'wing', saved: null }] }]);
+    expect(await chat.asset(cast[0]!.assets[0]!.id)).toEqual({ type: 'image/png', bytes: wing });
+    expect(await chat.portraits()).toEqual(expect.arrayContaining([{ owner: { kind: 'character', id: character }, portraits: [] }, { owner: { kind: 'module', id: f.module }, portraits: [] }, { owner: { kind: 'cast', id: guest.data.id }, portraits: [portrait] }]));
+    expect(session.store.list('likeness')).toHaveLength(1);
+  } finally { close(); host.close(); }
+}));
+
+it('puts a tool\'s pictures after the paragraphs it names, one to a slot, and refuses a paragraph the version lacks or a ninth slot', () => withTools(async (session, connect) => {
+  const f = await fixture(session);
+  await appendScripted(session.store, f.chat, { edits: [], removed: [], added: [{ follows: null, ahead: null, messages: [{ role: 'assistant', text: 'The tide turns.\n\nGulls rise.' }] }], vars: null });
+  await session.store.projections.evaluate(f.chat);
+  const bytes = Uint8Array.from(atob(PICTURE), (char) => char.charCodeAt(0));
+  const transport = inProcessTools(() => {});
+  const host = connect(transport.open);
+  const close = host.page(f.module, page(f.chat));
+  // Stored in no order of its own.
+  const placed = () => session.store.children('illustration', f.chat).map(({ value }) => 'tool' in value && [value.slot ?? '', value.paragraph, value.line]).sort();
+  try {
+    await vi.waitFor(() => expect(transport.frames[0]?.api).not.toBeNull());
+    const chat = transport.frames[0]!.api!.page!.chat!;
+    const [, reply] = await chat.messages();
+    await chat.picture(reply!, bytes, { paragraph: 0, slot: 'opening' });
+    await chat.picture(reply!, bytes);
+    expect(placed()).toEqual([['', 1, 'Gulls rise.'], ['opening', 0, 'The tide turns.']]);
+    await chat.picture(reply!, bytes, { paragraph: 1, slot: 'opening' });
+    expect(placed()).toEqual([['', 1, 'Gulls rise.'], ['opening', 1, 'Gulls rise.']]);
+    await expect(chat.picture(reply!, bytes, { paragraph: 2 })).rejects.toThrow('no-paragraph');
+    for (let slot = 0; slot < 6; slot++) await chat.picture(reply!, bytes, { slot: String(slot) });
+    await expect(chat.picture(reply!, bytes, { slot: 'ninth' })).rejects.toThrow('too-many-slots');
+    expect(placed()).toHaveLength(8);
+  } finally { close(); host.close(); }
+}));
+
+it('writes the character\'s 삽화 프로필 under its card\'s answer, over the app\'s and its own and never over the user\'s', () => withTools(async (session, connect) => {
+  const f = await fixture(session, undefined, 'Hello.');
+  const character = session.store.get('chat', f.chat)!.value.character!;
+  const made = (name: string, look: string) => ({ name, aliases: [], look, outfits: [], artist: '' });
+  await importPortraits(session.store, character, [{ ...made('Mira', 'girl'), source: 'text' }, { ...made('Rook', 'boy, scar'), source: 'user' }]);
+  const transport = inProcessTools(() => {});
+  const host = connect(transport.open);
+  const close = host.page(f.module, page(f.chat));
+  try {
+    await vi.waitFor(() => expect(transport.frames[0]?.api).not.toBeNull());
+    const chat = transport.frames[0]!.api!.page!.chat!;
+    const asked = chat.editPortraits([made('mira', 'girl, silver hair'), made('Rook', 'boy'), made('Sora', 'girl, hat')]);
+    await vi.waitFor(() => expect(session.scriptInteractions.snapshot().questions).toMatchObject([{ question: { kind: 'card' } }]));
+    session.scriptInteractions.answer(session.scriptInteractions.snapshot().questions[0]!.id, 'yes');
+    expect(await asked).toEqual({ ok: true, kept: ['Rook'] });
+    const mine = (await chat.portraits()).find(({ owner }) => owner.kind === 'character')!.portraits;
+    expect(mine.map(({ name, look, source }) => [name, look, source])).toEqual([['Rook', 'boy, scar', 'user'], ['mira', 'girl, silver hair', 'tool'], ['Sora', 'girl, hat', 'tool']]);
+    expect(await chat.editPortraits(Array.from({ length: 23 }, (_, index) => made(`Extra ${index}`, '')))).toEqual({ ok: false, reason: 'too-many' });
+    await expect(chat.editPortraits([made('Ann', ''), { ...made('Bea', ''), aliases: ['ann'] }])).rejects.toThrow('Invalid portraits');
   } finally { close(); host.close(); }
 }));
 

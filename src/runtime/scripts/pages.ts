@@ -5,6 +5,8 @@ import { allWritten } from '../api';
 import { cardAssets, editCharacter } from '../library/characters';
 import { cardLoreNamed, writeCardLore } from '../library/lore';
 import { toolAssetId } from '../tools/store';
+import { writePortraits } from '../tasks/likeness';
+import { noteStep } from '../diagnostics/auto-diagnosis';
 import type { ScriptOutcome } from './lua/event';
 import type { ReadModels } from '../store/read-model';
 import { onLast, type ScriptEffects } from './effects';
@@ -84,6 +86,20 @@ export class ScriptPages {
       ...(fresh.length ? [store.batch(fresh.map((value) => ({ type: 'create', kind: 'asset', id: crypto.randomUUID(), parent: character, value })))] : []),
     ]);
     return saved.ok ? { ok: true } : { ok: false, reason: 'failed' };
+  }
+
+  // A tool's portraits of the chat's character (Hazelle.Chat.editPortraits), under the same answer as editCard: they are
+  // the character's, in every chat with it.
+  async editPortraits(chat: string, portraits: Hazelle.PortraitEdit[], from: PackOwner, signal: AbortSignal): Promise<Hazelle.PortraitsAnswer> {
+    const { store } = this.session;
+    const character = live(store.get('chat', chat))?.value.character ?? null;
+    if (character === null) return { ok: false, reason: 'no-character' };
+    if (!(await this.interactions.mayRewrite(chat, character, from, false, signal))) return { ok: false, reason: 'not-allowed' };
+    if (!live(store.get('character', character)) || signal.aborted) return { ok: false, reason: 'failed' };
+    const saved = await writePortraits(store, character, portraits);
+    if (saved.ok) return { ok: true, kept: saved.data };
+    noteStep(`script-portraits:${saved.error === 'too-many' ? 'too-many' : 'unsaved'}`);
+    return { ok: false, reason: saved.error === 'too-many' ? 'too-many' : 'failed' };
   }
 
   pageWrite(chat: string, module: string, outcome: ScriptOutcome): Promise<void> {

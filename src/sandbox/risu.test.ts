@@ -40,7 +40,7 @@ function fakeApi({ open = true } = {}) {
     personas: [{ id: 'p0', name: 'Jin', description: 'A reader', picture: null, current: true }, { id: 'p1', name: 'Rook', description: 'A sailor too', picture: 'data:image/webp;base64,UklG', current: false }],
     characters: [{ id: 'character-1', name: 'Mira' }],
   };
-  const setup: Hazelle.Setup = { persona: 'p1', limits: { context: 8000, reply: null }, modules: [{ id: 'module-1', name: 'Harbor', regex: [{ name: 'bold', find: '\\*(.+?)\\*', replace: '<b>$1</b>', stage: 'display', flags: null }] }] };
+  const setup: Hazelle.Setup = { illustrate: { auto: false, note: '', pov: false, comic: false }, persona: 'p1', limits: { context: 8000, reply: null }, modules: [{ id: 'module-1', name: 'Harbor', regex: [{ name: 'bold', find: '\\*(.+?)\\*', replace: '<b>$1</b>', stage: 'display', flags: null }] }] };
   const settings: Hazelle.Settings = { image_base: 'none' };
   const model = vi.fn<Hazelle.Chat['model']>(async () => ({ ok: true, text: 'made' }));
   const send = vi.fn<Hazelle.Chat['send']>(async () => ({ ok: true }));

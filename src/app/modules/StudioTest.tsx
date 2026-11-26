@@ -25,7 +25,7 @@ import { useChats, useSession } from '../session';
 import { Button, Callout, ChoiceGroup, CodeBlock, Disclosure, Empty, Facts, Row, Section, SettingRow, Stack, StepList, Switch, Text, TextField } from '../ui';
 import { fixAsk, lineRange, SEE_IN_CODE, TEST_REQUEST, testEvent, testPicks, type TestPick } from './studio';
 
-const REFUSED: Record<Extract<TrialWrite, { kind: 'refused' }>['call'], string> = { 'assets.save': '파일 저장', 'chat.picture': '이미지 넣기', 'chat.send': '메시지 보내기', 'chat.card.edit': '캐릭터 카드 수정' };
+const REFUSED: Record<Extract<TrialWrite, { kind: 'refused' }>['call'], string> = { 'assets.save': '파일 저장', 'chat.picture': '이미지 넣기', 'chat.send': '메시지 보내기', 'chat.card.edit': '캐릭터 카드 수정', 'chat.portraits.edit': '삽화 프로필 수정' };
 
 // What 테스트 holds across its runs and the AI's: the chat, and the answer for the plugin's model calls, on the 보조 모델
 // unless another is picked. chat null: the latest.

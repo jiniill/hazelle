@@ -13,8 +13,10 @@ import { live } from '../../model/library';
 import { accountSettings } from '../account-settings';
 import { toolId } from '../../model/tool';
 import { isQuestions } from '../../connectors/decide';
+import { namesOf } from '../../engine/likeness';
 import { isDrawRequest } from '../../engine/illustrate';
-import { TOOL_LOG_CHARS, TOOL_PROGRESS_CHARS, TOOL_VARIABLES, toolVar, type Json } from '../../tool-api/manifest';
+import { MODEL_PICTURES, TOOL_KEY_CHARS, TOOL_LOG_CHARS, TOOL_PROGRESS_CHARS, TOOL_VARIABLES, toolVar, type Json } from '../../tool-api/manifest';
+import { imageSize } from '../../engine/import/card';
 import { called, type ChatHeader, type Down, type Message, type ToolOutcome } from '../../tool-api/protocol';
 import { RISU_DECLINED } from '../../tool-api/risu-methods';
 import { limitsOf, packsOf } from '../chat/chat-context';
@@ -23,6 +25,9 @@ import type { Lane } from '../evaluation/evaluation';
 import type { RanAway } from '../../engine/pipeline';
 import { changedTail } from '../evaluation/history-delta';
 import { attachIllustration } from '../tasks/illustrate';
+import { chatIllustrate } from '../tasks/features';
+import { portraitOwners } from '../tasks/likeness';
+import { likenessId } from '../../model/likeness';
 import type { ScriptOutcome } from '../scripts/lua/event';
 import { cardAssets } from '../library/characters';
 import { toolLore } from '../library/lore';
@@ -66,7 +71,13 @@ function isQuestion(value: unknown): value is Question {
   return value.kind === 'select' && (value.text === undefined || typeof value.text === 'string') && Array.isArray(value.options) && value.options.every((option) => typeof option === 'string');
 }
 function isModelMessages(value: unknown): value is ModelMessage[] {
-  return Array.isArray(value) && value.every((message) => isRecord(message) && (message.role === 'system' || message.role === 'user' || message.role === 'assistant') && typeof message.content === 'string');
+  return Array.isArray(value) && value.every((message) => isRecord(message) && (message.role === 'system' || message.role === 'user' || message.role === 'assistant') && typeof message.content === 'string' && (message.cache === undefined || message.cache === true));
+}
+// Pictures go with a user message alone, each one a picture by its header, MODEL_PICTURES in the call at most.
+function isAsked(value: unknown): value is Hazelle.AskedMessage[] {
+  if (!isModelMessages(value)) return false;
+  const pictures = value.flatMap(({ role, pictures }: Hazelle.AskedMessage): unknown[] => pictures === undefined ? [] : role === 'user' && Array.isArray(pictures) ? pictures : [null]);
+  return pictures.length <= MODEL_PICTURES && pictures.every((bytes) => bytes instanceof Uint8Array && imageSize(bytes) !== null);
 }
 // A tool's fetch as the sandbox sends it: one of the relay's methods, text headers, and a body of text or bytes, never
 // with GET.
@@ -94,8 +105,17 @@ const isCardEdit = (value: unknown): value is Hazelle.CardEdit => isRecord(value
     : key === 'tags' ? Array.isArray(field) && field.every((tag) => typeof tag === 'string')
     : key === 'lore' ? Array.isArray(field) && field.every(isLore)
     : key === 'assets' && Array.isArray(field) && field.every((asset) => isRecord(asset) && typeof asset.name === 'string' && typeof asset.saved === 'string'));
+const strings = (value: unknown) => Array.isArray(value) && value.every((each) => typeof each === 'string');
+// Each named, and by a name or alias no other of the edit goes by: one would take the other's place.
+function isPortraitEdits(value: unknown): value is Hazelle.PortraitEdit[] {
+  const one = (portrait: unknown): portrait is Hazelle.PortraitEdit => isRecord(portrait) && typeof portrait.name === 'string' && portrait.name.trim() !== '' && strings(portrait.aliases) && typeof portrait.look === 'string'
+    && typeof portrait.artist === 'string' && Array.isArray(portrait.outfits) && portrait.outfits.every((outfit) => isRecord(outfit) && typeof outfit.name === 'string' && typeof outfit.tags === 'string');
+  if (!Array.isArray(value) || !value.every(one)) return false;
+  const names = value.flatMap((portrait) => namesOf({ ...portrait, source: 'tool' }));
+  return new Set(names).size === names.length;
+}
 const isRequestMessages = (value: unknown): value is Hazelle.RequestMessage[] => Array.isArray(value) && value.every((message) => isModelMessages([message])
-  && (message.message === undefined || typeof message.message === 'string') && (message.cache === undefined || message.cache === true));
+  && (message.message === undefined || typeof message.message === 'string'));
 const answers = (event: ToolEvent['kind'] | undefined, value: unknown) => {
   if (value === undefined) return true;
   switch (event) {
@@ -166,7 +186,7 @@ function trialCall(entry: Entry, trial: EntryTrial, method: string, first: unkno
       trial.writes.push({ kind: 'setting', key: field.key, value: second });
       return { answer: undefined };
     }
-    case 'assets.save': case 'chat.picture': case 'chat.send': case 'chat.card.edit':
+    case 'assets.save': case 'chat.picture': case 'chat.send': case 'chat.card.edit': case 'chat.portraits.edit':
       trial.writes.push({ kind: 'refused', call: method });
       throw new Error('Not run in a test');
     default: return null;
@@ -177,9 +197,7 @@ function trialCall(entry: Entry, trial: EntryTrial, method: string, first: unkno
 const scriptsOf = ({ regex }: Pack): Hazelle.Script[] => regex.flatMap(({ name, find, replace, stage, flags, off }) => off ? [] : [{ name, find, replace, stage, flags }]);
 // saved: a file a module holds is one its tool saved only under the id a save gives that name (toolAssetId); another
 // asset of the module is the user's.
-async function cardOf(store: Session['store'], module: string, character: string | null, scope: ChatScope): Promise<Hazelle.Card | null> {
-  const { card } = scope;
-  if (!card || character === null) return null;
+async function cardOf(store: Session['store'], module: string, character: string, card: NonNullable<ChatScope['card']>): Promise<Hazelle.Card> {
   const held = store.children('asset', module);
   const assets = await Promise.all(cardAssets(store, character).map(async ({ id, value }) => {
     const same = held.find((asset) => asset.value.file.id === value.file.id);
@@ -198,7 +216,7 @@ function lorebookOf(chat: string, character: string | null, scope: ChatScope): H
 }
 export const header = (chat: string, scope: ChatScope): ChatHeader => ({ id: chat, character: scope.card && { name: scope.card.name, description: scope.card.description }, persona: scope.persona, length: scope.messages.length - (scope.greeting === null ? 0 : 1) });
 
-export type ToolServices = { pages: Pick<ScriptPages, 'pageContext' | 'pageWrite' | 'send' | 'rendered' | 'editCard'>; journal: Pick<ScriptJournal, 'report'> };
+export type ToolServices = { pages: Pick<ScriptPages, 'pageContext' | 'pageWrite' | 'send' | 'rendered' | 'editCard' | 'editPortraits'>; journal: Pick<ScriptJournal, 'report'> };
 
 type FrameRuntime = {
   allowed(chat: string, module: string): boolean;
@@ -344,12 +362,13 @@ export class ToolApi {
         return read.data;
       }
       case 'chat.picture': {
-        const [, at, bytes, caption] = args;
-        if (typeof first !== 'string' || !isRecord(at) || typeof at.id !== 'string' || typeof at.version !== 'string' || !(bytes instanceof Uint8Array) || (caption !== null && typeof caption !== 'string')) break;
+        const [, at, bytes, caption, paragraph, slot] = args;
+        if (typeof first !== 'string' || !isRecord(at) || typeof at.id !== 'string' || typeof at.version !== 'string' || !(bytes instanceof Uint8Array) || (caption !== null && typeof caption !== 'string')
+          || (paragraph !== null && !(Number.isInteger(paragraph) && (paragraph as number) >= 0)) || typeof slot !== 'string' || slot.length > TOOL_KEY_CHARS) break;
         if (!this.runtime.allowed(first, entry.module)) throw new ToolStopped();
         this.storage.take(entry.module);
         const tool = { module: entry.module, name: live(this.session.store.get('module', entry.module))!.value.name };
-        const saved = await attachIllustration(this.session, first, tool, { message: at.id, version: at.version }, new Uint8Array(bytes), caption);
+        const saved = await attachIllustration(this.session, first, tool, { message: at.id, version: at.version }, new Uint8Array(bytes), { caption, paragraph: paragraph as number | null, slot });
         if (!saved.ok) throw new Error(saved.error);
         return;
       }
@@ -363,6 +382,12 @@ export class ToolApi {
         if (typeof first !== 'string' || !isCardEdit(second)) break;
         if (!this.runtime.allowed(first, entry.module)) throw new ToolStopped();
         return this.services.pages.editCard(first, second, { kind: 'module', id: entry.module }, AbortSignal.any([frame.closing.signal, cancel]));
+      }
+      case 'chat.portraits.edit': {
+        if (typeof first !== 'string') break;
+        if (!isPortraitEdits(second)) throw new Error('Invalid portraits: see PortraitEdit in hazelle.d.ts');
+        if (!this.runtime.allowed(first, entry.module)) throw new ToolStopped();
+        return this.services.pages.editPortraits(first, second.map(({ name, aliases, look, outfits, artist }) => ({ name, aliases, look, outfits: outfits.map(({ name, tags }) => ({ name, tags })), artist })), { kind: 'module', id: entry.module }, AbortSignal.any([frame.closing.signal, cancel]));
       }
       case 'chat.rendered': {
         const at = screenAt(second);
@@ -410,10 +435,21 @@ export class ToolApi {
           frame.messages = messages;
           return tail;
         }
-        if (method === 'chat.card') return cardOf(this.session.store, entry.module, live(this.session.store.get('chat', context.chat))?.value.character ?? null, context.scope);
+        if (method === 'chat.card') {
+          const character = live(this.session.store.get('chat', context.chat))?.value.character ?? null;
+          return character === null || !context.scope.card ? null : cardOf(this.session.store, entry.module, character, context.scope.card);
+        }
+        if (method === 'chat.cast') return Promise.all(context.scope.cast.map(({ id, card }) => cardOf(this.session.store, entry.module, id, card)));
+        if (method === 'chat.portraits') {
+          const { store } = this.session;
+          const chat = live(store.get('chat', context.chat))!.value;
+          const cast = new Set(context.scope.cast.map(({ id }) => id));
+          const kind = (owner: string) => owner === chat.character ? 'character' : cast.has(owner) ? 'cast' : store.get('persona', owner) ? 'persona' : 'module';
+          return portraitOwners(store, chat).map((id) => ({ owner: { kind: kind(id), id }, portraits: store.get('likeness', likenessId(id))?.value.portraits ?? [] })) satisfies Hazelle.Portraits[];
+        }
         if (method === 'chat.asset' && typeof first === 'string') {
           const character = live(this.session.store.get('chat', context.chat))?.value.character ?? null;
-          const asset = character === null ? undefined : cardAssets(this.session.store, character).find(({ id }) => id === first);
+          const asset = [...(character === null ? [] : [character]), ...context.scope.cast.map(({ id }) => id)].flatMap((owner) => cardAssets(this.session.store, owner)).find(({ id }) => id === first);
           if (!asset) return null;
           const read = await this.session.files.read(asset.value.file, { signal: context.signal });
           if (!read.ok) throw new Error(read.error);
@@ -432,7 +468,9 @@ export class ToolApi {
           const { store } = this.session;
           const chat = live(store.get('chat', context.chat))!.value;
           const persona = chatPersona(store, chat);
+          const { auto, pov, comic } = chatIllustrate(store, chat);
           return {
+            illustrate: { auto, note: chat.illustrateNote ?? '', pov, comic },
             persona: persona.kind === 'persona' ? persona.persona.id : null,
             limits: limitsOf(store, chat),
             modules: packsOf(store, chat).flatMap(({ id, pack, module }) => module ? [{ id, name: store.get('module', id)!.value.name, regex: scriptsOf(pack) }] : []),
@@ -458,10 +496,11 @@ export class ToolApi {
           if (!entry.tool.manifest.uses.includes('draw')) return { ok: false, reason: 'not-declared' };
           return context.host.draw(first, owner, context.signal);
         }
-        if (method === 'model' && typeof first === 'string' && isModelMessages(second)) {
+        if (method === 'model' && typeof first === 'string') {
+          if (!isAsked(second)) throw new Error('Invalid messages: see AskedMessage in hazelle.d.ts');
           if (first !== 'main' && first !== 'aux' && !entry.tool.manifest.models?.some(({ id }) => id === first)) throw new Error(`No model named ${first}: declare it with //@model`);
           if (!entry.tool.manifest.uses.includes('model')) return { ok: false, reason: 'not-declared' };
-          const result = await context.host.model(first, second.map(({ role, content }) => ({ role, content })), owner, context.signal);
+          const result = await context.host.model(first, second.map(({ role, content, cache, pictures }) => ({ role, content, ...(cache && { cache }), ...(pictures?.length && { pictures }) })), owner, context.signal);
           return result.success ? { ok: true, text: result.result } : { ok: false, reason: result.reason };
         }
         if (method === 'fetch' && typeof first === 'string' && URL.canParse(first) && isRequest(second)) {

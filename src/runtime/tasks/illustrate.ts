@@ -13,6 +13,7 @@ import { byName, type Stored } from '../../model/kinds';
 import { live } from '../../model/library';
 import { likenessId, type Portrait } from '../../model/likeness';
 import type { IllustratePrompt } from '../../model/prompt';
+import { PICTURE_SLOTS } from '../../tool-api/manifest';
 import type { ApiFailure, ApiResult } from '../api';
 import type { Route, RouteFailure } from '../models/assignment';
 import { chatIllustrate } from './features';
@@ -39,9 +40,11 @@ export type ImageRoute = Route & { draws: Draws };
 export const removeIllustration = (store: ObjectStore, id: string) => store.take('illustration', id);
 export const restoreIllustration = (store: ObjectStore, removed: Stored<'illustration'>) => store.restore(removed);
 
-// Replace only this tool's prior picture on the version, anchored after its last paragraph; user deletion still applies.
+// Replace only this tool's prior picture in the slot on the version; user deletion still applies. paragraph null: after
+// the last. no-paragraph: the version has no such paragraph. too-many-slots: the tool's slots on it are full.
 export async function attachIllustration(
-  { store, files }: Pick<Deps, 'store' | 'files'>, chat: string, tool: Attached['tool'], at: { message: string; version: string }, bytes: Uint8Array<ArrayBuffer>, caption: string | null,
+  { store, files }: Pick<Deps, 'store' | 'files'>, chat: string, tool: Attached['tool'], at: { message: string; version: string }, bytes: Uint8Array<ArrayBuffer>,
+  { caption, paragraph, slot }: { caption: string | null; paragraph: number | null; slot: string },
 ): Promise<ApiResult<null>> {
   const picture = imageSize(bytes);
   if (!picture) return { ok: false, error: 'not-a-picture' };
@@ -52,15 +55,20 @@ export async function attachIllustration(
     const messages = fold(store.children('entry', chat));
     const version = messages.find(({ id }) => id === at.message)?.versions.find(({ id }) => id === at.version);
     if (!live(store.get('chat', chat)) || !version) return { ok: false, error: 'gone' };
+    const paragraphs = paragraphsOf(version.text);
+    if (paragraph !== null && paragraph >= paragraphs.length) return { ok: false, error: 'no-paragraph' };
     const versions = standing(messages);
-    const held = store.children('illustration', chat).find(({ value }) => 'tool' in value && value.tool.module === tool.module && versions.get(value.version) === at.version);
+    const own = store.children('illustration', chat).filter(({ value }) => 'tool' in value && value.tool.module === tool.module && versions.get(value.version) === at.version);
+    const held = own.find(({ value }) => ('tool' in value && value.slot || '') === slot);
+    if (!held && own.length >= PICTURE_SLOTS) return { ok: false, error: 'too-many-slots' };
+    const after = paragraph ?? Math.max(0, paragraphs.length - 1);
     const saved = await files.save([bytes]);
     if (!saved.ok) return saved;
     const [file] = saved.data;
     if (!file) return { ok: false, error: 'picture-refused' };
     const value: Attached = {
       message: at.message, version: at.version, file, type: picture.type, size: bytes.byteLength, at: Date.now(),
-      paragraph: Math.max(0, paragraphsOf(version.text).length - 1), line: paragraphsOf(version.text).at(-1), width: picture.width, height: picture.height, tool, ...(caption !== null && { caption }),
+      paragraph: after, line: paragraphs[after], width: picture.width, height: picture.height, tool, ...(caption !== null && { caption }), ...(slot && { slot }),
     };
     const written = held ? await store.update('illustration', held.id, () => value) : await store.create('illustration', value, { parent: chat });
     return written.ok ? { ok: true, data: null } : written;

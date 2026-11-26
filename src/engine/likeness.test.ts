@@ -63,13 +63,14 @@ it('takes the artist tags most pictures share, the earlier on a tie', () => {
   expect(artistOf([[]])).toBe('');
 });
 
-it('a rebuild keeps the user’s portraits first and leaves out a built one sharing a name or alias with them', () => {
+it('a rebuild keeps the user’s and a tool’s portraits first and leaves out a built one sharing a name or alias with them', () => {
   const made = (name: string, aliases: string[], source: Portrait['source']): Portrait => ({ name, aliases, look: '', outfits: [], artist: '', source });
   const lotta = made('Charlotte Grandellia', ['Lotta'], 'user');
-  const before = [made('Mina', [], 'text'), lotta];
-  const built = [made('Lotta', [], 'vision'), made('Mina', [], 'vision'), made('Rei', [], 'vision')];
-  expect(rebuiltPortraits(before, built, 8)).toEqual([lotta, built[1], built[2]]);
-  expect(rebuiltPortraits(before, built, 2)).toEqual([lotta, built[1]]);
+  const rei = made('Rei', [], 'tool');
+  const before = [made('Mina', [], 'text'), lotta, rei];
+  const built = [made('Lotta', [], 'vision'), made('Mina', [], 'vision'), made('Rei', [], 'vision'), made('Sora', [], 'vision')];
+  expect(rebuiltPortraits(before, built, 8)).toEqual([lotta, rei, built[1], built[3]]);
+  expect(rebuiltPortraits(before, built, 3)).toEqual([lotta, rei, built[1]]);
 });
 
 describe('삽화 프로필 file', () => {

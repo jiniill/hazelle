@@ -8,15 +8,20 @@ declare namespace Hazelle {
   // its text is the user's own words and raw the translation sent.
   interface Message { index: number; id: string; version: string; role: Role; text: string; raw: string; time: number; translation: { text: string; sent: boolean } | null }
   type At = { index: number; id: string; version: string };
-  interface ModelMessage { role: 'system' | 'user' | 'assistant'; content: string }
+  // cache marks the end of a prefix the provider caches, where the model called has its cache on; a request keeps at
+  // most four, the first three and the last.
+  interface ModelMessage { role: 'system' | 'user' | 'assistant'; content: string; cache?: true }
+  // A message of chat.model. pictures: what the model looks at with a user message, as chat.asset and chat.inlay
+  // give them (PNG, JPEG, GIF, WebP or AVIF bytes), at most 6 in a call; one too large for a provider is sent smaller.
+  interface AskedMessage extends ModelMessage { pictures?: Uint8Array[] }
   // Retaining message on a replacement request message preserves its pictures.
-  // cache marks the end of the provider-cached prefix.
-  interface RequestMessage extends ModelMessage { message?: string; cache?: true }
+  interface RequestMessage extends ModelMessage { message?: string }
   // A message about to be shown; at: null for the greeting.
   type Shown = { at: At | null; text: string };
   // flood: past 20 model, embed, decide, draw and fetch calls a minute in the chat, its bot's scripts and every tool counted together.
   type ModelRefusal = 'not-allowed' | 'not-declared' | 'no-model' | 'flood' | 'failed';
-  type ModelAnswer = { ok: true; text: string } | { ok: false; reason: ModelRefusal };
+  // no-vision: a message holds pictures and the model called reads none, so nothing was sent.
+  type ModelAnswer = { ok: true; text: string } | { ok: false; reason: ModelRefusal | 'no-vision' };
   // model: the embedding model that made the vectors; vectors from another model cannot be compared with them.
   type EmbedAnswer = { ok: true; model: string; vectors: number[][] } | { ok: false; reason: ModelRefusal | 'too-large' };
   // A question a decision model answers without writing: instructions say what is asked of the input. noul: a yes or
@@ -37,7 +42,11 @@ declare namespace Hazelle {
   type DecideAnswer = { ok: true; model: string; answers: { [id: string]: Decision } } | { ok: false; reason: ModelRefusal };
   // A picture asked of the chat's image model (삽화's) in the tags or words that model takes; the plugin never learns
   // which model it is. shape: portrait when absent. seed: 0 to 4294967295, random when absent.
-  type DrawRequest = { prompt: string; negative?: string; shape?: 'portrait' | 'landscape' | 'square'; seed?: number };
+  // characters: the figures of the picture, at most 6, each in tags of its own so that one's hair, clothes and pose
+  // are not drawn on another; prompt then holds what is not theirs (how many they are, the place, the framing).
+  type DrawRequest = { prompt: string; negative?: string; characters?: DrawCharacter[]; shape?: 'portrait' | 'landscape' | 'square'; seed?: number };
+  // center: where the figure stands, 0 to 1 from the top left; the middle when absent.
+  type DrawCharacter = { prompt: string; negative?: string; center?: { x: number; y: number } };
   // costs: the picture is not known to cost nothing, and the chat's 삽화 draws such a picture only when asked.
   type DrawAnswer = { ok: true; type: string; bytes: Uint8Array } | { ok: false; reason: ModelRefusal | 'costs' };
   // refused: the relay or the app refused the call, code naming why (not-https, not-public, upstream-redirect,
@@ -66,6 +75,18 @@ declare namespace Hazelle {
   // id: what Chat.asset reads it by. saved: the name of the asset this tool saved (Assets) that holds the same file,
   // null when it saved none such.
   interface CardAsset { id: string; name: string; type: string; saved: string | null }
+  // A 삽화 프로필: one figure as the chat's pictures draw it, in the tags the image model reads. aliases: its other
+  // names. look: body and face. outfits: named sets of clothes, the first worn where a scene names none. artist: the
+  // artist tags its pictures lead with. source: user for one the user wrote or changed, tool for one a plugin wrote,
+  // else what the app made it from.
+  interface Portrait { name: string; aliases: string[]; look: string; outfits: { name: string; tags: string }[]; artist: string; source: 'metadata' | 'vision' | 'text' | 'user' | 'tool' }
+  // A 삽화 프로필 a tool writes. kept: the names it wrote none for, since the user wrote or changed the one there.
+  // too-many: the character would hold more than 24, and none was written.
+  type PortraitEdit = Omit<Portrait, 'source'>;
+  type PortraitsAnswer = { ok: true; kept: string[] } | { ok: false; reason: 'not-allowed' | 'no-character' | 'too-many' | 'failed' };
+  // owner: whose profiles they are, with that one's id: the chat's character, one of its 등장인물, its persona, or a
+  // module on in it.
+  interface Portraits { owner: { kind: 'character' | 'cast' | 'persona' | 'module'; id: string }; portraits: Portrait[] }
   // What of a card a tool rewrites; greeting takes the place of the first. lore: entries of the character's lorebook,
   // each written over the one of its name, whose other settings stay, or added when it has none; a name the lorebook
   // or the edit holds more than once throws. assets: assets this tool saved, joining the character's under a name,
@@ -85,8 +106,10 @@ declare namespace Hazelle {
   interface Script { name: string; find: string; replace: string; stage: 'input' | 'output' | 'process' | 'display' | 'translation'; flags: string | null }
   // persona: the id of the persona this chat speaks as, null when it is gone. limits: the chat model's context and reply
   // lengths in tokens, null where unknown or no model is set. modules: those on in the chat, in pack order, a
-  // conversation prompt's own included, each with its regex scripts that are on, in its order.
-  interface Setup { persona: string | null; limits: { context: number | null; reply: number | null }; modules: { id: string; name: string; regex: Script[] }[] }
+  // conversation prompt's own included, each with its regex scripts that are on, in its order. illustrate: the chat's
+  // 삽화 as the user set it. auto: the app draws a picture after each reply by itself (자동 삽화), so a plugin that
+  // draws on reply would add a second. note: the chat's 삽화 노트. pov, comic: 페르소나 시점 and 만화 형식.
+  interface Setup { illustrate: { auto: boolean; note: string; pov: boolean; comic: boolean }; persona: string | null; limits: { context: number | null; reply: number | null }; modules: { id: string; name: string; regex: Script[] }[] }
 
   interface ChatState {                         // this tool's own per-chat variables, replayed with the story
     get<T extends Json = Json>(key: string): Promise<T | undefined>;
@@ -121,6 +144,11 @@ declare namespace Hazelle {
     messages(from?: number, to?: number): Promise<Message[]>;
     greeting(): Promise<string | null>;         // the character's opening message, before index 0
     card(): Promise<Card | null>;               // null in a chat with no character
+    cast(): Promise<Card[]>;                    // the chat's 등장인물, in the order they joined, each as card gives the character
+    // The 삽화 프로필 of everyone the chat's pictures draw from, in the order they are read: the packs on in the chat
+    // (its character among them), its 등장인물, its persona. One whose profiles are not made yet has none, and reading
+    // makes none.
+    portraits(): Promise<Portraits[]>;
     readonly state: ChatState;
     readonly variables: ChatVariables;
     readonly data: ChatData;
@@ -130,7 +158,8 @@ declare namespace Hazelle {
     // needs //@uses model. main: the chat's 대화 모델. aux: its 보조 모델, or the one the user picked for this plugin.
     // Any other role is the id of a //@model line: the model the user picked for it on the plugin's page, and while
     // none is picked, the same as aux. Throws on an id no line declares.
-    model(role: 'main' | 'aux' | (string & {}), messages: ModelMessage[]): Promise<ModelAnswer>;
+    // Throws on messages that are no AskedMessage list.
+    model(role: 'main' | 'aux' | (string & {}), messages: AskedMessage[]): Promise<ModelAnswer>;
     // needs //@uses embed. as: what the texts are for, which retrieval-tuned models embed differently.
     embed(texts: string[], as?: 'query' | 'document'): Promise<EmbedAnswer>;
     // needs //@uses decide. The account's 판단 모델 reads input once and answers every question in one call, far sooner
@@ -145,10 +174,15 @@ declare namespace Hazelle {
     // with its reason, as fetch does.
     fetch(url: string, init?: FetchInit): Promise<FetchAnswer>;
     badge(index: number, text: string | null): void;   // on the version shown now, cut to 10 characters; lands with the outcome
-    // Replaces this tool's picture after the version's last paragraph, with storage's write rate.
+    // Puts this tool's picture after a paragraph of the version, with storage's write rate. paragraph: which, from 0,
+    // counting the lines of the version's raw text that hold words; the last when absent. slot: this picture's name
+    // among the tool's pictures on the version, at most 256 characters: a picture put in a slot replaces the one there,
+    // and a tool keeps at most 8 slots on a version. Without a slot it is the tool's one unnamed picture. Pictures after
+    // the same paragraph show one at a time, the newest first.
     // May save after its event ends; resolves only once saved. caption substitutes where the image is unseen.
-    // Throws for non-PNG/JPEG/GIF/WebP/AVIF bytes, a missing version or a refused file.
-    picture(at: At, bytes: Uint8Array, options?: { caption?: string }): Promise<void>;
+    // Throws for non-PNG/JPEG/GIF/WebP/AVIF bytes, a missing version (gone), a paragraph the version lacks
+    // (no-paragraph), a ninth slot (too-many-slots) or a refused file.
+    picture(at: At, bytes: Uint8Array, options?: { caption?: string; paragraph?: number; slot?: string }): Promise<void>;
     tokens(text: string): Promise<number>;
     // text with its CBS read after the chat's messages, with the variables they leave, as a prompt's text is; its setvar
     // sets nothing.
@@ -158,7 +192,8 @@ declare namespace Hazelle {
     // A picture the chat holds, by the name a message's raw text gives it in {{inlay::name}}: its MIME type and bytes.
     // null when the chat holds no picture by that name; throws when its file cannot be read.
     inlay(name: string): Promise<{ type: string; bytes: Uint8Array } | null>;
-    // One of the card's assets, by its id, as inlay reads a picture. null when the character has none by that id.
+    // An asset of the card or of a 등장인물's (cast), by its id, as inlay reads a picture. null when none of them has
+    // one by that id.
     asset(id: string): Promise<{ type: string; bytes: Uint8Array } | null>;
     // An entry of the chat's own lorebook, taking the place of every one of its name there, as Lua's
     // upsertLocalLoreBook does; lands with the event's outcome.
@@ -184,6 +219,12 @@ declare namespace Hazelle {
     // Rewrites the chat's character's card, in every chat with it, under the user's one answer for this character's
     // card, which the bot's own scripts share. Bound to the chat, as picture is; answers once saved.
     editCard(edit: CardEdit): Promise<CardAnswer>;
+    // Writes 삽화 프로필 of the chat's character, in every chat with it, under the same answer as editCard. Each takes
+    // the place of the one that goes by its name or one of its aliases, or joins after the rest; none is taken out, and
+    // one the user wrote or changed stays as it is. The user sees and changes them under 삽화 프로필 as any other. A
+    // character given its first profiles here gets none made by the app until the user asks for them. Bound to the
+    // chat, as picture is. Throws on portraits that are no PortraitEdit list, or two that share a name.
+    editPortraits(portraits: PortraitEdit[]): Promise<PortraitsAnswer>;
   }
   // Tool data: synced, owned by the module. A value is at most 4 MB of JSON and a tool's values 32 MB; one past 512 KB is
   // kept as a file counted in the account's picture budget, read when asked. set throws too-large past either, or

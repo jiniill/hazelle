@@ -167,7 +167,7 @@ function loreEntry(raw: unknown): LoreEntry {
   };
 }
 
-const SOURCES = new Set<unknown>(['metadata', 'vision', 'text', 'user'] satisfies PortraitSource[]);
+const SOURCES = new Set<unknown>(['metadata', 'vision', 'text', 'user', 'tool'] satisfies PortraitSource[]);
 
 function profiles(raw: unknown): Profiles | null {
   if (!isRecord(raw) || typeof raw.at !== 'number') return null;

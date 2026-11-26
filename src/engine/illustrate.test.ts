@@ -144,6 +144,10 @@ it("builds a picture asked for in its own words with the prompt's size and contr
   expect(plainPicture(model, { prompt: '1girl, rain' }, undefined, 42)).toEqual({ model, prompt: '1girl, rain', negative: '', characters: [], width: 832, height: 1216, seed: 42, steps: null, scale: null, rescale: null, sampler: null });
   expect(plainPicture(model, { prompt: 'a cat', negative: 'text', shape: 'square' }, picture, 42)).toEqual({ model, prompt: 'a cat', negative: 'text', characters: [], width: 1472, height: 1472, seed: 3, steps: 28, scale: 5, rescale: 0, sampler: 'k_euler' });
   expect(plainPicture(model, { prompt: 'a cat', seed: 9 }, picture, 42)).toMatchObject({ seed: 9 });
+  expect(plainPicture(model, { prompt: '2girls', characters: [{ prompt: 'silver hair', negative: 'hat', center: { x: 0.2, y: 0.6 } }, { prompt: 'black hair' }] }, undefined, 42).characters).toEqual([
+    { prompt: 'silver hair', negative: 'hat', center: { x: 0.2, y: 0.6 } },
+    { prompt: 'black hair', negative: '', center: { x: 0.5, y: 0.5 } },
+  ]);
 });
 
 it.each([
@@ -155,6 +159,10 @@ it.each([
   [{ prompt: '1girl', seed: -1 }, false],
   [{ prompt: '1girl', seed: 1.5 }, false],
   [{ prompt: '1girl', negative: 3 }, false],
+  [{ prompt: '2girls', characters: [{ prompt: 'silver hair', center: { x: 0, y: 1 } }, { prompt: 'black hair', negative: 'hat' }] }, true],
+  [{ prompt: '1girl', characters: [{ prompt: '' }] }, false],
+  [{ prompt: '1girl', characters: [{ prompt: 'girl', center: { x: 1.2, y: 0.5 } }] }, false],
+  [{ prompt: '7girls', characters: Array.from({ length: 7 }, () => ({ prompt: 'girl' })) }, false],
   ['1girl', false],
 ])('reads %j as a picture request: %s', (value, is) => {
   expect(isDrawRequest(value)).toBe(is);

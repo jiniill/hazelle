@@ -106,6 +106,8 @@ export function connectApi(port: Port, execute: (code: string, api: Hazelle.Api)
       },
       greeting: () => call<string | null>('chat.greeting', [], event),
       card: () => call<Hazelle.Card | null>('chat.card', [], event),
+      cast: () => call('chat.cast', [], event),
+      portraits: () => call('chat.portraits', [], event),
       state: {
         get: <T extends Json>(key: string) => overlaid<T>('writes', 'chat.state.get', key),
         set: (key, value) => { pending().writes.set(key, value); changed(); },
@@ -149,7 +151,7 @@ export function connectApi(port: Port, execute: (code: string, api: Hazelle.Api)
       fetch: (url, { method = 'GET', headers = {}, body, signal } = {}) => call('fetch', [url, { method, headers, body: body ?? null }], event, signal),
       badge: (index, text) => { pending().badges.set(index, text); changed(); },
       // Bound to the chat, not the event: a picture often lands after its event has ended.
-      picture: (at, bytes, options) => call('chat.picture', [header.id, at, bytes, options?.caption ?? null]),
+      picture: (at, bytes, options) => call('chat.picture', [header.id, at, bytes, options?.caption ?? null, options?.paragraph ?? null, options?.slot ?? '']),
       tokens: (text) => call('tokens', [text], event),
       cbs: (text) => call('chat.cbs', [text], event),
       lore: (reserve) => call('lore', [reserve ?? null], event),
@@ -159,6 +161,7 @@ export function connectApi(port: Port, execute: (code: string, api: Hazelle.Api)
       send: async (text) => { await landed(); return call('chat.send', [header.id, text]); },
       rendered: (at) => call('chat.rendered', [header.id, at]),
       editCard: (edit) => call('chat.card.edit', [header.id, edit]),
+      editPortraits: (portraits) => call('chat.portraits.edit', [header.id, portraits]),
       setup: () => call('chat.setup', [], event),
       ask: (question) => call('ask', [question], event),
       say: (text, tone = 'normal') => fire('say', [tone, text], event),
