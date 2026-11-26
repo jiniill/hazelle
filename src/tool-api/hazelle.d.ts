@@ -77,8 +77,13 @@ declare namespace Hazelle {
   interface CardAsset { id: string; name: string; type: string; saved: string | null }
   // A 삽화 프로필: one figure as the chat's pictures draw it, in the tags the image model reads. aliases: its other
   // names. look: body and face. outfits: named sets of clothes, the first worn where a scene names none. artist: the
-  // artist tags its pictures lead with. source: user for one the user wrote or changed, else what it was made from.
-  interface Portrait { name: string; aliases: string[]; look: string; outfits: { name: string; tags: string }[]; artist: string; source: 'metadata' | 'vision' | 'text' | 'user' }
+  // artist tags its pictures lead with. source: user for one the user wrote or changed, tool for one a plugin wrote,
+  // else what the app made it from.
+  interface Portrait { name: string; aliases: string[]; look: string; outfits: { name: string; tags: string }[]; artist: string; source: 'metadata' | 'vision' | 'text' | 'user' | 'tool' }
+  // A 삽화 프로필 a tool writes. kept: the names it wrote none for, since the user wrote or changed the one there.
+  // too-many: the character would hold more than 24, and none was written.
+  type PortraitEdit = Omit<Portrait, 'source'>;
+  type PortraitsAnswer = { ok: true; kept: string[] } | { ok: false; reason: 'not-allowed' | 'no-character' | 'too-many' | 'failed' };
   // owner: whose profiles they are, with that one's id: the chat's character, one of its 등장인물, its persona, or a
   // module on in it.
   interface Portraits { owner: { kind: 'character' | 'cast' | 'persona' | 'module'; id: string }; portraits: Portrait[] }
@@ -214,6 +219,12 @@ declare namespace Hazelle {
     // Rewrites the chat's character's card, in every chat with it, under the user's one answer for this character's
     // card, which the bot's own scripts share. Bound to the chat, as picture is; answers once saved.
     editCard(edit: CardEdit): Promise<CardAnswer>;
+    // Writes 삽화 프로필 of the chat's character, in every chat with it, under the same answer as editCard. Each takes
+    // the place of the one that goes by its name or one of its aliases, or joins after the rest; none is taken out, and
+    // one the user wrote or changed stays as it is. The user sees and changes them under 삽화 프로필 as any other. A
+    // character given its first profiles here gets none made by the app until the user asks for them. Bound to the
+    // chat, as picture is. Throws on portraits that are no PortraitEdit list, or two that share a name.
+    editPortraits(portraits: PortraitEdit[]): Promise<PortraitsAnswer>;
   }
   // Tool data: synced, owned by the module. A value is at most 4 MB of JSON and a tool's values 32 MB; one past 512 KB is
   // kept as a file counted in the account's picture budget, read when asked. set throws too-large past either, or

@@ -740,7 +740,7 @@ it('notifies a running tool after pulling a data change written on another devic
   await startChat(account.store, chat, { title: null, character: null, models: {} }, null);
   const changes = vi.fn();
   const transport = inProcessTools((api) => { api.storage.onChange(changes); });
-  const host = new ToolHost(account, { journal: { report: () => {} }, pages: { pageContext: () => null, pageWrite: async () => {}, send: async () => ({ ok: true as const }), rendered: () => null, editCard: async () => ({ ok: true as const }) } }, transport.open);
+  const host = new ToolHost(account, { journal: { report: () => {} }, pages: { pageContext: () => null, pageWrite: async () => {}, send: async () => ({ ok: true as const }), rendered: () => null, editCard: async () => ({ ok: true as const }), editPortraits: async () => ({ ok: true as const, kept: [] }) } }, transport.open);
   try {
     await host.warm(chat);
     const peer = await account.open();
@@ -1214,6 +1214,28 @@ it('puts a tool\'s pictures after the paragraphs it names, one to a slot, and re
     for (let slot = 0; slot < 6; slot++) await chat.picture(reply!, bytes, { slot: String(slot) });
     await expect(chat.picture(reply!, bytes, { slot: 'ninth' })).rejects.toThrow('too-many-slots');
     expect(placed()).toHaveLength(8);
+  } finally { close(); host.close(); }
+}));
+
+it('writes the character\'s 삽화 프로필 under its card\'s answer, over the app\'s and its own and never over the user\'s', () => withTools(async (session, connect) => {
+  const f = await fixture(session, undefined, 'Hello.');
+  const character = session.store.get('chat', f.chat)!.value.character!;
+  const made = (name: string, look: string) => ({ name, aliases: [], look, outfits: [], artist: '' });
+  await importPortraits(session.store, character, [{ ...made('Mira', 'girl'), source: 'text' }, { ...made('Rook', 'boy, scar'), source: 'user' }]);
+  const transport = inProcessTools(() => {});
+  const host = connect(transport.open);
+  const close = host.page(f.module, page(f.chat));
+  try {
+    await vi.waitFor(() => expect(transport.frames[0]?.api).not.toBeNull());
+    const chat = transport.frames[0]!.api!.page!.chat!;
+    const asked = chat.editPortraits([made('mira', 'girl, silver hair'), made('Rook', 'boy'), made('Sora', 'girl, hat')]);
+    await vi.waitFor(() => expect(session.scriptInteractions.snapshot().questions).toMatchObject([{ question: { kind: 'card' } }]));
+    session.scriptInteractions.answer(session.scriptInteractions.snapshot().questions[0]!.id, 'yes');
+    expect(await asked).toEqual({ ok: true, kept: ['Rook'] });
+    const mine = (await chat.portraits()).find(({ owner }) => owner.kind === 'character')!.portraits;
+    expect(mine.map(({ name, look, source }) => [name, look, source])).toEqual([['Rook', 'boy, scar', 'user'], ['mira', 'girl, silver hair', 'tool'], ['Sora', 'girl, hat', 'tool']]);
+    expect(await chat.editPortraits(Array.from({ length: 23 }, (_, index) => made(`Extra ${index}`, '')))).toEqual({ ok: false, reason: 'too-many' });
+    await expect(chat.editPortraits([made('Ann', ''), { ...made('Bea', ''), aliases: ['ann'] }])).rejects.toThrow('Invalid portraits');
   } finally { close(); host.close(); }
 }));
 

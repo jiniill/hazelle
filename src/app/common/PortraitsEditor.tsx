@@ -12,9 +12,9 @@ import { describeLikenessFailure } from './failure';
 import { filled, typedText } from './typed';
 import { useAutosave } from './useAutosave';
 import { useRemoval } from './useRemoval';
-import { portraitName, REMOVE_FAILED } from './words';
+import { portraitName, REMOVE_FAILED, TOOL } from './words';
 
-const SOURCES: Record<PortraitSource, string> = { metadata: '이미지 메타데이터', vision: '이미지 분석', text: '캐릭터 설명', user: '직접 입력' };
+const SOURCES: Record<PortraitSource, string> = { metadata: '이미지 메타데이터', vision: '이미지 분석', text: '캐릭터 설명', user: '직접 입력', tool: TOOL };
 
 // By place, so a rename keeps its field; a portrait's place moves only by this screen's add and remove, and 다시
 // 만들기, which flush the edits first.

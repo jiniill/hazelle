@@ -1,6 +1,6 @@
 import type { InputPicture } from '../../connectors/types';
 import { artistTags, picturePrompt } from '../../engine/import/picture-prompt';
-import { artistOf, importedPortraits, likenessRequest, parseLikeness, rebuiltPortraits, sample, SAMPLE_MOST, SHOWN_MOST, sourcesOf, type LikenessInvalid } from '../../engine/likeness';
+import { artistOf, importedPortraits, likenessRequest, parseLikeness, rebuiltPortraits, sample, SAMPLE_MOST, SHOWN_MOST, sourcesOf, toolPortraits, type LikenessInvalid } from '../../engine/likeness';
 import type { Chat, Receipt } from '../../model/chat';
 import type { Stored } from '../../model/kinds';
 import { live, type Asset } from '../../model/library';
@@ -95,6 +95,15 @@ export function portraitOwners(store: ObjectStore, chat: Chat): string[] {
   const cast = (chat.cast ?? []).filter((member) => live(store.get('character', member)));
   const persona = chatPersona(store, chat);
   return [...new Set([...packsOf(store, chat).map(({ id }) => id), ...cast, ...(persona.kind === 'persona' ? [persona.persona.id] : [])])];
+}
+
+// A tool's portraits of an owner (Chat.editPortraits). kept: the names it left as the user has them. As after an
+// import, an owner given its first portraits here gets none built by the next 삽화.
+export async function writePortraits(store: ObjectStore, owner: string, written: readonly Omit<Portrait, 'source'>[]): Promise<ApiResult<string[]>> {
+  const merged = toolPortraits(store.get('likeness', likenessId(owner))?.value.portraits ?? [], written);
+  if (merged.portraits.length > PORTRAITS_MOST) return { ok: false, error: 'too-many' };
+  const saved = await writeLikeness(store, owner, { portraits: merged.portraits, at: Date.now(), receipt: null }, (current) => ({ ...current, portraits: toolPortraits(current.portraits, written).portraits }));
+  return saved.ok ? { ok: true, data: merged.kept } : saved;
 }
 
 export const removeLikeness = (store: ObjectStore, owner: string) => store.take('likeness', likenessId(owner));

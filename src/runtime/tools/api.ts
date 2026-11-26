@@ -13,6 +13,7 @@ import { live } from '../../model/library';
 import { accountSettings } from '../account-settings';
 import { toolId } from '../../model/tool';
 import { isQuestions } from '../../connectors/decide';
+import { namesOf } from '../../engine/likeness';
 import { isDrawRequest } from '../../engine/illustrate';
 import { MODEL_PICTURES, TOOL_KEY_CHARS, TOOL_LOG_CHARS, TOOL_PROGRESS_CHARS, TOOL_VARIABLES, toolVar, type Json } from '../../tool-api/manifest';
 import { imageSize } from '../../engine/import/card';
@@ -104,6 +105,15 @@ const isCardEdit = (value: unknown): value is Hazelle.CardEdit => isRecord(value
     : key === 'tags' ? Array.isArray(field) && field.every((tag) => typeof tag === 'string')
     : key === 'lore' ? Array.isArray(field) && field.every(isLore)
     : key === 'assets' && Array.isArray(field) && field.every((asset) => isRecord(asset) && typeof asset.name === 'string' && typeof asset.saved === 'string'));
+const strings = (value: unknown) => Array.isArray(value) && value.every((each) => typeof each === 'string');
+// Each named, and by a name or alias no other of the edit goes by: one would take the other's place.
+function isPortraitEdits(value: unknown): value is Hazelle.PortraitEdit[] {
+  const one = (portrait: unknown): portrait is Hazelle.PortraitEdit => isRecord(portrait) && typeof portrait.name === 'string' && portrait.name.trim() !== '' && strings(portrait.aliases) && typeof portrait.look === 'string'
+    && typeof portrait.artist === 'string' && Array.isArray(portrait.outfits) && portrait.outfits.every((outfit) => isRecord(outfit) && typeof outfit.name === 'string' && typeof outfit.tags === 'string');
+  if (!Array.isArray(value) || !value.every(one)) return false;
+  const names = value.flatMap((portrait) => namesOf({ ...portrait, source: 'tool' }));
+  return new Set(names).size === names.length;
+}
 const isRequestMessages = (value: unknown): value is Hazelle.RequestMessage[] => Array.isArray(value) && value.every((message) => isModelMessages([message])
   && (message.message === undefined || typeof message.message === 'string'));
 const answers = (event: ToolEvent['kind'] | undefined, value: unknown) => {
@@ -176,7 +186,7 @@ function trialCall(entry: Entry, trial: EntryTrial, method: string, first: unkno
       trial.writes.push({ kind: 'setting', key: field.key, value: second });
       return { answer: undefined };
     }
-    case 'assets.save': case 'chat.picture': case 'chat.send': case 'chat.card.edit':
+    case 'assets.save': case 'chat.picture': case 'chat.send': case 'chat.card.edit': case 'chat.portraits.edit':
       trial.writes.push({ kind: 'refused', call: method });
       throw new Error('Not run in a test');
     default: return null;
@@ -206,7 +216,7 @@ function lorebookOf(chat: string, character: string | null, scope: ChatScope): H
 }
 export const header = (chat: string, scope: ChatScope): ChatHeader => ({ id: chat, character: scope.card && { name: scope.card.name, description: scope.card.description }, persona: scope.persona, length: scope.messages.length - (scope.greeting === null ? 0 : 1) });
 
-export type ToolServices = { pages: Pick<ScriptPages, 'pageContext' | 'pageWrite' | 'send' | 'rendered' | 'editCard'>; journal: Pick<ScriptJournal, 'report'> };
+export type ToolServices = { pages: Pick<ScriptPages, 'pageContext' | 'pageWrite' | 'send' | 'rendered' | 'editCard' | 'editPortraits'>; journal: Pick<ScriptJournal, 'report'> };
 
 type FrameRuntime = {
   allowed(chat: string, module: string): boolean;
@@ -372,6 +382,12 @@ export class ToolApi {
         if (typeof first !== 'string' || !isCardEdit(second)) break;
         if (!this.runtime.allowed(first, entry.module)) throw new ToolStopped();
         return this.services.pages.editCard(first, second, { kind: 'module', id: entry.module }, AbortSignal.any([frame.closing.signal, cancel]));
+      }
+      case 'chat.portraits.edit': {
+        if (typeof first !== 'string') break;
+        if (!isPortraitEdits(second)) throw new Error('Invalid portraits: see PortraitEdit in hazelle.d.ts');
+        if (!this.runtime.allowed(first, entry.module)) throw new ToolStopped();
+        return this.services.pages.editPortraits(first, second.map(({ name, aliases, look, outfits, artist }) => ({ name, aliases, look, outfits: outfits.map(({ name, tags }) => ({ name, tags })), artist })), { kind: 'module', id: entry.module }, AbortSignal.any([frame.closing.signal, cancel]));
       }
       case 'chat.rendered': {
         const at = screenAt(second);

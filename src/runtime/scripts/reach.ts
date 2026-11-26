@@ -134,7 +134,7 @@ export class ScriptReach {
       return 'no-vision';
     }
     const encoded = async (bytes: Uint8Array): Promise<InputPicture> => {
-      const sent = await sentPicture({ bytes: new Uint8Array(bytes), type: imageSize(bytes)?.type ?? '' });
+      const sent = await sentPicture({ bytes: new Uint8Array(bytes), type: imageSize(bytes)!.type });
       return { type: sent.type, data: toBase64(sent.bytes) };
     };
     try {

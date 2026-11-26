@@ -33,7 +33,7 @@ export type Frame = {
 // its own copy (storage, settings) or is refused, each listed in writes. installed: the module of the plugin its file
 // would replace, whose stored data (storage, chat data, saved files) the run reads under its own writes; null: none, so
 // it reads nothing stored. storage: what the run wrote, undefined for a key it deleted.
-export type TrialWrite = { kind: 'storage' | 'setting'; key: string; value: Json | undefined } | { kind: 'refused'; call: 'assets.save' | 'chat.picture' | 'chat.send' | 'chat.card.edit' };
+export type TrialWrite = { kind: 'storage' | 'setting'; key: string; value: Json | undefined } | { kind: 'refused'; call: 'assets.save' | 'chat.picture' | 'chat.send' | 'chat.card.edit' | 'chat.portraits.edit' };
 // One call a test run made of the app, named as its code names it (protocol called), or a console line it wrote: its
 // arguments as sent and its answer, as cut text. gave null: not answered when the calls were read. failed: gave is what
 // the call threw; a console.error.

@@ -170,9 +170,9 @@ export const nameKey = (name: string) => name.trim().normalize('NFC').toLowerCas
 
 export const namesOf = (portrait: Portrait) => [portrait.name, ...portrait.aliases].map(nameKey).filter(Boolean);
 
-// Regeneration keeps user portraits first and discards generated name/alias collisions.
+// Regeneration keeps the user's and a tool's portraits first and discards generated name/alias collisions.
 export function rebuiltPortraits(before: readonly Portrait[], built: readonly Portrait[], most: number): Portrait[] {
-  const kept = before.filter(({ source }) => source === 'user');
+  const kept = before.filter(({ source }) => source === 'user' || source === 'tool');
   const taken = new Set(kept.flatMap(namesOf));
   return [...kept, ...built.filter((portrait) => !namesOf(portrait).some((key) => taken.has(key)))].slice(0, most);
 }
@@ -182,6 +182,15 @@ export function importedPortraits(before: readonly Portrait[], imported: readonl
   const taken = new Set(imported.flatMap(namesOf));
   const kept = before.filter((portrait) => !namesOf(portrait).some((key) => taken.has(key)));
   return { portraits: [...kept, ...imported], replaced: before.length - kept.length };
+}
+
+// A tool's portraits over an owner's, as an import's, but for one that meets a portrait the user wrote or changed: that
+// one stays and the tool's is left out, its name told in kept.
+export function toolPortraits(before: readonly Portrait[], written: readonly Omit<Portrait, 'source'>[]): { portraits: Portrait[]; kept: string[] } {
+  const users = new Set(before.filter(({ source }) => source === 'user').flatMap(namesOf));
+  const tools = written.map((portrait): Portrait => ({ ...portrait, source: 'tool' }));
+  const meets = (portrait: Portrait) => namesOf(portrait).some((key) => users.has(key));
+  return { portraits: importedPortraits(before, tools.filter((portrait) => !meets(portrait))).portraits, kept: tools.filter(meets).map(({ name }) => name) };
 }
 
 // The artist stretches the most pictures share, as one tag list; a tie goes to the earlier picture (the card's own is
