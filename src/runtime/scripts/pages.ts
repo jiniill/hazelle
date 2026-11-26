@@ -88,11 +88,13 @@ export class ScriptPages {
     return saved.ok ? { ok: true } : { ok: false, reason: 'failed' };
   }
 
-  // A tool's portraits of the chat's character (Hazelle.Chat.editPortraits), under the same answer as editCard: they are
-  // the character's, in every chat with it.
-  async editPortraits(chat: string, portraits: Hazelle.PortraitEdit[], from: PackOwner, signal: AbortSignal): Promise<Hazelle.PortraitsAnswer> {
+  // A tool's portraits of the chat's character, or of the 등장인물 it names (Hazelle.Chat.editPortraits), under that
+  // character's own card answer: they are the character's, in every chat with it.
+  async editPortraits(chat: string, portraits: Hazelle.PortraitEdit[], cast: string | null, from: PackOwner, signal: AbortSignal): Promise<Hazelle.PortraitsAnswer> {
     const { store } = this.session;
-    const character = live(store.get('chat', chat))?.value.character ?? null;
+    const stored = live(store.get('chat', chat))?.value;
+    if (cast !== null && !stored?.cast?.includes(cast)) throw new Error(`This chat has no 등장인물 by the id ${cast}`);
+    const character = cast ?? stored?.character ?? null;
     if (character === null) return { ok: false, reason: 'no-character' };
     if (!(await this.interactions.mayRewrite(chat, character, from, false, signal))) return { ok: false, reason: 'not-allowed' };
     if (!live(store.get('character', character)) || signal.aborted) return { ok: false, reason: 'failed' };

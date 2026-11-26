@@ -37,9 +37,10 @@ type Note =
   | { kind: 'runaway' }
   | { kind: 'input-stop' };
 type ScriptNote = { id: number; chat: string; from: PackOwner | null } & Note;
-// Save model consent on its spender, card-write consent on the character, plugin uses on the module.
+// Save model consent on its spender, card-write consent on the character, plugin uses on the module. A card question
+// names its character, which a chat's 등장인물 is as well as its own.
 // Dismissal saves nothing. Plugin cards combine unanswered uses; hosts are Risu literal hosts, empty for Hazelle tools.
-export type ScriptQuestion = { id: number; chat: string; from: PackOwner; question: Question | { kind: 'model' } | { kind: 'card' } | { kind: 'plugin'; grants: Grant[]; hosts: string[] } };
+export type ScriptQuestion = { id: number; chat: string; from: PackOwner; question: Question | { kind: 'model' } | { kind: 'card'; name: string } | { kind: 'plugin'; grants: Grant[]; hosts: string[] } };
 export type ScriptsState = { notes: ScriptNote[]; questions: ScriptQuestion[] };
 
 export class ScriptInteractions {
@@ -131,7 +132,7 @@ export class ScriptInteractions {
     if (!stored) return false;
     if (stored.value.cardWrites !== undefined) return stored.value.cardWrites;
     if (deadline) return false;
-    return this.decide(`card:${character}`, chat, { kind: 'card' }, from, (yes) => setCardWrites(store, character, yes), signal);
+    return this.decide(`card:${character}`, chat, { kind: 'card', name: stored.value.card.name }, from, (yes) => setCardWrites(store, character, yes), signal);
   }
 
   // Whether module's tool may reach the outside (design §6.10), under its plugin card.
