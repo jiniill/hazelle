@@ -1,20 +1,21 @@
 import { entryName } from '../../connectors/types';
 import { ArrowRight, ChevronDown, ChevronUp, Eraser, Languages, Square } from 'lucide-react';
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { translateOnTool, setToolLanguage, setToolNote, toolTranslatorOf, type TranslatorFailure } from '../../runtime/tasks/translate';
+import { translateOnTool, setToolLanguage, setToolModel, setToolNote, toolTranslatorOf, type TranslatorFailure } from '../../runtime/tasks/translate';
 import { ACTS } from '../common/acts';
 import { describeTranslateFailure } from '../common/failure';
 import { LanguageMenu } from '../common/IntoLanguage';
+import { RoleChoices } from '../common/RolePicker';
 import { TranslatorNoteField } from '../common/TranslatorNoteField';
 import { count } from '../common/typedNumber';
 import { useCopy } from '../common/useCopy';
-import { inSettings, MODEL_ROLES, noteLines, opens, STOP, TOOL_PAGES, TRANSLATE_FAILED, TRANSLATOR_NOTE } from '../common/words';
+import { follows, inSettings, MODEL_ROLES, noteLines, opens, STOP, TASK_MODELS, TOOL_PAGES, TRANSLATE_FAILED, TRANSLATOR_NOTE } from '../common/words';
 import { useConnections, useSession, useSettings } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { SHORTCUTS } from '../shortcuts';
 import { useToast } from '../toast';
-import { Button, Callout, ChipButton, formatKeys, Icon, Menu, MenuHeading, MenuItem, NavBar, pressed, Screen, TranslateDesk } from '../ui';
+import { Button, Callout, ChipButton, Divider, formatKeys, Icon, Menu, MenuHeading, MenuItem, NavBar, pressed, Screen, TranslateDesk } from '../ui';
 import { toolDesk } from './desk';
 
 // text: what came before a stop or a failure, kept in view.
@@ -34,7 +35,7 @@ export function TranslatorScreen({ back }: { back: Back | null }) {
   const { store } = session;
   const settings = useSettings();
   // toolTranslatorOf reads these too.
-  useConnections();
+  const connections = useConnections();
   const copy = useCopy();
   const language = settings.toolLanguage ?? 'Korean';
   const toast = useToast();
@@ -82,19 +83,21 @@ export function TranslatorScreen({ back }: { back: Back | null }) {
         tools={
           <>
             <Menu
-              label={MODEL_ROLES.aux}
+              label={TASK_MODELS.translate}
               trigger={(opener) => (
                 <ChipButton
-                  label={translator.ok ? entryName(translator.with.route.model) : `${MODEL_ROLES.aux} 없음`}
-                  title={MODEL_ROLES.aux}
+                  label={translator.ok ? entryName(translator.with.route.model) : `${TASK_MODELS.translate} 없음`}
+                  title={TASK_MODELS.translate}
                   tone={translator.ok ? 'plain' : 'warn'}
                   leading={<Icon icon={Languages} size="sm" />}
                   {...opener}
                 />
               )}
             >
-              <MenuHeading>{translator.ok ? `${inSettings('models')}의 ${MODEL_ROLES.aux}로 번역해요.` : describeTranslateFailure(translator.failure)}</MenuHeading>
-              <MenuItem label={opens(inSettings('models'))} onClick={() => navigate({ kind: 'models' })} />
+              {!translator.ok && <MenuHeading>{describeTranslateFailure(translator.failure)}</MenuHeading>}
+              <RoleChoices role="aux" own={settings.toolModel} follow={follows(MODEL_ROLES.aux)} connections={connections} onPick={(ref) => toast.settled(setToolModel(store, ref))} />
+              <Divider variant="menu" />
+              <MenuItem tone="muted" label={opens(inSettings('models'))} onClick={() => navigate({ kind: 'models' })} />
               <MenuHeading>여기서 번역한 내용은 저장되지 않아요.</MenuHeading>
             </Menu>
             <Icon icon={ArrowRight} size="sm" />

@@ -102,6 +102,8 @@ export type Settings = {
   // Tool-only note; never inherits the chats' global translator note (user, 2026-10-20).
   toolNote?: string;
   toolLanguage?: string;
+  // 번역기's own model; absent, 설정 › 모델's 보조 모델.
+  toolModel?: ModelRef;
   importNotice?: true;
   ledger?: 'filled' | { after: string };
   // How far the one fill of the ledger's unknown purposes went (runtime/models/usage fillPurposes); absent, not begun.

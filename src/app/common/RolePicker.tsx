@@ -96,7 +96,7 @@ export function RoleCard({ role, help, own, follow, connections, onPick, values,
   );
 }
 
-function RoleChoices({ role, own, follow, connections, onPick, open }: CardProps) {
+export function RoleChoices({ role, own, follow, connections, onPick, open }: CardProps) {
   return (
     <>
       {open && (

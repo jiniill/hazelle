@@ -6,7 +6,7 @@ import { RELAY_HEADER } from '../../contracts/http';
 import { answerable, inTurn, saying, stubRelay, testConnection, testModel, testServer } from '../testing';
 import { createCharacter, setOwnTranslate, setTranslate, setTranslatorNote, translateSwitches } from '../library/characters';
 import { setDefaultModel } from '../models/assignment';
-import { setToolNote, translate, translatorOf, translateOnTool, translateText, translationShown, type Translating } from './translate';
+import { setToolModel, setToolNote, translate, toolTranslatorOf, translatorOf, translateOnTool, translateText, translationShown, type Translating } from './translate';
 import { takeTurn } from '../chat/turn';
 import { SHARED_CHAT } from './features';
 import { translationInput } from '../chat/chat-context';
@@ -285,6 +285,24 @@ describe('Translator', () => {
       expect(sent.some(({ content }) => content.includes('Master -> 주인님'))).toBe(false);
       expect(sent[2]!.content).toBe('The Q3 report.');
       expect(fetched.mock.calls.filter(([, init]) => init?.method === 'DELETE').map(([url]) => String(url))).toEqual([expect.stringMatching(/^\/api\/streams\//)]);
+    }));
+
+  it('translates on 번역기 with its own model once one is picked, and with 보조 모델 again once it is unpicked', () =>
+    server.withSession(async (session) => {
+      await answerable(session);
+      const [connection] = session.store.list('connection');
+      await session.store.update('connection', connection!.id, (current) => ({ ...current, starred: [...current.starred, { ...current.starred[0]!, id: 'aux', name: 'aux' }, { ...current.starred[0]!, id: 'tool', name: 'tool' }] }));
+      await setDefaultModel(session.store, 'aux', { connection: connection!.id, model: 'aux' });
+      const model = () => {
+        const tool = toolTranslatorOf(session.store);
+        return tool.ok ? tool.with.route.model.id : tool.failure.kind;
+      };
+      await setToolModel(session.store, { connection: connection!.id, model: 'tool' });
+      expect(model()).toBe('tool');
+      await setToolModel(session.store, { connection: connection!.id, model: 'gone' });
+      expect(model()).toBe('model-gone');
+      await setToolModel(session.store, null);
+      expect(model()).toBe('aux');
     }));
 
   it('translates a character’s text with its 번역가의 노트 and without its card', () =>

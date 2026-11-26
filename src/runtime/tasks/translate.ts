@@ -11,6 +11,7 @@ import { without } from '../../model/fields';
 import type { TranslatePrompt } from '../../model/prompt';
 import type { Stream } from '../../model/stream';
 import type { ApiFailure, ApiResult } from '../api';
+import type { ModelRef } from '../../connectors/assignment';
 import { sharedModel, taskModel, type Route, type RouteFailure } from '../models/assignment';
 import { setTextTranslation, translatorNotes } from '../library/characters';
 import { chatTranslate, SHARED_CHAT } from './features';
@@ -148,17 +149,21 @@ export function translatorOf(store: ObjectStore, chat: Chat): { ok: true; prompt
 }
 
 // 번역기 (user, 2026-10-20): a tool apart from every chat, for any text, so it takes neither the chat translation's
-// prompt nor its 전역 번역가의 노트: a plain prompt of its own, 설정 › 모델's 보조 모델 and its own note.
+// prompt nor its 전역 번역가의 노트: a plain prompt of its own, its own model (else 설정 › 모델's 보조 모델) and its own note.
 export function toolTranslatorOf(store: ObjectStore): { ok: true; with: TranslateWith } | { ok: false; failure: RouteFailure } {
-  const route = sharedModel(store, 'aux');
+  const settings = accountSettings(store);
+  const route = sharedModel(store, 'aux', settings.toolModel ?? null);
   if ('kind' in route) return { ok: false, failure: route };
-  return { ok: true, with: { prompt: TOOL_PROMPT, route, notes: accountSettings(store).toolNote ?? '' } };
+  return { ok: true, with: { prompt: TOOL_PROMPT, route, notes: settings.toolNote ?? '' } };
 }
 
 const TOOL_PROMPT = toolPrompt();
 
 export const setToolLanguage = (store: ObjectStore, name: string) =>
   changeSettings(store, (current) => ({ ...current, toolLanguage: name }));
+
+export const setToolModel = (store: ObjectStore, ref: ModelRef | null) =>
+  changeSettings(store, (current) => (ref ? { ...current, toolModel: ref } : without(current, 'toolModel')));
 
 export const setToolNote = (store: ObjectStore, text: string) =>
   changeSettings(store, (current) => (text.trim() ? { ...current, toolNote: text } : without(current, 'toolNote')));
