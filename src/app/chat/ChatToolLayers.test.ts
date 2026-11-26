@@ -9,6 +9,6 @@ it('lays no layer while the chat asks for a consent, whoever asks, and lays them
   const asked = (id: number, chat: string, module: string, question: ScriptQuestion['question']): ScriptQuestion => ({ id, chat, from: { kind: 'module', id: module }, question });
   expect(layered(frames, [], 'here')).toEqual(['asks', 'quiet']);
   expect(layered(frames, [asked(1, 'here', 'asks', { kind: 'model' })], 'here')).toEqual([]);
-  expect(layered(frames, [{ id: 1, chat: 'here', from: { kind: 'character', id: 'bot' }, question: { kind: 'card' } }], 'here')).toEqual([]);
+  expect(layered(frames, [{ id: 1, chat: 'here', from: { kind: 'character', id: 'bot' }, question: { kind: 'card', name: 'Mira' } }], 'here')).toEqual([]);
   expect(layered(frames, [asked(1, 'here', 'asks', { kind: 'confirm', text: 'Sure?' }), asked(2, 'there', 'quiet', { kind: 'model' })], 'here')).toEqual(['asks', 'quiet']);
 });

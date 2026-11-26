@@ -384,10 +384,11 @@ export class ToolApi {
         return this.services.pages.editCard(first, second, { kind: 'module', id: entry.module }, AbortSignal.any([frame.closing.signal, cancel]));
       }
       case 'chat.portraits.edit': {
-        if (typeof first !== 'string') break;
+        const cast = args[2];
+        if (typeof first !== 'string' || (cast !== null && typeof cast !== 'string')) break;
         if (!isPortraitEdits(second)) throw new Error('Invalid portraits: see PortraitEdit in hazelle.d.ts');
         if (!this.runtime.allowed(first, entry.module)) throw new ToolStopped();
-        return this.services.pages.editPortraits(first, second.map(({ name, aliases, look, outfits, artist }) => ({ name, aliases, look, outfits: outfits.map(({ name, tags }) => ({ name, tags })), artist })), { kind: 'module', id: entry.module }, AbortSignal.any([frame.closing.signal, cancel]));
+        return this.services.pages.editPortraits(first, second.map(({ name, aliases, look, outfits, artist }) => ({ name, aliases, look, outfits: outfits.map(({ name, tags }) => ({ name, tags })), artist })), cast, { kind: 'module', id: entry.module }, AbortSignal.any([frame.closing.signal, cancel]));
       }
       case 'chat.rendered': {
         const at = screenAt(second);

@@ -161,7 +161,7 @@ export function connectApi(port: Port, execute: (code: string, api: Hazelle.Api)
       send: async (text) => { await landed(); return call('chat.send', [header.id, text]); },
       rendered: (at) => call('chat.rendered', [header.id, at]),
       editCard: (edit) => call('chat.card.edit', [header.id, edit]),
-      editPortraits: (portraits) => call('chat.portraits.edit', [header.id, portraits]),
+      editPortraits: (portraits, cast) => call('chat.portraits.edit', [header.id, portraits, cast ?? null]),
       setup: () => call('chat.setup', [], event),
       ask: (question) => call('ask', [question], event),
       say: (text, tone = 'normal') => fire('say', [tone, text], event),

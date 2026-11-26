@@ -1116,7 +1116,7 @@ it('rewrites the chat\'s character\'s card under the character\'s one answer, th
     await vi.waitFor(() => expect(transport.frames[0]?.api).not.toBeNull());
     const chat = transport.frames[0]!.api!.page!.chat!;
     const asked = chat.editCard({ description: 'A captain', greeting: 'Ahoy.' });
-    await vi.waitFor(() => expect(session.scriptInteractions.snapshot().questions).toEqual([expect.objectContaining({ question: { kind: 'card' }, from: { kind: 'module', id: f.module } })]));
+    await vi.waitFor(() => expect(session.scriptInteractions.snapshot().questions).toEqual([expect.objectContaining({ question: { kind: 'card', name: 'Mira' }, from: { kind: 'module', id: f.module } })]));
     session.scriptInteractions.answer(session.scriptInteractions.snapshot().questions[0]!.id, 'yes');
     expect(await asked).toEqual({ ok: true });
     expect(session.store.get('character', character)!.value).toMatchObject({ cardWrites: true, card: { description: 'A captain', greetings: ['Ahoy.', 'Hi again.'] } });
@@ -1236,6 +1236,16 @@ it('writes the character\'s 삽화 프로필 under its card\'s answer, over the 
     expect(mine.map(({ name, look, source }) => [name, look, source])).toEqual([['Rook', 'boy, scar', 'user'], ['mira', 'girl, silver hair', 'tool'], ['Sora', 'girl, hat', 'tool']]);
     expect(await chat.editPortraits(Array.from({ length: 23 }, (_, index) => made(`Extra ${index}`, '')))).toEqual({ ok: false, reason: 'too-many' });
     await expect(chat.editPortraits([made('Ann', ''), { ...made('Bea', ''), aliases: ['ann'] }])).rejects.toThrow('Invalid portraits');
+    // A 등장인물's are asked for under its own card, by its name.
+    const guest = await session.store.create('character', { card: blankCard('Noa'), folder: null, loreFolders: [] });
+    if (!guest.ok) throw new Error(guest.error);
+    await expect(chat.editPortraits([made('Noa', 'girl')], guest.data.id)).rejects.toThrow('no 등장인물');
+    await session.store.update('chat', f.chat, (current) => ({ ...current, cast: [guest.data.id] }));
+    const joined = chat.editPortraits([made('Noa', 'girl')], guest.data.id);
+    await vi.waitFor(() => expect(session.scriptInteractions.snapshot().questions).toMatchObject([{ question: { kind: 'card', name: 'Noa' } }]));
+    session.scriptInteractions.answer(session.scriptInteractions.snapshot().questions[0]!.id, 'no');
+    expect(await joined).toEqual({ ok: false, reason: 'not-allowed' });
+    expect(session.store.get('character', guest.data.id)!.value.cardWrites).toBe(false);
   } finally { close(); host.close(); }
 }));
 

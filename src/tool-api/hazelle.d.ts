@@ -81,7 +81,8 @@ declare namespace Hazelle {
   // else what the app made it from.
   interface Portrait { name: string; aliases: string[]; look: string; outfits: { name: string; tags: string }[]; artist: string; source: 'metadata' | 'vision' | 'text' | 'user' | 'tool' }
   // A 삽화 프로필 a tool writes. kept: the names it wrote none for, since the user wrote or changed the one there.
-  // too-many: the character would hold more than 24, and none was written.
+  // too-many: the character would hold more than 24, and none was written. no-character: no cast was named and the
+  // chat has no character.
   type PortraitEdit = Omit<Portrait, 'source'>;
   type PortraitsAnswer = { ok: true; kept: string[] } | { ok: false; reason: 'not-allowed' | 'no-character' | 'too-many' | 'failed' };
   // owner: whose profiles they are, with that one's id: the chat's character, one of its 등장인물, its persona, or a
@@ -219,12 +220,14 @@ declare namespace Hazelle {
     // Rewrites the chat's character's card, in every chat with it, under the user's one answer for this character's
     // card, which the bot's own scripts share. Bound to the chat, as picture is; answers once saved.
     editCard(edit: CardEdit): Promise<CardAnswer>;
-    // Writes 삽화 프로필 of the chat's character, in every chat with it, under the same answer as editCard. Each takes
+    // Writes 삽화 프로필 of the chat's character, or of the 등장인물 whose id cast gives, in every chat with that
+    // character, under the user's one answer for its card, as editCard's is asked. Each takes
     // the place of the one that goes by its name or one of its aliases, or joins after the rest; none is taken out, and
     // one the user wrote or changed stays as it is. The user sees and changes them under 삽화 프로필 as any other. A
     // character given its first profiles here gets none made by the app until the user asks for them. Bound to the
-    // chat, as picture is. Throws on portraits that are no PortraitEdit list, or two that share a name.
-    editPortraits(portraits: PortraitEdit[]): Promise<PortraitsAnswer>;
+    // chat, as picture is. Throws on portraits that are no PortraitEdit list, two that share a name, or a cast the
+    // chat has no 등장인물 by.
+    editPortraits(portraits: PortraitEdit[], cast?: string): Promise<PortraitsAnswer>;
   }
   // Tool data: synced, owned by the module. A value is at most 4 MB of JSON and a tool's values 32 MB; one past 512 KB is
   // kept as a file counted in the account's picture budget, read when asked. set throws too-large past either, or

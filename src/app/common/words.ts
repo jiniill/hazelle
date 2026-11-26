@@ -62,7 +62,7 @@ const ASKER = { character: '봇', module: '모듈', plugin: TOOL };
 export type Asker = keyof typeof ASKER;
 export const modelsHelp = (asker: Asker) => (asker === 'character' ? BOT_MODELS_HELP : `이 ${ASKER[asker]}이 대화 응답과 별개로 모델을 호출해요. 호출한 만큼 요금이 더 나올 수 있어요.`);
 export const modelConsent = (asker: Asker) => `이 ${ASKER[asker]}이 모델을 추가로 호출하려고 해요`;
-export const cardWriteConsent = (asker: Asker) => `이 ${ASKER[asker]}이 캐릭터 카드를 수정하려고 해요`;
+export const cardWriteConsent = (asker: Asker, name: string) => `이 ${ASKER[asker]}이 ${name}의 캐릭터 카드를 수정하려고 해요`;
 export const MEMORY_CLAIM_HELP = '허용하면 이 플러그인을 사용하는 채팅에서는 기본 장기 기억이 일시 중지돼요. 기존 기록은 삭제되지 않아요.';
 export const NETWORK = '외부 연결';
 export const NETWORK_HELP = '켜면 이 플러그인이 대화 내용을 외부 서버로 전송할 수 있어요. 외부 이미지와 글꼴은 화면을 새로고침한 뒤부터 표시돼요.';

@@ -24,7 +24,7 @@ export function asking(question: ScriptQuestion['question'], asker: Asker): { te
         answer: CONSENT,
       };
     case 'card':
-      return { text: cardWriteConsent(asker), help: CARD_WRITE_ASK_HELP, answer: CONSENT };
+      return { text: cardWriteConsent(asker, question.name), help: CARD_WRITE_ASK_HELP, answer: CONSENT };
     case 'plugin':
       return { text: pluginConsent(question.grants), help: pluginConsentHelp(question.grants, question.hosts), answer: CONSENT };
   }
