@@ -136,14 +136,14 @@ export class ObjectStore {
       const { generation, saved } = openedCache;
       this.timeline = generation.timeline;
       if (!saved) return true;
-      const { state } = saved;
+      const { state, revisions } = saved;
       this.cursor = state.cursor;
       this.bootstrap = state.until;
       this.bootstrapped = state.complete;
       this.limits = state.limits;
-      this.objects.loadRevisions(state);
+      this.objects.loadRevisions(revisions);
       this.known = Math.max(state.cursor, state.until ?? 0);
-      for (const [, rev] of [...state.heads, ...state.revisions]) this.known = Math.max(this.known, rev);
+      for (const [, rev] of [...revisions.heads, ...revisions.revisions]) this.known = Math.max(this.known, rev);
       const rows = saved.changes.sort((a, b) => a.rev - b.rev);
       const opened = this.opener(rows, false, stop);
       for (const [index, row] of rows.entries()) {
@@ -172,7 +172,6 @@ export class ObjectStore {
       complete: scope ? scope.complete : this.bootstrapped,
       until: scope ? null : this.bootstrap,
       limits: this.limits,
-      ...(scope ? { heads: [], revisions: [] } : this.objects.snapshotRevisions()),
     };
   }
 
@@ -186,10 +185,12 @@ export class ObjectStore {
   }
 
   private cachePut(changes: SealedChange[], scopes: { chat: string; state: CacheState }[]) {
+    // Revisions raised while no write can be made are kept for the first one that is.
     if (!this.cachedObjects.available || this.timeline === null) return;
-    const feed = JSON.stringify([this.cursor, this.bootstrapped, this.bootstrap, this.limits, this.objects.revisionsVersion()]);
-    if (feed === this.cachedFeed && !changes.length && !scopes.length) return;
-    this.cachedObjects.write({ changes, scopes, ...(feed !== this.cachedFeed && { feed: this.cacheState() }) });
+    const feed = JSON.stringify([this.cursor, this.bootstrapped, this.bootstrap, this.limits]);
+    const raised = this.objects.takeRaised();
+    if (feed === this.cachedFeed && !raised.heads.length && !raised.revisions.length && !changes.length && !scopes.length) return;
+    this.cachedObjects.write({ changes, raised, scopes, ...(feed !== this.cachedFeed && { feed: this.cacheState() }) });
     this.cachedFeed = feed;
   }
 

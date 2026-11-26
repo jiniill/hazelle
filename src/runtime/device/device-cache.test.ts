@@ -28,7 +28,7 @@ it('keeps a version-2 cache’s rows when it adds the guest stores', async () =>
   await done(tx);
   v2.close();
   const db = await database();
-  expect([...db.objectStoreNames].sort()).toEqual(['drafts', 'generations', 'guest-files', 'guest-heads', 'guest-objects', 'objects', 'request-logs', 'states']);
+  expect([...db.objectStoreNames].sort()).toEqual(['drafts', 'generations', 'guest-files', 'guest-heads', 'guest-objects', 'objects', 'request-logs', 'revisions', 'states']);
   expect(await done(db.transaction('objects').objectStore('objects').get(['account', 'kept']))).toEqual({ id: 'kept', scope: '' });
 });
 
@@ -48,14 +48,14 @@ it('retries a blocked cache upgrade without keeping its rejected promise or late
     v2.close();
   }
   const db = await database();
-  expect(db.version).toBe(5);
+  expect(db.version).toBe(6);
   await new Promise<void>((resolve, reject) => {
     const req = indexedDB.deleteDatabase('risu-alpha-objects');
     req.onsuccess = () => resolve();
     req.onblocked = () => reject(new Error('A late or current connection stayed open'));
     req.onerror = () => reject(req.error);
   });
-  expect((await database()).version).toBe(5);
+  expect((await database()).version).toBe(6);
 });
 
 it('adds drafts and request logs to a version-3 database, retaining account and guest data', async () => {
@@ -82,12 +82,42 @@ it('adds drafts and request logs to a version-3 database, retaining account and 
 
   const { database } = await import('./device-cache');
   const db = await database();
-  expect(db.version).toBe(5);
-  expect([...db.objectStoreNames].sort()).toEqual(['drafts', 'request-logs', ...stores].sort());
+  expect(db.version).toBe(6);
+  expect([...db.objectStoreNames].sort()).toEqual(['drafts', 'request-logs', 'revisions', ...stores].sort());
   for (const store of stores) {
     expect(await done(db.transaction(store).objectStore(store).get(['account', 'kept']))).toEqual({ kept: store });
   }
   expect([...db.transaction('guest-objects').objectStore('guest-objects').indexNames]).toEqual(['kind', 'parent', 'rev', 'scope']);
+});
+
+it('moves a version-5 feed state’s revisions to rows of their own, in the same generation', async () => {
+  const old = indexedDB.open('risu-alpha-objects', 5);
+  old.onupgradeneeded = () => {
+    old.result.createObjectStore('generations');
+    old.result.createObjectStore('states');
+    old.result.createObjectStore('objects').createIndex('scope', ['account', 'scope']);
+  };
+  const v5 = await done(old) as IDBDatabase;
+  const generation = { id: 'kept', timeline: 't' };
+  const state = (cursor: number) => ({ cursor, complete: true, until: null, limits: null });
+  const read = JSON.stringify({ kind: 'chat', list: true });
+  const tx = v5.transaction(['generations', 'states'], 'readwrite');
+  tx.objectStore('generations').put(generation, 'account');
+  tx.objectStore('states').put({ ...state(4), heads: [['chat', 3]], revisions: [[read, 4]] }, ['account', '']);
+  tx.objectStore('states').put({ ...state(3), heads: [], revisions: [] }, ['account', 'chat']);
+  await done(tx);
+  v5.close();
+
+  const { deviceCache } = await import('./device-cache');
+  const cache = deviceCache('account');
+  expect(await cache.open()).toEqual({ generation, saved: { state: state(4), changes: [], revisions: { heads: [['chat', 3]], revisions: [[read, 4]] } } });
+  expect(await cache.scopes(generation)).toEqual(new Map([['chat', state(3)]]));
+});
+
+it('keeps the generation rules MemoryCache keeps', async () => {
+  const { deviceCache } = await import('./device-cache');
+  const { GENERATION_STEPS, generationSteps } = await import('../testing/cache');
+  expect(await generationSteps(deviceCache('contract'))).toEqual(GENERATION_STEPS);
 });
 
 it('forgets only the account’s drafts and rejects its late writes', async () => {

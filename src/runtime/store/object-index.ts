@@ -1,13 +1,11 @@
 import type { StoreRead } from '../../model/kinds';
-import type { CacheState } from './object-cache';
+import type { CacheRevisions } from './object-cache';
 
 export type StoreChange = { kind: string; id: string; parent: string | null };
 
 // value is undefined for a body that did not open. Such an object is counted, never
 // shown as if it were empty, and never overwritten. kind may be one a newer version wrote.
 export type Held = { id: string; kind: string; parent: string | null; rev: number; value: unknown; pending?: number };
-
-type Revisions = Pick<CacheState, 'heads' | 'revisions'>;
 
 // Confirmed objects only. Pending writes never advance these revisions or enter the lookup indexes.
 export class ObjectIndex {
@@ -17,8 +15,9 @@ export class ObjectIndex {
   private readonly byParent = new Map<string, Map<string, Set<string>>>();
   private readonly heads = new Map<string, number>();
   private readonly revisions = new Map<string, number>();
-  // Moves whenever snapshotRevisions would answer differently.
-  private version = 0;
+  // The keys raised since takeRaised last answered.
+  private readonly raisedHeads = new Set<string>();
+  private readonly raisedReads = new Set<string>();
   private unreadableCount = 0;
 
   get(id: string): Held | undefined { return this.live.get(id); }
@@ -38,29 +37,32 @@ export class ObjectIndex {
     return this.revisions.get(JSON.stringify('list' in read ? { kind: read.kind, list: true } : { kind: read.kind, parent: read.parent })) ?? 0;
   }
 
-  loadRevisions({ heads, revisions }: Revisions) {
+  loadRevisions({ heads, revisions }: CacheRevisions) {
     for (const [chat, head] of heads) this.heads.set(chat, head);
     for (const [read, rev] of revisions) this.revisions.set(read, rev);
-    this.version++;
   }
 
-  snapshotRevisions(): Revisions {
-    return { heads: [...this.heads], revisions: [...this.revisions] };
+  takeRaised(): CacheRevisions {
+    const raised: CacheRevisions = {
+      heads: [...this.raisedHeads].map((chat) => [chat, this.heads.get(chat)!]),
+      revisions: [...this.raisedReads].map((read) => [read, this.revisions.get(read)!]),
+    };
+    this.raisedHeads.clear();
+    this.raisedReads.clear();
+    return raised;
   }
-
-  revisionsVersion(): number { return this.version; }
 
   // A feed may omit the body of an unheld chat. Its revision still invalidates reads and advances its entry head.
   recordRevision({ kind, parent, rev }: StoreChange & { rev: number }) {
-    for (const read of [{ kind, list: true }, ...(parent ? [{ kind, parent }] : [])]) this.raise(this.revisions, JSON.stringify(read), rev);
-    if (kind === 'entry' && parent) this.raise(this.heads, parent, rev);
+    for (const read of [{ kind, list: true }, ...(parent ? [{ kind, parent }] : [])]) this.raise(this.revisions, this.raisedReads, JSON.stringify(read), rev);
+    if (kind === 'entry' && parent) this.raise(this.heads, this.raisedHeads, parent, rev);
   }
 
-  private raise(revisions: Map<string, number>, key: string, rev: number) {
+  private raise(revisions: Map<string, number>, raised: Set<string>, key: string, rev: number) {
     const held = revisions.get(key);
     if (held !== undefined && held >= rev) return;
     revisions.set(key, rev);
-    this.version++;
+    raised.add(key);
   }
 
   // Every write takes the account's next rev, so one not above the rev held for the id is that write or an older
@@ -116,7 +118,8 @@ export class ObjectIndex {
     this.byParent.clear();
     this.heads.clear();
     this.revisions.clear();
-    this.version++;
+    this.raisedHeads.clear();
+    this.raisedReads.clear();
     this.unreadableCount = 0;
   }
 }

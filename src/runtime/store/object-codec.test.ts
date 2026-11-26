@@ -178,8 +178,9 @@ describe('object codec store boundaries', () => {
     const generation = { id: 'device', timeline: 'one' };
     const cache: DeviceCache = {
       open: async () => ({ generation, saved: {
-        state: { cursor: 1, complete: true, until: null, limits: { items: 200, bytes: 10000000, body: 1000000 }, heads: [], revisions: [] },
+        state: { cursor: 1, complete: true, until: null, limits: { items: 200, bytes: 10000000, body: 1000000 } },
         changes: [{ ...item, rev: 1, body: 'ciphertext' }],
+        revisions: { heads: [], revisions: [] },
       } }),
       read: vi.fn(async () => null), scopes: vi.fn(async () => new Map()), write: vi.fn(async () => {}), clear: vi.fn(async () => generation),
       adopt: vi.fn(async () => generation), forget: vi.fn(async () => {}),

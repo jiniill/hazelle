@@ -368,6 +368,29 @@ it('writes nothing for a pull that brought nothing, and the feed state again onc
   store.close();
 });
 
+it('writes only the revisions a pull raised, and the store opened after it holds every revision', async () => {
+  const f = await fixture();
+  await f.add('kept', 'connection', null, connection);
+  await f.add('chat', 'chat', null, { title: null, character: null, models: {} });
+  const store = await f.open();
+  await store.pull();
+  await f.flush();
+  const writing = vi.spyOn(f.cache, 'write');
+  await f.add('later', 'connection', null, connection);
+  await f.add('entry', 'entry', 'chat', { role: 'user', text: 'hi' });
+  expect(await store.pull()).toBeNull();
+  await f.flush();
+  const list = (kind: string) => JSON.stringify({ kind, list: true });
+  expect(writing.mock.calls.map(([, write]) => write.raised)).toEqual([{
+    heads: [['chat', 4]],
+    revisions: [[list('connection'), 3], [list('entry'), 4], [JSON.stringify({ kind: 'entry', parent: 'chat' }), 4]],
+  }]);
+  store.close();
+  const reopened = await f.open();
+  expect([reopened.revision({ kind: 'chat', list: true }), reopened.revision({ kind: 'connection', list: true }), reopened.entryHead('chat')]).toEqual([2, 3, 4]);
+  reopened.close();
+});
+
 it('keeps the generation rules a browser cache keeps', async () => {
   expect(await generationSteps(new MemoryCache())).toEqual(GENERATION_STEPS);
 });
@@ -376,7 +399,7 @@ it('discards a cache from before generations instead of reading its rows', async
   const f = await fixture();
   await f.add('server', 'connection', null, connection);
   f.cache.rows.set('old', { id: 'old', kind: 'connection', parent: null, rev: 9, body: 'sealed' });
-  f.cache.states.set('', { cursor: 9, complete: true, until: null, limits, heads: [], revisions: [] });
+  f.cache.states.set('', { cursor: 9, complete: true, until: null, limits });
   const store = await f.open();
   expect(store.cached).toBe(false);
   expect(await store.pull()).toBeNull();
