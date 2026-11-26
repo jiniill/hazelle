@@ -26,9 +26,8 @@ if [ "${1:-}" = fetch ]; then
     grep -Eq "\"snapshots\":\[($entry(,$entry)*)?\],\"operations\":\[" "$manifest"
     sed -n 's/.*"snapshots":\[\([^]]*\)\],"operations".*/\1/p' "$manifest" | tr '}' '\n' |
       sed -n 's|.*"path":"snapshots/\([0-9a-f]\{32\}/[0-9]*-[0-9a-f]\{12\}\.sqlite\.gz\)".*|\1|p' >"$work/snapshots"
-    while IFS= read -r key; do
-      rclone copyto "$remote/snapshots/$bucket/$key" "$root/$id/snapshots/$key"
-    done <"$work/snapshots"
+    # One call, not one each. A name the pool lacks is passed over here and refused by restore-cli as missing.
+    rclone copy "$remote/snapshots/$bucket" "$root/$id/snapshots" --files-from-raw "$work/snapshots"
   fi
   if ! grep -q '"bucket":"r2"' "$manifest"; then
     sed -n 's/.*"pictures":\[\([^]]*\)\].*/\1/p' "$manifest" | tr -d '"' | tr , '\n' >"$work/pictures"

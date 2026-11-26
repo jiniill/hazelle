@@ -33,9 +33,14 @@ copy_generation() {
   work=$(mktemp -d) || return 1
   if [ -n "$bucket" ]; then
     snapshots "$manifest" >"$work/snapshots" || { rm -rf "$work"; return 1; }
-    while IFS= read -r key; do
-      rclone copyto "files:$bucket/snapshots/$key" "$REMOTE/snapshots/$bucket/$key" --immutable || { rm -rf "$work"; return 1; }
-    done <"$work/snapshots"
+    # One call for them all: one each took four minutes for 162 accounts' archives (2026-11-26), four seconds this way.
+    # --files-from passes over a name the source lacks and still exits 0, so the pool is listed back and must hold
+    # every one. --checksum: an archive put again by a restore has a new time and the same bytes.
+    if [ -s "$work/snapshots" ]; then
+      rclone copy "files:$bucket/snapshots" "$REMOTE/snapshots/$bucket" --files-from-raw "$work/snapshots" --immutable --checksum &&
+        rclone lsf -R --files-only "$REMOTE/snapshots/$bucket" --files-from-raw "$work/snapshots" >"$work/pooled" &&
+        [ "$(sort "$work/pooled")" = "$(sort "$work/snapshots")" ] || { rm -rf "$work"; return 1; }
+    fi
   fi
   rclone copy "$LOCAL/$generation" "$REMOTE/$generation" --exclude manifest.json --exclude copied &&
     rclone copyto "$manifest" "$REMOTE/$generation/manifest.json" &&

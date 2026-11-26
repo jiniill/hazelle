@@ -33,11 +33,14 @@ const resolve = (name) => name.startsWith('backup:') ? path.join(process.env.REM
 const a = resolve(positional[0]), b = positional[1] && resolve(positional[1]);
 const walk = (dir, prefix = '') => !fs.existsSync(dir) ? [] : fs.readdirSync(dir, { withFileTypes: true }).flatMap(e => e.isDirectory() ? walk(path.join(dir, e.name), prefix + e.name + '/') : [prefix + e.name]);
 const copy = (a, b) => { fs.mkdirSync(path.dirname(b), { recursive: true }); fs.copyFileSync(a, b); };
+// As rclone does: a listed name the source lacks is passed over, with no error.
+const listed = command === 'delete' ? null : flags['--files-from-raw']?.flatMap(file => fs.readFileSync(file, 'utf8').split('\\n').filter(Boolean));
+const named = (name) => !listed || listed.includes(name);
 try {
   switch (command) {
     case 'copyto': copy(a, b); break;
     case 'copy':
-      for (const name of walk(a)) if (!(flags['--exclude'] ?? []).includes(name)) copy(path.join(a, name), path.join(b, name));
+      for (const name of walk(a)) if (!(flags['--exclude'] ?? []).includes(name) && named(name)) copy(path.join(a, name), path.join(b, name));
       break;
     case 'lsf': {
       let names = flags['--dirs-only'] ? fs.readdirSync(a, { withFileTypes: true }).filter(e => e.isDirectory()).map(e => e.name + '/') : walk(a);
@@ -45,6 +48,7 @@ try {
       if (include === '/*/manifest.json') names = names.filter(n => /^[^/]+\\/manifest.json$/.test(n));
       if (include === '/files/*') names = names.filter(n => /^files\\/[^/]+$/.test(n));
       if (include === '/snapshots/**') names = names.filter(n => n.startsWith('snapshots/'));
+      names = names.filter(named);
       if (names.length) console.log(names.join('\\n'));
       break;
     }

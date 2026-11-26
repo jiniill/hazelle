@@ -47,7 +47,9 @@ async function verify(generation: string, manifest: Manifest, files: Bucket, sou
 
 // Every stored picture the service names is in the store at the size its row records, or the restore fails naming each
 // one that is not. Sizes only: reading every object back to hash it is not done. One listing per account, not one HEAD
-// per picture: the hosted store held 277,334 pictures on 2026-11-02, 45 minutes of HEADs.
+// per picture: the hosted store held 277,334 pictures on 2026-11-02, 45 minutes of HEADs. LISTINGS accounts at a time:
+// one after another its 850,983 took 15 minutes of a restore on 2026-11-26, the site down meanwhile.
+const LISTINGS = 8;
 async function inStore(files: R2Bucket, service: string, manifest: Manifest) {
   const db = new DatabaseSync(service, { readOnly: true });
   let stored: { incarnation: string; id: string; size: number }[];
@@ -56,16 +58,25 @@ async function inStore(files: R2Bucket, service: string, manifest: Manifest) {
   } finally {
     db.close();
   }
-  const byAccount = new Map<string, { id: string; size: number }[]>();
-  for (const { incarnation, id, size } of stored) byAccount.set(incarnation, [...(byAccount.get(incarnation) ?? []), { id, size }]);
-  const wrong: string[] = [];
-  for (const [incarnation, pictures] of byAccount) {
-    const sizes = await files.sizes(filePrefix(incarnation));
-    for (const { id, size } of pictures) {
-      const found = sizes.get(fileKey(incarnation, id));
-      if (found !== size) wrong.push(`${fileKey(incarnation, id)}: ${found === undefined ? 'missing' : `${found} bytes, not ${size}`}`);
-    }
+  const byAccount = new Map<string, typeof stored>();
+  for (const picture of stored) {
+    const pictures = byAccount.get(picture.incarnation);
+    if (pictures) pictures.push(picture);
+    else byAccount.set(picture.incarnation, [picture]);
   }
+  const accounts = [...byAccount];
+  const wrong: string[] = [];
+  const listed = async () => {
+    for (let account = accounts.pop(); account; account = accounts.pop()) {
+      const [incarnation, pictures] = account;
+      const sizes = await files.sizes(filePrefix(incarnation));
+      for (const { id, size } of pictures) {
+        const found = sizes.get(fileKey(incarnation, id));
+        if (found !== size) wrong.push(`${fileKey(incarnation, id)}: ${found === undefined ? 'missing' : `${found} bytes, not ${size}`}`);
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: LISTINGS }, listed));
   if (wrong.length) throw new Error(`restore: ${wrong.length} of ${stored.length} pictures are not in the R2 bucket as the generation names them:\n${wrong.sort().join('\n')}`);
 }
 
