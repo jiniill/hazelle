@@ -1,5 +1,6 @@
 import type { AutoRow } from '../../contracts/auto-diagnosis';
 import type { BoardSettings } from '../../contracts/board';
+import type { ServerWork } from '../../contracts/work';
 import type { AdminAccount, LogRow, Report, Service, ShareVersion, Totals, UsagePage, Visits } from '../../contracts/admin';
 import { api, SLOW_ROUTE_WAIT, type ApiResult } from '../api';
 import { page } from './pages';
@@ -10,6 +11,7 @@ import { page } from './pages';
 export const readService = () => api<Service>('GET', 'admin/service');
 export const readVisits = () => api<Visits>('GET', 'admin/visits');
 export const setService = (values: Pick<Service, 'signupCap' | 'accountBytesCap' | 'accountFileBytesCap'>) => api<undefined>('PUT', 'admin/service', values);
+export const setWork = (work: ServerWork | null) => api<undefined>('PUT', 'admin/work', { work });
 export const setBackupFolder = (folder: string | null) => api<undefined>('PUT', 'admin/backup-folder', { folder });
 
 // flagged: only the accounts suspended, restoring or leaving.

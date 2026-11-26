@@ -1,4 +1,5 @@
 import { PROXY_HEADER } from '../contracts/proxy';
+import { WORK_HEADER } from '../contracts/work';
 import { ACCOUNT_USAGE_HEADERS, BUILD_HEADER, RELAY_HEADER, RELAY_METHODS, RELAY_SOURCE, STREAM_HEADER, UNREAD_BOARD_HEADER, UNREAD_NOTICES_HEADER, type HttpRequest, type RelayError } from '../contracts/http';
 import { HOP_BY_HOP } from './hop-by-hop';
 import { isRecord } from '../record';
@@ -62,6 +63,7 @@ const DROPPED_RESPONSE_HEADERS = new Set([
   UNREAD_NOTICES_HEADER,
   UNREAD_BOARD_HEADER,
   BUILD_HEADER,
+  WORK_HEADER,
   STREAM_HEADER,
   PROXY_HEADER,
 ]);

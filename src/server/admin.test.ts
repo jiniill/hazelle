@@ -176,7 +176,7 @@ describe('the operator', () => {
     const service = (await (await t.get('admin/service', admin.cookie)).json()) as { databaseBytes: number };
     expect(service).toEqual({
       signupCap: 3, accountBytesCap: null, accountFileBytesCap: null, accounts: 1, people: 1, pending: 0, fileBytes: 3, links: 0,
-      databaseBytes: expect.any(Number), backupAgeHours: null, diskFreePercent: 50, warnings: [],
+      databaseBytes: expect.any(Number), backupAgeHours: null, diskFreePercent: 50, warnings: [], work: null,
     });
     expect(service.databaseBytes).toBeGreaterThan(0);
 
@@ -185,6 +185,20 @@ describe('the operator', () => {
     expect((await t.put('admin/service', { signupCap: 2, accountBytesCap: null, accountFileBytesCap: null }, admin.cookie)).status).toBe(204);
     expect((await t.post('signup', signupBody('late'))).status).toBe(201);
     expect((await log(admin.cookie))[0]).toMatchObject({ action: 'set-service', target: 'service', detail: { signupCap: 2, accountBytesCap: null, accountFileBytesCap: null } });
+  });
+
+  it('announces server work ahead of its start, calls it off, and refuses one already begun or without a length', async () => {
+    const admin = await operator();
+    const work = { at: Date.now() + 3_600_000, minutes: 20 };
+    const read = async () => ((await (await t.get('admin/service', admin.cookie)).json()) as { work: unknown }).work;
+    expect((await t.put('admin/work', { work }, admin.cookie)).status).toBe(204);
+    expect(await read()).toEqual(work);
+    expect((await log(admin.cookie))[0]).toMatchObject({ action: 'set-work', target: 'service', detail: work });
+    for (const bad of [{ ...work, at: Date.now() - 1 }, { ...work, minutes: 0 }, { ...work, minutes: 24 * 60 + 1 }, { at: work.at }, undefined]) expect((await t.put('admin/work', { work: bad }, admin.cookie)).status).toBe(400);
+    expect(await read()).toEqual(work);
+    expect((await t.put('admin/work', { work: null }, admin.cookie)).status).toBe(204);
+    expect(await read()).toBeNull();
+    expect((await log(admin.cookie))[0]).toMatchObject({ action: 'set-work', detail: null });
   });
 
   it("gives an account its own caps in place of the service's, none among them, and logs each", async () => {

@@ -30,6 +30,8 @@ import { streamStore } from './db/streams-db';
 import app from './worker';
 import { publishNews, RELEASE_NEWS } from './news';
 import { BUILD_HEADER } from '../contracts/http';
+import { WORK_HEADER } from '../contracts/work';
+import { openWork } from './work';
 import type { Release } from '../contracts/installation';
 import { releases } from './releases';
 import { openVisits, type FrontendMessage } from './visits';
@@ -122,6 +124,7 @@ const { applied } = migrate(raw, migrationsDir);
 if (!selfHost) publishNews(raw, version, RELEASE_NEWS, Date.now());
 const db = serviceDb(raw);
 const visits = openVisits(raw);
+const work = openWork(raw);
 let dayClose: ReturnType<typeof setTimeout>;
 const scheduleDayClose = () => {
   dayClose = setTimeout(() => {
@@ -173,6 +176,10 @@ const root = new Hono();
 const stamp = version ? { version, build: pageBuild(clientDir) } : null;
 if (stamp) root.use('/api/*', async (c, next) => {
   c.header(BUILD_HEADER, stamp.build);
+  await next();
+});
+root.use('/api/*', async (c, next) => {
+  c.header(WORK_HEADER, work());
   await next();
 });
 root.get('/api/health', async (c) => {

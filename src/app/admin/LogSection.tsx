@@ -2,6 +2,7 @@ import type { LogRow, OwnCap } from '../../contracts/admin';
 import { readLog } from '../../runtime/service/admin';
 import { sizeText } from '../common/size';
 import { ago, moment } from '../common/time';
+import { workSpan } from '../common/work';
 import { BOARD, onOff } from '../common/words';
 import { ACTIONS } from './actions';
 import { navigate } from '../shell/router';
@@ -45,6 +46,8 @@ function detailOf(row: LogRow): string | undefined {
       return `가입 정원 ${row.detail.signupCap}명 · 계정당 텍스트 한도 ${capWords(row.detail.accountBytesCap)} · 계정당 이미지 한도 ${capWords(row.detail.accountFileBytesCap)}`;
     case 'set-backup-folder':
       return row.detail.folder ?? '폴더 없음';
+    case 'set-work':
+      return row.detail === null ? '취소' : workSpan(row.detail, row.at);
     case 'set-pulse':
       return `손님 집계 ${onOff(row.detail.guests)}`;
     case 'block-share':

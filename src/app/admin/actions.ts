@@ -1,4 +1,5 @@
 import type { LogRow } from '../../contracts/admin';
+import { WORK } from '../common/work';
 import { NOTICES, PULSE } from '../common/words';
 
 // An operator's act by its name, the same in the log, the menu that does it and its dialog.
@@ -9,6 +10,7 @@ export const ACTIONS: Record<LogRow['action'], string> = {
   'set-service': '서비스 설정',
   'set-board': '게시판 설정',
   'set-backup-folder': '백업 폴더 설정',
+  'set-work': `${WORK} 예고`,
   'set-pulse': `${PULSE.title} 설정`,
   'guest-block': '손님 글쓰기 차단',
   'set-caps': '저장 한도',

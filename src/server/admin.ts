@@ -4,6 +4,8 @@ import type { BoardSettings } from '../contracts/board';
 import { Hono, type Context } from 'hono';
 import { KEEP_YEARS, MAX_NOTICE_LENGTH, type AccountState, type AdminAccount, type BackupFolder, type LogRow, type Report, type RestoreAction, type Service, type ShareVersion, type UsagePage, type Visits } from '../contracts/admin';
 import type { Paged } from '../contracts/http';
+import { MAX_WORK_MINUTES } from '../contracts/work';
+import { isRecord } from '../record';
 import { savedFolder } from './backup/backups';
 import { SHARE_ID } from '../contracts/shares';
 import { blockFiles, fileBlocks } from './files';
@@ -17,6 +19,7 @@ import { tellUnread, VISIBLE } from './unread';
 import { readCohorts, readPulseDays } from './pulse';
 import { forgetDiagnoses, readDiagnoses } from './diagnoses';
 import { readSources, readVisits } from './visits';
+import { standingWork, WORK_COLUMNS } from './work';
 
 const KEEP_MS = KEEP_YEARS * 365 * DAY_MS;
 
@@ -309,12 +312,13 @@ admin.get('/service', async (c) => {
          + (SELECT COUNT(*) FROM posts WHERE visibility = 'operator' AND status = 'open' AND deleted = 0) AS pending,
        (SELECT COALESCE(SUM(file_bytes), 0) FROM accounts) AS fileBytes,
        (SELECT COUNT(*) FROM shares WHERE cut_at IS NULL) AS links,
-       (SELECT page_count * page_size FROM pragma_page_count(), pragma_page_size()) AS databaseBytes
+       (SELECT page_count * page_size FROM pragma_page_count(), pragma_page_size()) AS databaseBytes, ${WORK_COLUMNS}
      FROM service`,
-  ).first<Omit<Service, 'backupAgeHours' | 'diskFreePercent' | 'warnings' | 'backupFolder'>>();
+  ).first<Omit<Service, 'backupAgeHours' | 'diskFreePercent' | 'warnings' | 'backupFolder' | 'work'> & Parameters<typeof standingWork>[0]>();
   const backups = c.env.backups;
   const backupFolder: BackupFolder | undefined = backups.copier === 'folder' ? { path: await savedFolder(c.env), failure: backups.copyFailure() } : undefined;
-  return c.json({ ...row!, ...(await backups.freshness(c.env, Date.now())), backupFolder } satisfies Service);
+  const { workAt, workMinutes, ...service } = row!;
+  return c.json({ ...service, ...(await backups.freshness(c.env, Date.now())), backupFolder, work: standingWork({ workAt, workMinutes }, Date.now()) } satisfies Service);
 });
 
 // null clears it. A saved folder is copied to at once, so its first pass is not an hour away.
@@ -331,6 +335,20 @@ admin.put('/backup-folder', async (c) => {
     db.prepare('UPDATE service SET backup_folder = ?').bind(checked.folder),
   ]);
   c.executionCtx.waitUntil(c.env.backups.tick(c.env, Date.now()));
+  return c.body(null, 204);
+});
+
+// work: null calls it off.
+admin.put('/work', async (c) => {
+  const work = (await readObject(c))?.work;
+  const now = Date.now();
+  const announced = isRecord(work) && isCount(work.at) && work.at > now && isPositive(work.minutes) && work.minutes <= MAX_WORK_MINUTES ? { at: work.at, minutes: work.minutes } : null;
+  if (work !== null && !announced) return fail(c, 400, 'bad-input');
+  const db = c.env.db;
+  await db.batch([
+    logged(db, now, 'set-work', { target: 'service', detail: announced }),
+    db.prepare('UPDATE service SET work_at = ?, work_minutes = ?').bind(announced?.at ?? null, announced?.minutes ?? null),
+  ]);
   return c.body(null, 204);
 });
 

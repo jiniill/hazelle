@@ -1,4 +1,5 @@
 import type { BoardSettings, Status } from './board';
+import type { ServerWork } from './work';
 
 export const MAX_REPORT_LENGTH = 4000;
 export const MAX_NOTICE_LENGTH = 2000;
@@ -72,6 +73,7 @@ export type Service = {
   diskFreePercent: number;
   warnings: BackupWarning[];
   backupFolder?: BackupFolder;
+  work: ServerWork | null;
 };
 // An account's own cap: bytes, null for none, or 'default' for the service's.
 export type OwnCap = number | null | 'default';
@@ -124,6 +126,8 @@ export type LogDetails = {
   'set-service': Pick<Service, 'signupCap' | 'accountBytesCap' | 'accountFileBytesCap'>;
   'set-board': BoardSettings;
   'set-backup-folder': { folder: string | null };
+  // null: called off.
+  'set-work': ServerWork | null;
   // null: to every account.
   'send-notice': Named | null;
   'resolve-report': null;

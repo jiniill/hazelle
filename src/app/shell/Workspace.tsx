@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
-import { hearServedBuild } from '../../runtime/api';
+import { underWay, type ServerWork } from '../../contracts/work';
+import { hearServedBuild, serverWork } from '../../runtime/api';
 import { markSeen } from '../../runtime/chat/chat-context';
 import type { AccountFacts } from '../../runtime/account/account';
 import { Drafts } from '../../runtime/device/drafts';
@@ -18,6 +19,7 @@ import { openedNewRelease, TOURS, tourToShow, type Tour } from '../common/releas
 import { TourDialog } from '../common/Tour';
 import { TutorialProvider, useTutorials } from '../common/Tutorial';
 import { count } from '../common/typedNumber';
+import { WORK_OFF, workAhead, workUnderWay } from '../common/work';
 import { playSound, unlockSound } from '../common/sounds';
 import { DisplayProvider, useDisplay } from '../display';
 import { BOARD, inSettings, NOTICES, LOADING_TITLE, OPEN_STEPS, PURGE_FREES, SEE } from '../common/words';
@@ -99,6 +101,25 @@ function Stale() {
       removeEventListener('pageshow', restored);
     };
   }, [toast]);
+  return null;
+}
+
+// 서버 작업 예고: said once for each work announced before it starts, and once more if that one is called off.
+function WorkAhead() {
+  const toast = useToast();
+  const work = useSyncExternalStore(serverWork.subscribe, serverWork.snapshot);
+  const heard = useRef<ServerWork | null>(null);
+  useEffect(() => {
+    const before = heard.current;
+    if (before === work) return;
+    heard.current = work;
+    const now = Date.now();
+    if (work && !underWay(work, now)) {
+      const { message, detail } = workAhead(work, now);
+      toast.show(message, { detail, stays: true });
+    }
+    if (!work && !underWay(before, now)) toast.show(WORK_OFF);
+  }, [work, toast]);
   return null;
 }
 
@@ -275,6 +296,7 @@ export function Workspace({ accountId, vaultKey, username, ...account }: Unlocke
           <Unread facts={account.facts} kind="unreadNotices" />
           <Unread facts={account.facts} kind="unreadBoard" />
           <Stale />
+          <WorkAhead />
           <ReplyHold />
           <LeaveHold />
           <Chimes />
@@ -302,8 +324,9 @@ function StandingToasts({ store, facts, children }: { store: ObjectStore; facts:
     return restoring ? RESTORING : suspended ? SUSPENDED : full ? FULL : null;
   };
   const notice = useSyncExternalStore(facts.subscribe, noticeOf, noticeOf);
+  const work = useSyncExternalStore(serverWork.subscribe, serverWork.snapshot);
   return (
-    <ToastProvider standing={notice !== RESTORING && waiting ? RECONNECTING : notice} onReport={() => navigate({ kind: 'board-write', operator: true })}>
+    <ToastProvider standing={notice !== RESTORING && waiting ? (underWay(work, Date.now()) ? workUnderWay(work) : RECONNECTING) : notice} onReport={() => navigate({ kind: 'board-write', operator: true })}>
       {children}
     </ToastProvider>
   );

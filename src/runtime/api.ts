@@ -1,5 +1,6 @@
 import { ACCOUNT_HEADER, RELAY_HEADER, ACCOUNT_USAGE_HEADERS, PULSE_HEADER, UNREAD_BOARD_HEADER, UNREAD_NOTICES_HEADER, BUILD_HEADER, type ServerError } from '../contracts/http';
 import { pulseHeader, type PulseLabel } from '../contracts/pulse';
+import { readWorkHeader, WORK_HEADER, type ServerWork } from '../contracts/work';
 import { isRecord } from '../record';
 
 export type ApiFailure = { ok: false; error: string; retryAfter?: number; status?: number };
@@ -28,6 +29,18 @@ export function holdAccount(account: string | null, onHeard: ((heard: Heard) => 
   held = account;
   hear = onHeard;
 }
+
+// The server work the last answer told of (contracts/work), for whoever holds the page, an account or a guest.
+let work: ServerWork | null = null;
+let workSaid: string | null = null;
+const workHearers = new Set<() => void>();
+export const serverWork = {
+  subscribe: (hearer: () => void) => {
+    workHearers.add(hearer);
+    return () => void workHearers.delete(hearer);
+  },
+  snapshot: () => work,
+};
 
 // Only fetchApi applies sharing labels. An owed page-load seen rides the next request sent while sharing.
 let sharing = false;
@@ -61,7 +74,14 @@ export async function fetchApi(path: string, { pulse, anonymous, ...init }: Omit
   if (label) seenOwed = false;
   const response = await fetch(`/api/${path}`, { ...init, ...(anonymous && { credentials: 'omit' }), headers: { ...(held === null || anonymous ? {} : { [ACCOUNT_HEADER]: held }), ...(label && { [PULSE_HEADER]: pulseHeader(label) }), ...init.headers } });
   // An immutable answer (a picture) may come from the browser's cache, carrying the release that first served it.
-  const build = response.headers.get('cache-control')?.includes('immutable') ? null : response.headers.get(BUILD_HEADER);
+  const kept = response.headers.get('cache-control')?.includes('immutable');
+  const build = kept ? null : response.headers.get(BUILD_HEADER);
+  const said = kept ? null : response.headers.get(WORK_HEADER);
+  if (said !== null && said !== workSaid) {
+    workSaid = said;
+    work = readWorkHeader(said);
+    for (const hearer of workHearers) hearer();
+  }
   if (build !== null && build !== served) {
     served = build;
     hearServed?.(build);

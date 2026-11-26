@@ -15,6 +15,7 @@ import { LogSection } from './LogSection';
 import { OperatorPostsSection } from './OperatorPostsSection';
 import { ReportsSection } from './ReportsSection';
 import { ServiceSection } from './ServiceSection';
+import { WorkSection } from './WorkSection';
 import { useLoaded } from '../common/useLoaded';
 import { moderates } from './moderation';
 import { useAccounts } from './useAccounts';
@@ -56,6 +57,7 @@ export function AdminScreen({ back }: { back: Back | null }) {
         </AccountsSection>
         {service.loading}
         {service.data && <ServiceSection service={service.data} onSaved={acted} />}
+        {service.data && <WorkSection work={service.data.work} onSaved={acted} />}
         {service.data?.backupFolder && <BackupFolderSection folder={service.data.backupFolder} backupAgeHours={service.data.backupAgeHours} onSaved={acted} />}
         {own && service.data && !service.data.backupFolder && service.data.backupAgeHours === null && <BackupCopierNote />}
         {!own && moderating && <ToolsSection onActed={acted} />}
