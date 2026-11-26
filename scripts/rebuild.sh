@@ -23,7 +23,6 @@ ssh_opts=(-o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=15 -o Ser
 remote() { ssh "${ssh_opts[@]}" "root@$host" "$@" </dev/null; }
 machine() { cat scripts/machine-lib.sh scripts/machine-restore.sh | ssh "${ssh_opts[@]}" "root@$host" bash -s -- "$@"; }
 
-export TF_VAR_start=false
 if [ "${1:-}" = --resume ]; then
   generation=${2:?usage: scripts/rebuild.sh --resume <generation id>}
   [[ ${TF_VAR_image_digest:-} =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "rebuild: set TF_VAR_image_digest to the digest the generation was written by" >&2; exit 1; }
@@ -47,7 +46,17 @@ var_files=()
 for file in infra/terraform.tfvars infra/*.auto.tfvars; do
   if [ -f "$file" ]; then var_files+=("-var-file=$PWD/$file"); fi
 done
+# The new machine admits only the key the variables name; without its private half here nothing can install the
+# generation on it, and the old machine is gone by then.
+held=
+for pub in ~/.ssh/*.pub; do
+  if [ -f "$pub" ] && grep -qF "$(cut -d' ' -f2 "$pub")" "${var_files[@]#-var-file=}"; then held=$pub; fi
+done
+[ -n "$held" ] || { echo "rebuild: ssh_public_key in the variable files is no key under ~/.ssh; nothing changed" >&2; exit 1; }
 tf() { TF_DATA_DIR=$PWD/infra/.terraform terraform -chdir="$config" "$@"; }
+# After the variable files, which a TF_VAR_ never overrides: terraform.tfvars names the digest of the machine's first
+# boot, and a machine booted on that image cannot read a generation a later one wrote.
+rebuilt=("${var_files[@]}" -var "image_digest=$TF_VAR_image_digest" -var start=false)
 
 install() {
   local resume="TF_VAR_image_digest=$TF_VAR_image_digest scripts/rebuild.sh --resume $generation"
@@ -64,13 +73,13 @@ install() {
 }
 
 if [ "${1:-}" = --resume ]; then
-  tf plan -input=false "${var_files[@]}" -out="$plans/rebuild"
+  tf plan -input=false "${rebuilt[@]}" -out="$plans/rebuild"
   tf apply -input=false "$plans/rebuild"
   install
   exit 0
 fi
 
-tf plan -input=false "${var_files[@]}" -replace=vultr_instance.hazelle -out="$plans/rebuild"
+tf plan -input=false "${rebuilt[@]}" -replace=vultr_instance.hazelle -out="$plans/rebuild"
 drilled=$(machine drill)
 echo "rebuild: $drilled restores on the machine; the replacement is planned above" >&2
 read -r -p "rebuild: type rebuild to stop the site, back it up and replace the machine: " answer
