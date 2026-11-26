@@ -86,7 +86,7 @@ export function TranslatorScreen({ back }: { back: Back | null }) {
               label={TASK_MODELS.translate}
               trigger={(opener) => (
                 <ChipButton
-                  label={translator.ok ? entryName(translator.with.route.model) : `${TASK_MODELS.translate} 없음`}
+                  label={translator.ok ? entryName(translator.with.route.model) : `${TASK_MODELS.translate} 선택`}
                   title={TASK_MODELS.translate}
                   tone={translator.ok ? 'plain' : 'warn'}
                   leading={<Icon icon={Languages} size="sm" />}

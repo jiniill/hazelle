@@ -53,7 +53,7 @@ const DEVICE: DeviceStorage = { read: (key) => readPersisted<string | null>(key,
 // dropped. The ref: StrictMode runs a mount's effect twice.
 const REOPENED: Record<TimelineBy | 'unheard', string> = {
   account: '계정을 복원해서 다시 열었어요',
-  server: `${WORK}이 끝나서 다시 열었어요`,
+  server: `${WORK}이 끝나서 계정을 다시 열었어요`,
   unheard: '계정을 다시 열었어요',
 };
 function Restored({ dropped, by }: Rewound) {
