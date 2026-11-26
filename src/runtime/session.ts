@@ -175,7 +175,7 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
   const unfound = new UnfoundAssets();
   const read = new ReadModels(store);
   const finder = new ChatFinder(store);
-  const scriptReach = new ScriptReach({ tokens, store, read, credentials, log, costs }, scriptInteractions, scriptClosing.signal);
+  const scriptReach = new ScriptReach({ tokens, store, read, credentials, log, costs, catalogs }, scriptInteractions, scriptClosing.signal);
   const likenesses = new Likenesses({ tokens, store, credentials, log, files, catalogs });
   const illustrator = new Illustrator({ tokens, store, credentials, log, files, likenesses });
   const speaker = new Speaker({ store, read, credentials, files, player: pagePlayer() });

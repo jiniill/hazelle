@@ -11,13 +11,17 @@ declare namespace Hazelle {
   // cache marks the end of a prefix the provider caches, where the model called has its cache on; a request keeps at
   // most four, the first three and the last.
   interface ModelMessage { role: 'system' | 'user' | 'assistant'; content: string; cache?: true }
+  // A message of chat.model. pictures: what the model looks at with a user message, as chat.asset and chat.inlay
+  // give them (PNG, JPEG, GIF, WebP or AVIF bytes), at most 6 in a call; one too large for a provider is sent smaller.
+  interface AskedMessage extends ModelMessage { pictures?: Uint8Array[] }
   // Retaining message on a replacement request message preserves its pictures.
   interface RequestMessage extends ModelMessage { message?: string }
   // A message about to be shown; at: null for the greeting.
   type Shown = { at: At | null; text: string };
   // flood: past 20 model, embed, decide, draw and fetch calls a minute in the chat, its bot's scripts and every tool counted together.
   type ModelRefusal = 'not-allowed' | 'not-declared' | 'no-model' | 'flood' | 'failed';
-  type ModelAnswer = { ok: true; text: string } | { ok: false; reason: ModelRefusal };
+  // no-vision: a message holds pictures and the model called reads none, so nothing was sent.
+  type ModelAnswer = { ok: true; text: string } | { ok: false; reason: ModelRefusal | 'no-vision' };
   // model: the embedding model that made the vectors; vectors from another model cannot be compared with them.
   type EmbedAnswer = { ok: true; model: string; vectors: number[][] } | { ok: false; reason: ModelRefusal | 'too-large' };
   // A question a decision model answers without writing: instructions say what is asked of the input. noul: a yes or
@@ -149,7 +153,8 @@ declare namespace Hazelle {
     // needs //@uses model. main: the chat's 대화 모델. aux: its 보조 모델, or the one the user picked for this plugin.
     // Any other role is the id of a //@model line: the model the user picked for it on the plugin's page, and while
     // none is picked, the same as aux. Throws on an id no line declares.
-    model(role: 'main' | 'aux' | (string & {}), messages: ModelMessage[]): Promise<ModelAnswer>;
+    // Throws on messages that are no AskedMessage list.
+    model(role: 'main' | 'aux' | (string & {}), messages: AskedMessage[]): Promise<ModelAnswer>;
     // needs //@uses embed. as: what the texts are for, which retrieval-tuned models embed differently.
     embed(texts: string[], as?: 'query' | 'document'): Promise<EmbedAnswer>;
     // needs //@uses decide. The account's 판단 모델 reads input once and answers every question in one call, far sooner

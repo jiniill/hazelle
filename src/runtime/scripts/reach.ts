@@ -1,5 +1,10 @@
 import type { ModelRef } from '../../connectors/assignment';
-import type { Cost, DecideQuestion, EmbedPurpose } from '../../connectors/types';
+import type { ChatMessage, Cost, DecideQuestion, EmbedPurpose, InputPicture } from '../../connectors/types';
+import { toBase64 } from '../../base64';
+import { imageSize } from '../../engine/import/card';
+import { sentPicture } from '../files/picture';
+import { seesPicturesNow } from '../models/connections';
+import type { Catalogs } from '../models/catalog';
 import type { HttpRequest } from '../../contracts/http';
 import type { ChatScope } from '../../engine/render';
 import { plainPicture } from '../../engine/illustrate';
@@ -30,7 +35,7 @@ import { keepRow } from '../models/usage';
 
 export class ScriptReach {
   constructor(
-    private readonly session: { store: ObjectStore; read: ReadModels; credentials: Credentials; log: RequestLog; costs: Costs; tokens: Tokens },
+    private readonly session: { store: ObjectStore; read: ReadModels; credentials: Credentials; log: RequestLog; costs: Costs; tokens: Tokens; catalogs: Catalogs },
     private readonly interactions: ScriptInteractions,
     private readonly closing: AbortSignal,
   ) {}
@@ -70,9 +75,9 @@ export class ScriptReach {
 
   // Only consented spenders may call the chat's role model. Keep receipts on the last shown message for usage.
   // Keep failure reasons structured for tools; Lua formats them at its binding.
-  private async model(chat: string, role: string, messages: ModelMessage[], from: PackOwner, deadline: boolean, signal?: AbortSignal): Promise<ModelResult> {
+  private async model(chat: string, role: string, messages: Hazelle.AskedMessage[], from: PackOwner, deadline: boolean, signal?: AbortSignal): Promise<ModelResult> {
     const { store } = this.session;
-    const refused = (reason: ModelRefusal, why: string): ModelResult => ({ success: false, reason, result: `Error: ${why}` });
+    const refused = (reason: ModelRefusal | 'no-vision', why: string): ModelResult => ({ success: false, reason, result: `Error: ${why}` });
     if (signal?.aborted || this.closing.aborted) return refused('failed', 'stopped');
     const stored = live(store.get('chat', chat));
     if (!stored || !live(store.get(from.kind, from.id))) return refused('failed', 'the chat or spender is gone');
@@ -90,8 +95,11 @@ export class ScriptReach {
       this.interactions.tell(chat, `no-model:${role}`, { kind: 'no-model', role: asked, ...(own && { own: true }) }, from);
       return refused('no-model', 'no model is set');
     }
+    const sent = await this.pictured(writer, messages);
+    if (sent === 'no-vision') return refused('no-vision', 'the model reads no pictures');
+    if (sent === 'unread') return refused('failed', 'a picture could not be read');
     const text = gather();
-    const answer = await generateOnce(this.session, writer, { messages, ...(await this.called(writer, chat, signal)), onText: text });
+    const answer = await generateOnce(this.session, writer, { messages: sent, ...(await this.called(writer, chat, signal)), onText: text });
     if (answer.error?.kind === 'app' && answer.error.code === 'too-many-bot-calls') {
       this.interactions.tell(chat, 'flood', { kind: 'flood' }, from);
       return refused('flood', 'too many model calls in a minute');
@@ -103,15 +111,38 @@ export class ScriptReach {
 
   // A studio test's model call, on the model its 테스트 picked (else the 보조 모델) whichever role the plugin asked for.
   // Turning 모델 부르기 on is the user's answer, so no plugin consent is asked; its receipt is kept outside any chat.
-  async tried(picked: ModelRef | null, messages: ModelMessage[], signal: AbortSignal): Promise<{ result: ModelResult; cost: Cost | null }> {
-    const refused = (reason: ModelRefusal, why: string) => ({ result: { success: false, reason, result: `Error: ${why}` } as ModelResult, cost: null });
+  async tried(picked: ModelRef | null, messages: Hazelle.AskedMessage[], signal: AbortSignal): Promise<{ result: ModelResult; cost: Cost | null }> {
+    const refused = (reason: ModelRefusal | 'no-vision', why: string) => ({ result: { success: false, reason, result: `Error: ${why}` } as ModelResult, cost: null });
     const route = sharedModel(this.session.store, 'aux', picked);
     const writer = 'kind' in route ? route : writerOf(this.session.store, route);
     if ('kind' in writer) return refused('no-model', 'no model is set');
+    const sent = await this.pictured(writer, messages);
+    if (sent === 'no-vision') return refused('no-vision', 'the model reads no pictures');
+    if (sent === 'unread') return refused('failed', 'a picture could not be read');
     const text = gather();
-    const { answer, receipt } = await taskCall(this.session, writer, { messages, ...(await this.called(writer, null, signal)), onText: text });
+    const { answer, receipt } = await taskCall(this.session, writer, { messages: sent, ...(await this.called(writer, null, signal)), onText: text });
     await keepRow(this.session.store, 'script', receipt, Date.now(), { chat: null, character: null });
     return answer.state === 'failed' ? { ...refused('failed', answer.error?.kind ?? 'failed'), cost: receipt.cost } : { result: { success: true, result: text.value() }, cost: receipt.cost };
+  }
+
+  // A call's messages as a codec takes them, each picture drawn within every codec's reach. no-vision: the model reads
+  // none, known before anything is sent. unread: the browser draws one of them not.
+  private async pictured({ route }: Writer, messages: Hazelle.AskedMessage[]): Promise<ChatMessage[] | 'no-vision' | 'unread'> {
+    if (!messages.some(({ pictures }) => pictures)) return messages as ModelMessage[];
+    if (!(await seesPicturesNow(this.session, route))) {
+      noteStep('script-model:no-vision');
+      return 'no-vision';
+    }
+    const encoded = async (bytes: Uint8Array): Promise<InputPicture> => {
+      const sent = await sentPicture({ bytes: new Uint8Array(bytes), type: imageSize(bytes)?.type ?? '' });
+      return { type: sent.type, data: toBase64(sent.bytes) };
+    };
+    try {
+      return await Promise.all(messages.map(async ({ pictures, ...message }) => (pictures ? { ...message, pictures: await Promise.all(pictures.map(encoded)) } : message)));
+    } catch {
+      noteStep('script-model:picture-unread');
+      return 'unread';
+    }
   }
 
   private async called({ route }: Writer, chat: string | null, signal?: AbortSignal) {

@@ -14,7 +14,8 @@ import { accountSettings } from '../account-settings';
 import { toolId } from '../../model/tool';
 import { isQuestions } from '../../connectors/decide';
 import { isDrawRequest } from '../../engine/illustrate';
-import { TOOL_LOG_CHARS, TOOL_PROGRESS_CHARS, TOOL_VARIABLES, toolVar, type Json } from '../../tool-api/manifest';
+import { MODEL_PICTURES, TOOL_LOG_CHARS, TOOL_PROGRESS_CHARS, TOOL_VARIABLES, toolVar, type Json } from '../../tool-api/manifest';
+import { imageSize } from '../../engine/import/card';
 import { called, type ChatHeader, type Down, type Message, type ToolOutcome } from '../../tool-api/protocol';
 import { RISU_DECLINED } from '../../tool-api/risu-methods';
 import { limitsOf, packsOf } from '../chat/chat-context';
@@ -70,6 +71,12 @@ function isQuestion(value: unknown): value is Question {
 }
 function isModelMessages(value: unknown): value is ModelMessage[] {
   return Array.isArray(value) && value.every((message) => isRecord(message) && (message.role === 'system' || message.role === 'user' || message.role === 'assistant') && typeof message.content === 'string' && (message.cache === undefined || message.cache === true));
+}
+// Pictures go with a user message alone, each one a picture by its header, MODEL_PICTURES in the call at most.
+function isAsked(value: unknown): value is Hazelle.AskedMessage[] {
+  if (!isModelMessages(value)) return false;
+  const pictures = value.flatMap(({ role, pictures }: Hazelle.AskedMessage): unknown[] => pictures === undefined ? [] : role === 'user' && Array.isArray(pictures) ? pictures : [null]);
+  return pictures.length <= MODEL_PICTURES && pictures.every((bytes) => bytes instanceof Uint8Array && imageSize(bytes) !== null);
 }
 // A tool's fetch as the sandbox sends it: one of the relay's methods, text headers, and a body of text or bytes, never
 // with GET.
@@ -472,10 +479,11 @@ export class ToolApi {
           if (!entry.tool.manifest.uses.includes('draw')) return { ok: false, reason: 'not-declared' };
           return context.host.draw(first, owner, context.signal);
         }
-        if (method === 'model' && typeof first === 'string' && isModelMessages(second)) {
+        if (method === 'model' && typeof first === 'string') {
+          if (!isAsked(second)) throw new Error('Invalid messages: see AskedMessage in hazelle.d.ts');
           if (first !== 'main' && first !== 'aux' && !entry.tool.manifest.models?.some(({ id }) => id === first)) throw new Error(`No model named ${first}: declare it with //@model`);
           if (!entry.tool.manifest.uses.includes('model')) return { ok: false, reason: 'not-declared' };
-          const result = await context.host.model(first, second.map(({ role, content, cache }) => ({ role, content, ...(cache && { cache }) })), owner, context.signal);
+          const result = await context.host.model(first, second.map(({ role, content, cache, pictures }) => ({ role, content, ...(cache && { cache }), ...(pictures?.length && { pictures }) })), owner, context.signal);
           return result.success ? { ok: true, text: result.result } : { ok: false, reason: result.reason };
         }
         if (method === 'fetch' && typeof first === 'string' && URL.canParse(first) && isRequest(second)) {

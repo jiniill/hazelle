@@ -306,6 +306,7 @@ it('refuses undeclared spending and forged event contexts, and isolates module s
   let unnamed = '';
   let drawn: Hazelle.DrawAnswer | null = null;
   let undrawable = '';
+  let unseen = '';
   const transport = inProcessTools((api) => api.on('prompt', async (chat) => {
     answer = await chat.model('aux', [{ role: 'user', content: 'hi' }]);
     fetched = await chat.fetch('https://api.example.com/');
@@ -314,6 +315,7 @@ it('refuses undeclared spending and forged event contexts, and isolates module s
     unnamed = await chat.model('sorter', [{ role: 'user', content: 'hi' }]).then(() => '', (error: Error) => error.message);
     drawn = await chat.draw({ prompt: '1girl' });
     undrawable = await chat.draw({ prompt: '1girl', shape: 'wide' as never }).then(() => '', (error: Error) => error.message);
+    unseen = await chat.model('aux', [{ role: 'system', content: 'look', pictures: [new Uint8Array([137, 80, 78, 71])] }]).then(() => '', (error: Error) => error.message);
     return null;
   }));
   const host = connect(transport.open);
@@ -330,6 +332,7 @@ it('refuses undeclared spending and forged event contexts, and isolates module s
     expect(unnamed).toContain('No model named sorter');
     expect(drawn).toEqual({ ok: false, reason: 'not-declared' });
     expect(undrawable).toContain('Invalid picture');
+    expect(unseen).toContain('Invalid messages');
     expect(model).not.toHaveBeenCalled();
     expect(fetch).not.toHaveBeenCalled();
     expect(decide).not.toHaveBeenCalled();
