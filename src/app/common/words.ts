@@ -63,6 +63,7 @@ export type Asker = keyof typeof ASKER;
 export const modelsHelp = (asker: Asker) => (asker === 'character' ? BOT_MODELS_HELP : `이 ${ASKER[asker]}이 대화 응답과 별개로 모델을 호출해요. 호출한 만큼 요금이 더 나올 수 있어요.`);
 export const modelConsent = (asker: Asker) => `이 ${ASKER[asker]}이 모델을 추가로 호출하려고 해요`;
 export const cardWriteConsent = (asker: Asker, name: string) => `이 ${ASKER[asker]}이 ${name}의 캐릭터 카드를 수정하려고 해요`;
+export const ILLUSTRATE_CLAIM_HELP = '허용하면 이 플러그인을 사용하는 채팅에서는 자동 삽화와 삽화 메뉴가 이 플러그인을 실행해요. 이미 만든 삽화는 삭제되지 않아요.';
 export const MEMORY_CLAIM_HELP = '허용하면 이 플러그인을 사용하는 채팅에서는 기본 장기 기억이 일시 중지돼요. 기존 기록은 삭제되지 않아요.';
 export const NETWORK = '외부 연결';
 export const NETWORK_HELP = '켜면 이 플러그인이 대화 내용을 외부 서버로 전송할 수 있어요. 외부 이미지와 글꼴은 화면을 새로고침한 뒤부터 표시돼요.';
@@ -72,11 +73,13 @@ const GRANT_CLAUSES = {
   network: ['대화 내용을 앱 밖으로 보내고', '대화 내용을 외부 서버로 전송할 수 있어요'],
   model: ['모델을 추가로 호출하고', '모델을 추가로 호출할 수 있어요'],
   memory: ['장기 기억을 대신 맡고', '기본 장기 기억 대신 기억을 관리할 수 있어요'],
+  illustrate: ['삽화를 대신 맡고', '기본 삽화 대신 삽화를 만들 수 있어요'],
 } as const;
 const GRANT_HELP = {
   network: '외부 이미지와 글꼴은 화면을 새로고침한 뒤부터 표시돼요.',
   model: '내 메시지를 대신 보내 응답을 받을 수도 있어요. 호출한 만큼 요금이 더 나올 수 있어요.',
   memory: MEMORY_CLAIM_HELP,
+  illustrate: ILLUSTRATE_CLAIM_HELP,
 };
 export const pluginConsent = (grants: (keyof typeof GRANT_CLAUSES)[]) => `이 플러그인이 ${grants.map((grant, index) => GRANT_CLAUSES[grant][index === grants.length - 1 ? 1 : 0]).join(', ')}`;
 export const pluginConsentHelp = (grants: (keyof typeof GRANT_CLAUSES)[], hosts: string[]) =>
@@ -281,6 +284,10 @@ export const agentsWaiting = ({ running, retrying, total }: { running: readonly 
 export const polishingNow = ({ name, at, total, retrying }: { name: string; at: number; total: number; retrying?: true }) => `${withParticle(name, '이/가')} ${retrying ? RESENDING : '응답을 다듬고 있어요'}${total > 1 ? ` · ${at}/${total}` : '.'}`;
 // note: what the tool says it is doing (Chat.progress), which then stands for the app's own words.
 export const toolWaiting = (name: string, note = '보낼 내용 준비 중') => `${name} · ${note}`;
+// Placeholders until the copy batch: 삽화 맡기기's words.
+export const HELD_DRAWING = '그리는 중…';
+export const ILLUSTRATE_CLAIM_LABEL = '삽화 맡기기';
+export const illustrateHeld = (name: string) => `${name} 플러그인이 삽화를 맡고 있어요.`;
 export const toolFinishing = (name: string, note = '실행 중…') => `${name} · ${note}`;
 export const STATUS = '상태';
 // Placeholders until the copy batch, as every word of 상태 is.

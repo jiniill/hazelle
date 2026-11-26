@@ -266,7 +266,7 @@ export function connectApi(port: Port, execute: (code: string, api: Hazelle.Api)
       const chat = data.chat && chatOf(data.chat, data.id, pending, STORY_LOCKED.has(data.event), QUIET.has(data.event));
       const args = {
         reply: [chat, data.reply], replying: [chat, data.text], sending: [chat, data.text], requesting: [chat, data.messages], calling: [chat, data.messages, data.role], showing: [chat, data.shown], prompt: [chat, data.turn],
-        change: [chat, data.change], branch: [chat, data.from], menu: [chat, data.item], action: [chat, data.item, data.message], input: [chat, data.item, data.text], tool: [chat, data.name, data.args],
+        change: [chat, data.change], branch: [chat, data.from], menu: [chat, data.item], action: [chat, data.item, data.message], illustrate: [chat, data.ask], input: [chat, data.item, data.text], tool: [chat, data.name, data.args],
       }[data.event as string] ?? [chat];
       const answer = (value: unknown) => data.event === 'prompt' ? (value as Hazelle.PromptAnswer | undefined) ?? null : ANSWERS.has(data.event) && value !== null ? value as ToolOutcome['value'] : undefined;
       // The host checks the answer's shape; one the port cannot carry fails the event here.

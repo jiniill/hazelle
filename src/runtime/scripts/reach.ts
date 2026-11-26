@@ -1,5 +1,5 @@
 import type { ModelRef } from '../../connectors/assignment';
-import type { ChatMessage, Cost, DecideQuestion, EmbedPurpose, InputPicture } from '../../connectors/types';
+import type { ChatMessage, Cost, Costs as DrawCosts, DecideQuestion, EmbedPurpose, InputPicture } from '../../connectors/types';
 import { toBase64 } from '../../base64';
 import { imageSize } from '../../engine/import/card';
 import { sentPicture } from '../files/picture';
@@ -33,6 +33,10 @@ import { callOf, generateOnce, pageCall, taskCall } from '../models/streams';
 import type { Tokens } from '../models/token-calibration';
 import { keepRow } from '../models/usage';
 
+// spend: the user's 그래도 생성, under which every picture of the run is drawn. unpaid: one was refused for its cost,
+// which the 삽화 run shows in place of the plugin's notice.
+export type Paid = { spend: boolean; unpaid(why: DrawCosts): void };
+
 export class ScriptReach {
   constructor(
     private readonly session: { store: ObjectStore; read: ReadModels; credentials: Credentials; log: RequestLog; costs: Costs; tokens: Tokens; catalogs: Catalogs },
@@ -42,7 +46,8 @@ export class ScriptReach {
 
   // deadline: the run is under a tool deadline (TOOL_DEADLINE_MS), which would dismiss a card before anyone read it.
   // progress: who waits on the run and shows what it says it is doing; nobody does off a turn's stages.
-  host(chat: string, scope: ChatScope, signal?: AbortSignal, deadline = false, progress: ToolReach['progress'] = () => {}): ToolReach {
+  // paid: the run is the chat's 삽화 handed to a plugin (Illustrator), which answers for its pictures' cost.
+  host(chat: string, scope: ChatScope, signal?: AbortSignal, deadline = false, progress: ToolReach['progress'] = () => {}, paid?: Paid): ToolReach {
     const either = (callSignal?: AbortSignal) => (callSignal ? AbortSignal.any([...(signal ? [signal] : []), callSignal]) : signal);
     return {
       ...this.reads(chat, scope, () => this.interactions.tell(chat, 'runaway', { kind: 'runaway' })),
@@ -51,7 +56,7 @@ export class ScriptReach {
       model: (role, messages, from, callSignal) => this.model(chat, role, messages, from, deadline, either(callSignal)),
       embed: (texts, as, from, callSignal) => this.embed(chat, texts, as, from, deadline, either(callSignal)),
       decide: (input, questions, from, callSignal) => this.decide(chat, input, questions, from, deadline, either(callSignal)),
-      draw: (picture, from, callSignal) => this.draw(chat, picture, from, deadline, either(callSignal)),
+      draw: (picture, from, callSignal) => this.draw(chat, picture, from, deadline, either(callSignal), paid),
       background: (html, from, callSignal) => this.background(chat, html, from, deadline, either(callSignal)),
       fetch: (request, module, callSignal) => this.fetch(chat, request, module, deadline, either(callSignal)),
       progress: (text) => { if (!signal?.aborted) progress(text); },
@@ -212,7 +217,7 @@ export class ScriptReach {
 
   // A picture from the chat's image model, sized and tuned as its 삽화 prompt says. One not known to cost nothing is
   // drawn only where the chat's 삽화 spends unasked. Image calls report no cost, so it leaves no receipt.
-  private async draw(chat: string, asked: Hazelle.DrawRequest, from: PackOwner, deadline: boolean, signal?: AbortSignal): Promise<DrawResult> {
+  private async draw(chat: string, asked: Hazelle.DrawRequest, from: PackOwner, deadline: boolean, signal?: AbortSignal, paid?: Paid): Promise<DrawResult> {
     const { store, credentials } = this.session;
     const began = performance.now();
     const ended = <T extends DrawResult>(answer: T): T => {
@@ -229,10 +234,11 @@ export class ScriptReach {
     }
     const prompt = illustrationPrompt(store, setup.prompt);
     const picture = plainPicture(route.model, asked, prompt.kind === 'missing' ? undefined : prompt.prompt.value.picture, crypto.getRandomValues(new Uint32Array(1))[0]!);
-    const drawn = await drawPicture(credentials, route, picture, { spend: setup.spend, chat }, signal ? AbortSignal.any([this.closing, signal]) : this.closing);
+    const drawn = await drawPicture(credentials, route, picture, { spend: setup.spend || paid?.spend === true, chat }, signal ? AbortSignal.any([this.closing, signal]) : this.closing);
     if (!('kind' in drawn)) return ended({ ok: true, type: drawn.type, bytes: drawn.bytes });
     if (drawn.kind === 'costs') {
-      this.interactions.tell(chat, 'unpaid', { kind: 'unpaid', why: drawn.why }, from);
+      if (paid) paid.unpaid(drawn.why);
+      else this.interactions.tell(chat, 'unpaid', { kind: 'unpaid', why: drawn.why }, from);
       return ended({ ok: false, reason: 'costs' });
     }
     if (drawn.kind === 'undrawn' && drawn.error.kind === 'app' && drawn.error.code === 'too-many-bot-calls') {

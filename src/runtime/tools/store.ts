@@ -77,7 +77,7 @@ export async function importTool(store: ObjectStore, files: Files, { manifest, b
     // Reset new-use consent before exposing code; failed saves may re-ask but must never grant silently.
     // Re-ask only affected uses: adding memory must preserve model consent.
     const added = manifest.uses.filter((use) => !existing.value.manifest.uses.includes(use));
-    const answers = [...(callsModels(added) ? ['botModels' as const] : []), ...(added.includes('memory') ? ['takesMemory' as const] : []), ...(added.includes('network') ? ['network' as const] : [])];
+    const answers = [...(callsModels(added) ? ['botModels' as const] : []), ...(added.includes('memory') ? ['takesMemory' as const] : []), ...(added.includes('illustrate') ? ['takesIllustrate' as const] : []), ...(added.includes('network') ? ['network' as const] : [])];
     // A pick for a model the new version no longer declares goes with it.
     const held = store.get('module', id)!.value;
     const dropped = Object.keys(held.models ?? {}).filter((picked) => !manifest.models?.some((each) => each.id === picked));

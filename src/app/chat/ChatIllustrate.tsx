@@ -1,7 +1,7 @@
 import { FEATURE_ICONS } from '../common/featureIcons';
 import { IllustrateRows } from '../common/IllustrateRows';
 import { PerCharacter } from '../common/TaskPrompt';
-import { ILLUSTRATE_NOTE, ILLUSTRATE_NOTE_UNSENT, scopeTag } from '../common/words';
+import { ILLUSTRATE_NOTE, ILLUSTRATE_NOTE_UNSENT, illustrateHeld, scopeTag } from '../common/words';
 import { useCaptured } from '../session';
 import { Divider, Menu, Section, Stack, Text, TextField, ToolButton } from '../ui';
 import type { RowTool } from './ChatToolRow';
@@ -19,6 +19,8 @@ type Props = {
   note: string | undefined;
   sceneWriter: ReturnType<typeof sceneWriterOf>;
   card: { name: string } | null;
+  // The plugin the chat's 삽화 is handed to, by name.
+  holder: string | null;
   onChange: IllustrationActions['setIllustrate'];
   onOwnChange: IllustrationActions['setOwnIllustrate'];
   onSaveNote: ChatSettingsActions['setIllustrateNote'];
@@ -42,10 +44,11 @@ function ChatIllustrate(props: Props) {
   );
 }
 
-function IllustrateForm({ id, illustrate, note, sceneWriter, card, onChange, onOwnChange, onSaveNote, onEditPrompt }: Props) {
+function IllustrateForm({ id, illustrate, note, sceneWriter, card, holder, onChange, onOwnChange, onSaveNote, onEditPrompt }: Props) {
   return (
     <Section level={3} title="삽화" tag={scopeTag(card && illustrate.own ? 'character' : 'default')}>
       <Stack gap="related">
+        {holder !== null && <Text variant="note">{illustrateHeld(holder)}</Text>}
         <IllustrateRows illustrate={illustrate} sceneWriter={sceneWriter} card={card} opens="up" onChange={onChange} onEditPrompt={onEditPrompt}>
           <PerCharacter card={card} own={illustrate.own} onChange={onOwnChange} />
         </IllustrateRows>

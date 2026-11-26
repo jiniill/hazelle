@@ -30,6 +30,7 @@ type Note =
   | { kind: 'unpaid'; why: Costs }
   | { kind: 'late' }
   | { kind: 'memory-held'; by: string }
+  | { kind: 'illustrate-held'; by: string }
   | { kind: 'stale-reply' }
   | { kind: 'flood' }
   | { kind: 'unsaved'; failure: ApiFailure }
@@ -163,6 +164,7 @@ export class ScriptInteractions {
       ...(uses.includes('network') && value.network === undefined ? ['network' as const] : []),
       ...(callsModels(uses) && value.botModels === undefined ? ['model' as const] : []),
       ...(uses.includes('memory') && value.takesMemory === undefined ? ['memory' as const] : []),
+      ...(uses.includes('illustrate') && value.takesIllustrate === undefined ? ['illustrate' as const] : []),
     ];
   }
 

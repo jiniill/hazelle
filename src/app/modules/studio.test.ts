@@ -14,6 +14,10 @@ it('offers the turn\'s stages and each declared item and runs one on the chat as
   expect(testEvent('action:redo', scope, '', manifest)).toEqual({ kind: 'action', item: 'redo', message: { index: 2, id: 'again', version: 'again-v' } });
   expect(testEvent('input:tidy', scope, 'hi', manifest)).toEqual({ kind: 'input', item: 'tidy', text: 'hi' });
   expect(testEvent('prompt', scope, '', manifest)).toEqual({ kind: 'prompt', turn: { memory: true } });
+  // Offered only to a plugin that declares the chat's 삽화, as a press on the last reply.
+  const holds = { ...manifest, uses: ['illustrate' as const] };
+  expect(testPicks(holds).map(({ value }) => value)).toContain('illustrate');
+  expect(testEvent('illustrate', scope, '', holds)).toEqual({ kind: 'illustrate', ask: { message: { index: 1, id: 'told', version: 'told-v' }, paragraphs: ['told'], count: 1, auto: false } });
   expect(testEvent('tool:roll', scope, '{"sides":6}', manifest)).toEqual({ kind: 'tool', name: 'roll', args: { sides: 6 } });
   expect(testEvent('tool:roll', scope, ' ', manifest)).toEqual({ kind: 'tool', name: 'roll', args: {} });
   expect(testEvent('replying', scope, '', manifest)).toEqual({ kind: 'replying', text: 'told' });

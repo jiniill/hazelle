@@ -85,7 +85,7 @@ export function ChatComposer({ chat, fold }: { chat: OpenChat; fold: ComposerFol
       onEditPrompt: editPrompt,
       onEditCharacter: shelf ? () => actions.side({ kind: 'character', id: shelf.id, part: 'instructions' }) : undefined,
     })] : []),
-    ...(chat.features.illustrate ? [illustrateTool({ id: chat.id, illustrate: chat.illustrate, note: chat.illustrateNote, card: chat.card, onChange: actions.setIllustrate, onOwnChange: actions.setOwnIllustrate, onSaveNote: actions.setIllustrateNote, sceneWriter: chat.sceneWriter, onEditPrompt: editPrompt })] : []),
+    ...(chat.features.illustrate ? [illustrateTool({ id: chat.id, illustrate: chat.illustrate, note: chat.illustrateNote, card: chat.card, holder: chat.illustrateHolderName, onChange: actions.setIllustrate, onOwnChange: actions.setOwnIllustrate, onSaveNote: actions.setIllustrateNote, sceneWriter: chat.sceneWriter, onEditPrompt: editPrompt })] : []),
     ...(chat.features.speech ? [speechTool({ speech: chat.speech, card: chat.card, onChange: actions.setSpeech, onOwnChange: actions.setOwnSpeech })] : []),
     ...chat.composerTools.map((tool) => composerTool({
       tool,

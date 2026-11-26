@@ -49,6 +49,7 @@ export function messageRow(chat: OpenChat, index: number) {
       drawing: drawing?.version === version ? drawing : null,
       canIllustrate: chat.features.illustrate,
       pictureSizes: chat.pictureSizes,
+      holder: chat.illustrateHolder,
     }, { pictures: sameItems(Object.is), drawing: Object.is, pictureSizes: Object.is }),
     speech: rowPart({
       canSpeak: chat.features.speech,

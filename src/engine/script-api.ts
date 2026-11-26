@@ -56,6 +56,7 @@ export type ToolEvent =
   | { kind: 'branch'; from: Hazelle.Branched }
   | { kind: 'menu'; item: string }
   | { kind: 'action'; item: string; message: Hazelle.At }
+  | { kind: 'illustrate'; ask: Hazelle.Illustrate }
   // A //@input item pressed in the composer, not Lua's input, which a send is.
   | { kind: 'input'; item: string; text: string }
   // The chat model called one of the file's //@tool tools; args: its arguments, read as a JSON object.

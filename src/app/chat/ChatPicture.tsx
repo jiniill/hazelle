@@ -24,6 +24,8 @@ type Props = {
   running: boolean;
   // 삽화's 기능: off, a picture stays and is drawn again no more.
   draws: boolean;
+  // The plugin the chat's 삽화 is handed to, by its module's id: its pictures alone are made again, by it.
+  holder: string | null;
   sizes: PictureSizes;
   onDraw: IllustrationActions['draw'];
   onDismiss: IllustrationActions['dismissIllustration'];
@@ -31,7 +33,7 @@ type Props = {
   onDrop: IllustrationActions['dropPicture'];
 };
 
-export function ChatPicture({ place, message, running, draws, sizes, onDraw, onDismiss, onReshape, onDrop }: Props) {
+export function ChatPicture({ place, message, running, draws, holder, sizes, onDraw, onDismiss, onReshape, onDrop }: Props) {
   const [paged, setPaged] = useState<Paged>(null);
   const url = useAssetUrl([place, paged]);
   if (place.kind === 'drawing') {
@@ -39,7 +41,7 @@ export function ChatPicture({ place, message, running, draws, sizes, onDraw, onD
     return <StoryPicture src={undefined} label={LABEL} width={width} height={height} status="그리는 중" />;
   }
   if (place.kind === 'failed') {
-    const { failure, version, scene } = place;
+    const { failure, version, scene, slot } = place;
     return (
       <Failure
         title={failure.kind === 'costs' ? '유료 이미지 생성' : '삽화 실패'}
@@ -49,11 +51,11 @@ export function ChatPicture({ place, message, running, draws, sizes, onDraw, onD
               닫기
             </Button>
             {!draws ? null : failure.kind === 'costs' ? (
-              <Button size="sm" disabled={running} onClick={() => onDraw(message.id, version, scene, true)}>
+              <Button size="sm" disabled={running} onClick={() => onDraw(message.id, version, scene, true, slot)}>
                 그래도 생성
               </Button>
             ) : (
-              <Button size="sm" disabled={running} onClick={() => onDraw(message.id, version, scene)}>
+              <Button size="sm" disabled={running} onClick={() => onDraw(message.id, version, scene, false, slot)}>
                 {ACTS.retry.label}
               </Button>
             )}
@@ -81,9 +83,12 @@ export function ChatPicture({ place, message, running, draws, sizes, onDraw, onD
       pages={{ at: pictures.indexOf(picture), versions: pictures.map(({ value }) => timeOfDay(value.at)), onPage: (index) => setPaged({ id: pictures[index]!.id, newest: pictures.at(-1)!.id }) }}
       foot={
         <>
-          {/* A tool's picture is redrawn by its tool, never here. */}
+          {/* A tool's picture is never redrawn here: the plugin holding the chat's 삽화 is asked for its own again (user, 2026-11-26). */}
           {'tool' in value ? (
-            <Text variant="note">{`${withParticle(moduleName(value.tool.name), '이/가')} 만든 이미지`}</Text>
+            <>
+              <Text variant="note">{`${withParticle(moduleName(value.tool.name), '이/가')} 만든 이미지`}</Text>
+              {draws && value.tool.module === holder && <IconButton icon={ACTS.regenerate.icon} size="sm" label="다시 그리기" disabled={running} onClick={() => onDraw(message.id, version, null, false, value.slot ?? '')} />}
+            </>
           ) : draws && (
             <>
               <IconButton icon={ACTS.regenerate.icon} size="sm" label="다시 그리기" disabled={running} onClick={() => onDraw(message.id, version, scene)} />

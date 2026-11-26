@@ -73,13 +73,14 @@ export type Character = Mark & {
 };
 
 // Lore/assets remain owned children. namespace serves {{moduleenabled}}; risu keeps exported identity for move/charx pairing.
-// takesMemory replaces built-in memory; network covers relay fetches and frame pictures/fonts.
+// takesMemory replaces built-in memory; takesIllustrate hands its chats' 삽화 to its plugin; network covers relay fetches and frame pictures/fonts.
 // Absent consent fields mean not asked, never implicitly allowed.
 // model: its own model for the 보조 calls its scripts and plugin make; absent, the chat's 보조 모델.
 // models: the model picked for each of its plugin's own (//@model), by id; one without a pick runs as a 보조 call.
 export type Module = Pack & Mark & {
   botModels?: boolean;
   takesMemory?: boolean;
+  takesIllustrate?: boolean;
   network?: boolean;
   model?: ModelRef;
   models?: Record<string, ModelRef>;

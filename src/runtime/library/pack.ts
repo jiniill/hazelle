@@ -122,6 +122,9 @@ export const sampleScript = (store: ObjectStore, owner: PackOwner, script: Regex
 export const setTakesMemory = (store: ObjectStore, module: string, takesMemory: boolean): Promise<ApiResult<unknown>> =>
   store.update('module', module, (current) => current.deleted === undefined ? { ...current, takesMemory } : null);
 
+export const setTakesIllustrate = (store: ObjectStore, module: string, takesIllustrate: boolean): Promise<ApiResult<unknown>> =>
+  store.update('module', module, (current) => current.deleted === undefined ? { ...current, takesIllustrate } : null);
+
 export const setNetwork = (store: ObjectStore, module: string, network: boolean): Promise<ApiResult<unknown>> =>
   store.update('module', module, (current) => current.deleted === undefined ? { ...current, network } : null);
 
@@ -137,7 +140,7 @@ export const setModuleModel = (store: ObjectStore, module: string, model: ModelR
   });
 
 // What a plugin's one card answers (design §6.10), each kept in its own field, which its switch edits alone.
-export const GRANTS = { network: 'network', model: 'botModels', memory: 'takesMemory' } as const;
+export const GRANTS = { network: 'network', model: 'botModels', memory: 'takesMemory', illustrate: 'takesIllustrate' } as const;
 export type Grant = keyof typeof GRANTS;
 
 // A switch answered while the card waited keeps its answer.

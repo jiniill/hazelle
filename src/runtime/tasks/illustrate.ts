@@ -30,6 +30,10 @@ import type { Session } from '../session';
 import { KeyedSnapshot } from '../store/snapshot';
 import type { ObjectStore } from '../store/store';
 import { chatPlace, receiptRow } from '../models/usage';
+import { noteStep } from '../diagnostics/auto-diagnosis';
+import type { ScriptCommands } from '../scripts/commands';
+import type { ToolUnit } from '../../model/tool';
+import { toolsOf } from '../tools/store';
 
 // One scene call per message/run, then sequential image calls. Owns illustration writes, including tool pictures,
 // except backup restores and chat copies (design §6.6).
@@ -77,6 +81,11 @@ export async function attachIllustration(
   }
 }
 
+// The plugin a chat's 삽화 is handed to (design §6.10): the first in pack order that declares the use and whose module
+// the user let take it. The app then writes no scene and draws nothing of its own for the chat.
+export const illustrateOwner = (store: ObjectStore, chat: Chat): ToolUnit | null =>
+  toolsOf(store, chat).find(({ module, tool }) => tool.manifest.uses.includes('illustrate') && store.get('module', module)?.value.takesIllustrate === true) ?? null;
+
 // The added models that draw: their output holds an image and their connection's type fills draws. The first is the
 // image model of a chat whose switches name none.
 export const drawingModels = (connections: readonly Stored<'connection'>[]): ImageRoute[] =>
@@ -104,13 +113,17 @@ export type IllustrateFailure =
   | { kind: 'file-refused' }
   | { kind: 'gone' }
   | { kind: 'empty' }
+  // The plugin holding the chat's 삽화 threw or was stopped (failed), or answered the user's press with no picture (none).
+  | { kind: 'held'; why: 'failed' | 'none'; name: string }
   | { kind: 'unsaved'; failure: ApiFailure };
 
 // A scene being drawn, or one whose picture failed, which a retry draws again without another scene call.
 type Sketch = { scene: Scene; failure: IllustrateFailure | null };
 // One run per message. Run-level failures have no scene and appear at message end;
 // sketches retain pending/failed scenes until saved pictures replace them.
-export type Drawing = { chat: string; version: string; writing: boolean; failure: IllustrateFailure | null; sketches: readonly Sketch[] };
+// by: the run is the plugin's that holds the chat's 삽화, which has no scene: writing while it runs, note what the
+// plugin last said it is doing. slot: the one picture of the plugin's the run was asked for, as a retry asks again.
+export type Drawing = { chat: string; version: string; writing: boolean; failure: IllustrateFailure | null; sketches: readonly Sketch[]; by?: { module: string; name: string; note?: string }; slot?: string };
 export type Illustrating = ReadonlyMap<string, Drawing>;
 
 export const runs = (drawing: Drawing) => drawing.writing || drawing.sketches.some(({ failure }) => failure === null);
@@ -140,7 +153,7 @@ export class Illustrator {
   private readonly state = new KeyedSnapshot<Drawing>();
   private readonly aborts = new Map<string, AbortController>();
 
-  constructor(private readonly deps: Deps) {}
+  constructor(private readonly deps: Deps, private readonly hand: ScriptCommands['illustrate']) {}
 
   readonly subscribe = this.state.subscribe;
 
@@ -161,16 +174,22 @@ export class Illustrator {
 
   // Retry edited/failed scenes without another scene call, retaining other failed scenes.
   // Auto uses the passive stuck gate; manual redraw keeps earlier pictures. spend records explicit cost consent.
-  draw(chat: string, message: string, version: string, { scene = null, auto = false, spend = false }: { scene?: Scene | null; auto?: boolean; spend?: boolean } = {}) {
+  // A run with no scene given goes to the plugin holding the chat's 삽화, if one does. slot: 다시 그리기 on that
+  // plugin's picture, which no other run draws.
+  draw(chat: string, message: string, version: string, { scene = null, auto = false, spend = false, slot }: { scene?: Scene | null; auto?: boolean; spend?: boolean; slot?: string } = {}) {
     if (this.closed || this.aborts.has(message)) return;
+    const stored = live(this.deps.store.get('chat', chat));
+    const holder = scene || !stored ? null : illustrateOwner(this.deps.store, stored.value);
+    if (slot !== undefined && !holder) return;
+    const by = holder && { by: { module: holder.module, name: holder.tool.manifest.displayName }, ...(slot !== undefined && { slot }) };
     const abort = new AbortController();
     this.aborts.set(message, abort);
     const previous = this.state.snapshot().get(message);
     const kept = scene && previous?.version === version ? previous.sketches.filter((each) => each.scene !== scene) : [];
-    this.change(message, { chat, version, writing: !scene, failure: null, sketches: [...kept, ...(scene ? [{ scene, failure: null }] : [])] });
+    this.change(message, { chat, version, writing: !scene, failure: null, sketches: [...kept, ...(scene ? [{ scene, failure: null }] : [])], ...by });
     const lease = this.deps.store.retainChat(chat);
     void lease.ready
-      .then(async (failure) => (failure ? { kind: 'unsaved' as const, failure } : this.run(chat, message, version, scene, auto, spend, abort.signal)))
+      .then(async (failure) => (failure ? { kind: 'unsaved' as const, failure } : this.run(chat, message, version, scene, auto, spend, abort.signal, holder, slot)))
       .then(
         (outcome) => {
           if (outcome?.kind === 'stopped') return this.change(message, null);
@@ -206,7 +225,7 @@ export class Illustrator {
   }
 
   // null once every scene is drawn or failed on its own; a failure returned came before any picture.
-  private async run(chat: string, message: string, version: string, given: Scene | null, auto: boolean, spend: boolean, signal: AbortSignal): Promise<IllustrateFailure | Stopped | null> {
+  private async run(chat: string, message: string, version: string, given: Scene | null, auto: boolean, spend: boolean, signal: AbortSignal, holder: ToolUnit | null, slot?: string): Promise<IllustrateFailure | Stopped | null> {
     const { store } = this.deps;
     const stored = live(store.get('chat', chat));
     const messages = fold(store.children('entry', chat));
@@ -215,6 +234,7 @@ export class Illustrator {
     if (!stored || selected === -1) return { kind: 'gone' };
     const text = messages[index]!.versions[selected]!.text;
     const switches = chatIllustrate(store, stored.value);
+    if (holder) return this.handed(chat, message, version, text, holder, pictureCount(switches.ladder, text), auto, spend, slot, signal);
     const route = imageRoute(store, switches.model);
     if ('kind' in route) return route;
     // A given scene draws with the tags and settings of the prompt chosen now, as a written one does.
@@ -252,6 +272,29 @@ export class Illustrator {
       logged ||= !outcome;
     }
     return null;
+  }
+
+  // The run as the holding plugin's illustrate event. What it attached is counted by its rows, as nothing else says.
+  private async handed(chat: string, message: string, version: string, text: string, holder: ToolUnit, count: number, auto: boolean, spend: boolean, slot: string | undefined, signal: AbortSignal): Promise<IllustrateFailure | Stopped | null> {
+    const paragraphs = paragraphsOf(text);
+    if (!paragraphs.length) return { kind: 'empty' };
+    const name = holder.tool.manifest.displayName;
+    const began = performance.now();
+    const since = Date.now();
+    const refused: { why: Costs | null } = { why: null };
+    const ended = await this.hand(chat, holder.module, { message, version }, { paragraphs, count, auto, ...(slot !== undefined && { slot }) }, {
+      paid: { spend, unpaid: (why) => { refused.why ??= why; } },
+      progress: (note) => this.update(message, (drawing) => (drawing.by ? { ...drawing, by: { ...drawing.by, note } } : drawing)),
+      signal,
+    });
+    if (signal.aborted) return { kind: 'stopped' };
+    const attached = this.deps.store.children('illustration', chat).filter(({ value }) => 'tool' in value && value.tool.module === holder.module && value.version === version && value.at >= since).length;
+    const outcome = ended === 'gone' ? 'gone' : refused.why ? 'costs' : ended === 'failed' ? 'failed' : attached || auto ? 'done' : 'none';
+    noteStep(`illustrate-held:${outcome}`, performance.now() - began);
+    noteStep(`illustrate-held:${auto ? 'auto' : slot === undefined ? 'press' : 'slot'}`, attached);
+    if (outcome === 'gone') return { kind: 'gone' };
+    if (refused.why) return { kind: 'costs', why: refused.why };
+    return outcome === 'done' ? null : { kind: 'held', why: outcome === 'failed' ? 'failed' : 'none', name };
   }
 
   // null once the illustration is saved. Each picture of the run keeps the receipt of the call that wrote its scene.

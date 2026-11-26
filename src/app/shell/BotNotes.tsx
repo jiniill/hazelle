@@ -50,6 +50,9 @@ export function BotNotes() {
         case 'memory-held':
           toast.show(`장기 기억은 ${note.by} 플러그인이 맡고 있어요`, { detail: from?.name });
           break;
+        case 'illustrate-held':
+          toast.show(`삽화는 ${note.by} 플러그인이 맡고 있어요`, { detail: from?.name });
+          break;
         case 'stale-reply':
           toast.show(TOOL_STALE, { detail: from?.name });
           break;
