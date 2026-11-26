@@ -13,15 +13,16 @@ import type { ReadModels } from '../store/read-model';
 import { noOutcome, ToolLate, ToolStopped, until, type Binding, type LuaRunner } from './binding';
 import type { Anchor, ScriptEffects } from './effects';
 import type { ScriptJournal } from './journal';
-import type { ScriptReach } from './reach';
+import type { Paid, ScriptReach } from './reach';
 import type { ScriptSchedule } from './schedule';
 import { atOf, scopeFor, triggersOf } from './selection';
 import type { ObjectStore } from '../store/store';
 import type { Tools } from '../tools/facade';
 import { toolsOf } from '../tools/store';
 
-// progress: who waits on the tool's run (ScriptReach.host).
-type Units = { lua: ScriptUnit[]; event: Event } | { tool: ToolUnit; event: ToolEvent; progress?: ToolReach['progress'] };
+// progress, paid: who waits on the tool's run (ScriptReach.host). failed: told a run that did not end on its own, the
+// user's or the app's stop among them, which the outcome alone does not say.
+type Units = { lua: ScriptUnit[]; event: Event } | { tool: ToolUnit; event: ToolEvent; progress?: ToolReach['progress']; paid?: Paid; failed?: () => void };
 
 const ownerOf = (units: Units): PackOwner | null => 'tool' in units ? { kind: 'module', id: units.tool.module } : null;
 // What an event hands a tool to rewrite, in the shape of its answer; an event that hands nothing is answered an addition.
@@ -153,16 +154,18 @@ export class ScriptExecution {
     if (this.closing.aborted || signal?.aborted) return nothing;
     const from = ownerOf(units);
     try {
-      const host = this.reach.host(chat, scope, signal, deadline, 'tool' in units ? units.progress : undefined);
+      const host = this.reach.host(chat, scope, signal, deadline, 'tool' in units ? units.progress : undefined, 'tool' in units ? units.paid : undefined);
       const running = 'lua' in units
         ? this.bindings.lua().then((runner) => runner.run(chat, units.lua, scope, event, { ...host, model: this.calling(chat, scope, host.model) }, 'event'))
         : this.bindings.tools.run(chat, units.tool, scope, units.event, host, signal);
       const outcome = await until(running, signal);
       this.journal.report(chat, outcome, from);
+      if ('tool' in units && outcome.errors.length) units.failed?.();
       // A showing runs once per stretch shown; kept here, it would push the turns' entries out of the log's bound.
       if ('tool' in units && (event.kind !== 'showing' || outcome.errors.length || outcome.missing.length)) this.journal.keepLog(chat, [{ stage: event.kind, pack: from, script: units.tool.tool.manifest.displayName, at, duration: performance.now() - began, logs: [], writes: outcome.writes, errors: outcome.errors, missing: outcome.missing, stopped: outcome.stop, changed: outcome.value !== undefined && JSON.stringify(outcome.value) !== JSON.stringify(handed(units.event)), handled: outcome.handled, truncated: false }]);
       return outcome;
     } catch (error) {
+      if ('tool' in units) units.failed?.();
       this.journal.report(chat, error, from);
       this.journal.keepLog(chat, [{ stage: event.kind === 'edit' ? event.stage : event.kind, pack: from, script: '', at, duration: performance.now() - began, logs: [], writes: [], errors: [{ from, script: '', message: String(error) }], missing: [], stopped: error instanceof ToolStopped, changed: false, handled: false, truncated: false }]);
       return nothing;

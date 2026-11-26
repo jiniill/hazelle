@@ -17,7 +17,7 @@ export const toolVar = (manifest: Pick<ToolManifest, 'author' | 'name'>, key: st
 export const PICTURE_SLOTS = 8;
 // The most pictures one model call carries (Chat.model).
 export const MODEL_PICTURES = 6;
-export const TOOL_USES = ['model', 'embed', 'decide', 'draw', 'memory', 'network'] as const;
+export const TOOL_USES = ['model', 'embed', 'decide', 'draw', 'memory', 'illustrate', 'network'] as const;
 export type ToolUse = (typeof TOOL_USES)[number];
 // The uses that spend on a model, which the user answers as one.
 export const callsModels = (uses: readonly ToolUse[]) => uses.some((use) => use === 'model' || use === 'embed' || use === 'decide' || use === 'draw');

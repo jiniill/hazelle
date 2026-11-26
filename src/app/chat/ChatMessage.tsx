@@ -17,7 +17,7 @@ import { useTokens } from '../common/useTokens';
 import { useTranslatingVersion } from '../session';
 import { useFocusReturn } from '../ui';
 import { timeOfDay } from '../common/time';
-import { agentsWaiting, DISCOUNT_STOPPING, DISCOUNT_WAITING, polishingNow, PRE_READ_RETRYING, PRE_READ_WAITING, RETRYING, toolFinishing, toolWaiting } from '../common/words';
+import { agentsWaiting, DISCOUNT_STOPPING, DISCOUNT_WAITING, polishingNow, PRE_READ_RETRYING, HELD_DRAWING, PRE_READ_WAITING, RETRYING, toolFinishing, toolWaiting } from '../common/words';
 import type { Reading } from '../../runtime/chat/talk';
 import type { Preparing } from '../../runtime/chat/turn-steps';
 import { SHORTCUTS } from '../shortcuts';
@@ -55,7 +55,7 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
   const { row, modelMenu, actions } = props;
   const { message, text: original, decor: decoration, opening, last, busy, branching, usageShown, inked } = row.story.value;
   const { canTranslate, awaited, flipped, showOriginal, shownTranslation } = row.translation.value;
-  const { placed, pictures, drawing, canIllustrate, pictureSizes } = row.illustration.value;
+  const { placed, pictures, drawing, canIllustrate, pictureSizes, holder } = row.illustration.value;
   const { remark, fresh } = row.mascot.value;
   const { canSpeak, reading, kept } = row.speech.value;
   const { badges, toolActions } = row.tools.value;
@@ -103,7 +103,7 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
   const running = drawing !== null && runs(drawing);
   const illustrations = places.map((place) => ({
     mark: place.paragraph === null ? null : placeMark(place.paragraph),
-    node: <ChatPicture key={place.paragraph ?? 'run'} place={place} message={message} running={running} draws={canIllustrate} sizes={pictureSizes} onDraw={actions.draw} onDismiss={actions.dismissIllustration} onReshape={actions.reshape} onDrop={actions.dropPicture} />,
+    node: <ChatPicture key={place.paragraph ?? 'run'} place={place} message={message} running={running} draws={canIllustrate} holder={holder} sizes={pictureSizes} onDraw={actions.draw} onDismiss={actions.dismissIllustration} onReshape={actions.reshape} onDrop={actions.dropPicture} />,
   }));
   const failed = receipt?.state === 'failed';
   const empty = original === '';
@@ -268,7 +268,7 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
       {editing === null && receipt?.toolsRefused && <Marker reason="tool" label="이 모델은 모델 도구를 지원하지 않아서 도구 없이 응답했어요." />}
       {editing === null && receipt && toolLine(receipt) && <Marker reason="tool" label={toolLine(receipt)!} />}
       {live && !empty && message.preparing?.step === 'tools' && <Marker reason="tool" label={toolFinishing(message.preparing.running, message.preparing.note)} />}
-      {drawing?.writing && <Marker reason="illustration" label="장면 구성 중" />}
+      {drawing?.writing && <Marker reason="illustration" label={drawing.by ? toolFinishing(drawing.by.name, drawing.by.note ?? HELD_DRAWING) : '장면 구성 중'} />}
       {polishing && <Marker reason="agent" label={polishingNow(polishing)} />}
       {raw && <Marker reason="agent" label="다듬기 전 응답" action={{ label: '다듬기 전으로 복원', disabled: busy, onClick: () => actions.restoreRaw(message) }} />}
       {cut && (

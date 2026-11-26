@@ -252,9 +252,14 @@ declare namespace Hazelle {
   // through: the id of the last message memory stands for; it and every message before it, the greeting included,
   // leave the request.
   type PromptAnswer = string | null | { tool?: string | null; memory?: { text: string; through: string | null } };
+  // The chat's 삽화 handed to this tool (//@uses illustrate, allowed by the user, first in pack order), in place of the
+  // app's own scene call and drawing. message: the version to illustrate; paragraphs: its text as Chat.picture counts
+  // them; count: how many pictures the user's 삽화 settings ask for; auto: 자동 삽화 asked, not a press. slot: the user
+  // pressed 다시 그리기 on this tool's picture in that slot ('' the unnamed one), and only it is wanted again.
+  type Illustrate = { message: At; paragraphs: string[]; count: number; auto: boolean; slot?: string };
   type Change = At & { kind: 'edit' | 'select' | 'delete' | 'restore' };
   type Branched = { from: string; messages: Record<string, string>; versions: Record<string, string> };   // old id → new
-  // reply, change, branch, menu, action and input run one at a time for a tool in a chat, in the order they came. The
+  // reply, change, branch, menu, action, illustrate and input run one at a time for a tool in a chat, in the order they came. The
   // events of a turn (sending, requesting, prompt, tool, replying) do not wait for them: the next turn's may run while
   // a reply's handler is still under way.
   interface Events {
@@ -284,6 +289,13 @@ declare namespace Hazelle {
     branch(chat: Chat, from: Branched): void | Promise<void>;              // chat is the new branch
     menu(chat: Chat, item: string): void | Promise<void>;                   // a //@menu item pressed in the chat's ⋯
     action(chat: Chat, item: string, message: At): void | Promise<void>;   // a //@action item pressed on a message
+    // The chat's 삽화 is wanted for a message, by 자동 삽화 after a reply or by the user's press, and this tool holds
+    // it: analyse, draw (Chat.draw) and attach (Chat.picture) as it sees fit; the app draws nothing of its own. While
+    // it runs the message says so under this tool's name, with what Chat.progress last said. A throw, or a press that
+    // ends with no picture attached, shows as a failed 삽화 the user may try again. A picture that would cost is
+    // refused (draw answers costs) unless the user's settings spend unasked; the user is then offered to draw anyway,
+    // which runs this event again with every draw in it paid for. Runs in the tool's line, after its reply handler.
+    illustrate(chat: Chat, ask: Illustrate): void | Promise<void>;
     // A //@input item pressed from the //@composer button, with the chat input's text as typed ('' when empty): a text
     // answered replaces it, which the user can undo. No deadline: the user waits and may stop it, which aborts its calls.
     input(chat: Chat, item: string, text: string): string | void | Promise<string | void>;

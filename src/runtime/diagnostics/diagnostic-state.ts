@@ -53,6 +53,7 @@ function moduleFacts(store: Reader['store'], id: string): Facts {
     triggers: module.triggers.length,
     toggles: module.toggles.length,
     takesMemory: module.takesMemory === true,
+    takesIllustrate: module.takesIllustrate === true,
     network: module.network === true,
     ownModel: module.model !== undefined,
     tool: tool ? { name: known(tool.manifest.name), version: known(tool.manifest.version), uses: counted(tool.manifest.uses), size: tool.size } : null,

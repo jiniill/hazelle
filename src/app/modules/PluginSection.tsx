@@ -1,6 +1,6 @@
 import { ExternalLink } from 'lucide-react';
 import type { Stored } from '../../model/kinds';
-import { setModels, setModuleModel, setNetwork, setTakesMemory } from '../../runtime/library/pack';
+import { setModels, setModuleModel, setNetwork, setTakesIllustrate, setTakesMemory } from '../../runtime/library/pack';
 import { sharedModel } from '../../runtime/models/assignment';
 import { writerOf } from '../../runtime/models/profiles';
 import { scriptsOf } from '../../runtime/scripts/selection';
@@ -11,7 +11,7 @@ import { ToolSetting } from '../common/ToolSetting';
 import { opensPage } from '../common/ToolView';
 import type { Write } from '../common/saveQueue';
 import { useAutosave } from '../common/useAutosave';
-import { MEMORY_CLAIM_HELP, MODEL_ROLES, MODULE_MODEL_HELP, MODULE_MODELS, modelsHelp, NETWORK, NETWORK_CALLED, NETWORK_HELP, SAVE_FAILED, TOOL, toolVersion, type Asker } from '../common/words';
+import { ILLUSTRATE_CLAIM_HELP, ILLUSTRATE_CLAIM_LABEL, MEMORY_CLAIM_HELP, MODEL_ROLES, MODULE_MODEL_HELP, MODULE_MODELS, modelsHelp, NETWORK, NETWORK_CALLED, NETWORK_HELP, SAVE_FAILED, TOOL, toolVersion, type Asker } from '../common/words';
 import { useSession, useSettings, useTool, useToolHosts } from '../session';
 import { useToast } from '../toast';
 import { navigate } from '../shell/router';
@@ -65,6 +65,7 @@ export function PluginSection({ module }: { module: Stored<'module'> }) {
   const { manifest, settings } = stored.value;
   const models = hasLua(module) || callsModels(manifest.uses);
   const memory = manifest.uses.includes('memory');
+  const illustrate = manifest.uses.includes('illustrate');
   const network = manifest.uses.includes('network');
   return (
     <Section
@@ -73,7 +74,7 @@ export function PluginSection({ module }: { module: Stored<'module'> }) {
     >
       <Stack gap="group">
         <Facts items={[{ label: '버전', value: toolVersion(manifest.version) }, { label: '제작자', value: manifest.author }]} />
-        {(models || memory || network || manifest.settings.length > 0) && <SettingGroup label={`${TOOL} 설정`}>
+        {(models || memory || illustrate || network || manifest.settings.length > 0) && <SettingGroup label={`${TOOL} 설정`}>
           {models && <ModelsRow module={module} asker="plugin" />}
           {(hasLua(module) || manifest.uses.includes('model')) && <OwnModel module={module} />}
           {manifest.models?.map((each) => <OwnModel key={each.id} module={module} of={each} />)}
@@ -93,6 +94,15 @@ export function PluginSection({ module }: { module: Stored<'module'> }) {
               help={MEMORY_CLAIM_HELP}
               stored={module.value.takesMemory === true}
               write={(on) => setTakesMemory(store, module.id, on)}
+            />
+          )}
+          {illustrate && (
+            <FlagRow
+              saveKey={`module-illustrate:${module.id}`}
+              label={ILLUSTRATE_CLAIM_LABEL}
+              help={ILLUSTRATE_CLAIM_HELP}
+              stored={module.value.takesIllustrate === true}
+              write={(on) => setTakesIllustrate(store, module.id, on)}
             />
           )}
           {manifest.settings.map((field) => <ToolSetting key={field.key} module={module.id} field={field} value={settings[field.key]} />)}

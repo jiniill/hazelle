@@ -22,7 +22,7 @@ export type Role = 'background' | 'page' | 'frame';
 export type Down =
   // console: a test run, whose console output is sent up as log.
   | { kind: 'load'; api: 1; role: Role; code: string; manifest: ToolManifest; settings: Settings; chat: ChatHeader | null; theme: 'dark' | 'light'; colors?: Hazelle.Colors; console?: true }
-  | { kind: 'event'; id: number; event: EventName; chat: ChatHeader | null; reply?: Hazelle.At; turn?: Hazelle.Turn; change?: Hazelle.Change; from?: Hazelle.Branched; item?: string; message?: Hazelle.At; text?: string; messages?: Hazelle.RequestMessage[]; role?: 'main' | 'aux'; shown?: Hazelle.Shown[]; name?: string; args?: { [key: string]: Hazelle.Json } }
+  | { kind: 'event'; id: number; event: EventName; chat: ChatHeader | null; reply?: Hazelle.At; turn?: Hazelle.Turn; change?: Hazelle.Change; from?: Hazelle.Branched; item?: string; message?: Hazelle.At; ask?: Hazelle.Illustrate; text?: string; messages?: Hazelle.RequestMessage[]; role?: 'main' | 'aux'; shown?: Hazelle.Shown[]; name?: string; args?: { [key: string]: Hazelle.Json } }
   | { kind: 'answer'; call: number; ok: boolean; value: unknown }
   | { kind: 'storage'; keys: string[] }
   | { kind: 'message'; data: Json }

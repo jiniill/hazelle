@@ -6,7 +6,8 @@ import type { Drawing, IllustrateFailure } from '../../runtime/tasks/illustrate'
 // scene has no paragraph and goes at the message end. pictures: the place's, oldest first.
 export type PicturePlace = { paragraph: number | null } & (
   | { kind: 'drawing'; scene: Scene }
-  | { kind: 'failed'; failure: IllustrateFailure; version: string; scene: Scene | null }
+  // slot: the run was for one picture of the plugin holding the chat's 삽화, which a retry asks for again.
+  | { kind: 'failed'; failure: IllustrateFailure; version: string; scene: Scene | null; slot?: string }
   | { kind: 'picture'; paragraph: number; pictures: Stored<'illustration'>[] }
 );
 
@@ -19,7 +20,7 @@ export function picturePlaces(drawing: Drawing | null, pictures: Stored<'illustr
     places.set(paragraph, failure ? { paragraph, kind: 'failed', failure, version: drawing!.version, scene } : { paragraph, kind: 'drawing', scene });
   }
   const placed = [...places.values()].sort((a, b) => a.paragraph! - b.paragraph!);
-  return drawing?.failure ? [...placed, { paragraph: null, kind: 'failed', failure: drawing.failure, version: drawing.version, scene: null }] : placed;
+  return drawing?.failure ? [...placed, { paragraph: null, kind: 'failed', failure: drawing.failure, version: drawing.version, scene: null, ...(drawing.slot !== undefined && { slot: drawing.slot }) }] : placed;
 }
 
 // The picture paged to and the place's newest then. A picture made there since shows instead, so a redraw needs no

@@ -3,6 +3,8 @@ import { live } from '../../model/library';
 import type { ReadModels } from '../store/read-model';
 import { onLast } from './effects';
 import type { ScriptExecution } from './execution';
+import type { ScriptInteractions } from './interactions';
+import type { Paid } from './reach';
 import type { ScriptSchedule } from './schedule';
 import { atOf, scopeFor, unitFor } from './selection';
 import type { ObjectStore } from '../store/store';
@@ -18,6 +20,7 @@ export class ScriptCommands {
     private readonly tools: Pick<Tools, 'items' | 'actions'>,
     private readonly schedule: ScriptSchedule,
     private readonly execution: ScriptExecution,
+    private readonly interactions: Pick<ScriptInteractions, 'tell'>,
     private readonly closing: AbortSignal,
   ) {}
 
@@ -40,6 +43,27 @@ export class ScriptCommands {
       const at = atOf(scope, message);
       if (at) await this.execution.dispatch(chat, { tool: unit, event: { kind: 'action', item, message: at } }, scope, { version: at.version, stays: true }, this.closing);
     });
+  }
+
+  // The chat's 삽화 handed to the plugin that holds it (runtime/tasks/illustrate), in the plugin's line, so after its
+  // reply handler. Its writes stay with the message. gone: the plugin, the message or that version of it is no longer
+  // there; failed: the handler threw or was stopped.
+  illustrate(chat: string, module: string, of: { message: string; version: string }, ask: Omit<Hazelle.Illustrate, 'message'>, run: { paid: Paid; progress(text: string): void; signal: AbortSignal }): Promise<'done' | 'failed' | 'gone'> {
+    const unit = unitFor(this.session.store, chat, module);
+    if (!unit) return Promise.resolve('gone');
+    const { store } = this.session;
+    // One that would hold it too is told once who does, as with the memory slot.
+    for (const other of toolsOf(store, store.get('chat', chat)!.value)) {
+      if (other.module !== module && other.tool.manifest.uses.includes('illustrate') && store.get('module', other.module)?.value.takesIllustrate) this.interactions.tell(chat, 'illustrate-held', { kind: 'illustrate-held', by: unit.tool.manifest.displayName }, { kind: 'module', id: other.module });
+    }
+    let ended: 'done' | 'failed' | 'gone' = 'gone';
+    return this.schedule.lane(chat, unit, async () => {
+      const scope = scopeFor(this.session, chat);
+      const at = atOf(scope, of.message);
+      if (at?.version !== of.version) return;
+      ended = 'done';
+      await this.execution.dispatch(chat, { tool: unit, event: { kind: 'illustrate', ask: { message: at, ...ask } }, progress: run.progress, paid: run.paid, failed: () => { ended = 'failed'; } }, scope, { version: at.version, stays: true }, AbortSignal.any([this.closing, run.signal]));
+    }).then(() => ended);
   }
 
   // A //@input item pressed in the composer, its writes staying with the last message as a menu item's do. The text it

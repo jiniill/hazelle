@@ -5,7 +5,7 @@ import type { Stored } from '../../model/kinds';
 import { setIllustrate, setOwnIllustrate } from '../../runtime/library/characters';
 import { chatIllustrate } from '../../runtime/tasks/features';
 import { pictureSizes } from '../../engine/illustrate';
-import { removeIllustration, restoreIllustration, sceneWriterOf, type IllustrateFailure } from '../../runtime/tasks/illustrate';
+import { illustrateOwner, removeIllustration, restoreIllustration, sceneWriterOf, type IllustrateFailure } from '../../runtime/tasks/illustrate';
 import { illustrationPrompt } from '../../runtime/library/prompts';
 import { describeIllustrateFailure } from '../common/failure';
 import { useCaptured, useChildren, useIllustrating, useSession } from '../session';
@@ -38,9 +38,9 @@ export function useChatIllustrations(chatId: string, id: string | null, chat: Ch
   const { character } = chat;
   const { store, illustrator } = useSession();
   const toast = useToast();
-  const { illustrate, sceneWriter, prompt } = useCaptured((store) => {
+  const { illustrate, sceneWriter, prompt, holder } = useCaptured((store) => {
     const illustrate = chatIllustrate(store, chat);
-    return { illustrate, sceneWriter: sceneWriterOf(store, chat), prompt: illustrationPrompt(store, illustrate.prompt) };
+    return { illustrate, sceneWriter: sceneWriterOf(store, chat), prompt: illustrationPrompt(store, illustrate.prompt), holder: illustrateOwner(store, chat) };
   }, [chat]);
   // The frame a picture being drawn or placed takes: the 삽화 prompt's size tier; without a prompt nothing is drawn.
   const sizes = pictureSizes(prompt.kind === 'prompt' ? prompt.prompt.value : {});
@@ -67,8 +67,9 @@ export function useChatIllustrations(chatId: string, id: string | null, chat: Ch
   }
 
   // scene: one already written, drawn again with no scene call. spend: the user's 그래도 만들기 on a picture that may cost.
-  function draw(message: string, version: string, scene: Scene | null = null, spend = false) {
-    if (id) illustrator.draw(id, message, version, { scene, spend });
+  // slot: the holding plugin's picture to make again.
+  function draw(message: string, version: string, scene: Scene | null = null, spend = false, slot?: string) {
+    if (id) illustrator.draw(id, message, version, { scene, spend, ...(slot !== undefined && { slot }) });
   }
 
   function dropPicture(picture: Stored<'illustration'>) {
@@ -78,6 +79,8 @@ export function useChatIllustrations(chatId: string, id: string | null, chat: Ch
 
   return {
     illustrate, sceneWriter, pictures, pictureSizes: sizes, illustrating, stage, reshaping,
+    // The plugin the chat's 삽화 is handed to, by its module's id, and its name.
+    illustrateHolder: holder?.module ?? null, illustrateHolderName: holder?.tool.manifest.displayName ?? null,
     actions: {
       setIllustrate: setIllustrateSwitches,
       setOwnIllustrate: setOwnIllustrateSwitches,

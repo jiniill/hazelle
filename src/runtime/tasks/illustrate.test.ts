@@ -9,7 +9,14 @@ import { blankCard } from '../../engine/import/card';
 import { placeMark, type Drawn } from '../../model/illustration';
 import { COMIC_PAGE, lastScene, seenBy, severalScenes } from '../../engine/illustrate';
 import { takeTurn } from '../chat/turn';
-import { removeIllustration, restoreIllustration } from './illustrate';
+import { attachIllustration, removeIllustration, restoreIllustration } from './illustrate';
+import { readTool } from '../../engine/import/tool';
+import { importTool } from '../tools/store';
+import { setModuleAlways } from '../library/modules';
+import { noOutcome, type Binding } from '../scripts/binding';
+import type { ToolEvent, ToolReach } from '../../engine/script-api';
+import type { ToolUnit } from '../../model/tool';
+import { png } from '../testing';
 import { likenessId } from '../../model/likeness';
 import { editPortrait, removeLikeness, removePortrait, restoreLikeness } from './likeness';
 import type { ChatScope } from '../../engine/render';
@@ -435,4 +442,126 @@ describe('Illustrator with profiles', { timeout: 15_000 }, () => {
       expect(profileCalls()).toHaveLength(2);
       expect(session.store.get('likeness', likenessId(owner))!.value.portraits[0]).toMatchObject({ name: 'Ari' });
     }));
+});
+
+// A plugin that declares the chat's 삽화 and whose module the user let take it, on in every chat.
+async function holding(session: Session, name = 'atelier') {
+  const parsed = readTool(new TextEncoder().encode(`//@api 1\n//@name ${name}\n//@author jin\n//@display-name 화실\n//@uses illustrate\n//@uses draw`));
+  if (!parsed.ok) throw new Error('fixture');
+  const made = await importTool(session.store, session.files, parsed.tool);
+  if (!made.ok) throw new Error(made.error);
+  await setModuleAlways(session.store, made.data.id, true);
+  await session.store.update('module', made.data.id, (current) => ({ ...current, takesIllustrate: true, botModels: true }));
+  return made.data.id;
+}
+
+describe('삽화 맡기기', () => {
+  type Heard = Extract<ToolEvent, { kind: 'illustrate' }>['ask'];
+  // on: what the plugin does with the event, as its handler would through chat.draw and chat.picture.
+  const plugin = (heard: Heard[], on: (chat: string, unit: ToolUnit, ask: Heard, host: ToolReach) => Promise<void>): Binding<ToolUnit, ToolEvent, ToolReach> => ({
+    run: async (chat, unit, _scope, event, host) => {
+      if (event.kind !== 'illustrate') return noOutcome();
+      heard.push(event.ask);
+      await on(chat, unit, event.ask, host);
+      return noOutcome();
+    },
+    close: () => {},
+  });
+  const replied = async (session: Session, chat: string) => {
+    stubRelay(inTurn([saying(REPLY)]));
+    await takeTurn(session, chat, { kind: 'answer' });
+    return fold(session.store.children('entry', chat))[1]!;
+  };
+
+  it('hands a reply received with auto on to the holding plugin, with no scene call or picture of the app’s own, and says who draws while it runs', async () => {
+    const heard: Heard[] = [];
+    let session!: Session;
+    let finish!: () => void;
+    await server.withSession(async (opened) => {
+      session = opened;
+      const chat = await painted(session);
+      const module = await holding(session);
+      await setIllustrate(session.store, null, { auto: true });
+      const log = stubRelay(inTurn([saying(REPLY)]));
+      await takeTurn(session, chat, { kind: 'answer' });
+      const reply = fold(session.store.children('entry', chat))[1]!;
+      await vi.waitFor(() => expect(session.illustrator.snapshot().get(reply.id)).toMatchObject({ writing: true, sketches: [], by: { module, name: '화실', note: '스케치' } }), { timeout: 5000 });
+      expect(heard).toEqual([{ message: { index: 1, id: reply.id, version: shown(reply).id }, paragraphs: ['She opened the door.', 'The room was dark.', 'She smiled.'], count: 1, auto: true }]);
+      finish();
+      await vi.waitFor(() => {
+        expect(session.store.children('illustration', chat)).toMatchObject([{ value: { tool: { module }, version: shown(reply).id, paragraph: 2 } }]);
+        expect(session.illustrator.snapshot().size).toBe(0);
+      });
+      expect(log).toHaveLength(1);
+    }, plugin(heard, async (chat, unit, ask, host) => {
+      host.progress('스케치');
+      await new Promise<void>((resolve) => { finish = resolve; });
+      await attachIllustration(session, chat, { module: unit.module, name: unit.tool.manifest.displayName }, { message: ask.message.id, version: ask.message.version }, png(), { caption: null, paragraph: null, slot: '' });
+    }));
+  });
+
+  it('keeps a press that ended with no picture, or whose handler failed, as a failed 삽화, and asks again for one slot alone', async () => {
+    const heard: Heard[] = [];
+    let fail = false;
+    await server.withSession(async (session) => {
+      const chat = await painted(session);
+      await holding(session);
+      const reply = await replied(session, chat);
+      const version = shown(reply).id;
+      session.illustrator.draw(chat, reply.id, version);
+      await vi.waitFor(() => expect(session.illustrator.snapshot().get(reply.id)).toMatchObject({ writing: false, failure: { kind: 'held', why: 'none', name: '화실' } }));
+      fail = true;
+      session.illustrator.draw(chat, reply.id, version, { slot: 'cover' });
+      await vi.waitFor(() => expect(session.illustrator.snapshot().get(reply.id)).toMatchObject({ writing: false, failure: { kind: 'held', why: 'failed' }, slot: 'cover' }));
+      expect(heard.map(({ auto, slot }) => ({ auto, slot }))).toEqual([{ auto: false, slot: undefined }, { auto: false, slot: 'cover' }]);
+      // A scene's own redraw and a slot with no holder are never the plugin's.
+      expect(session.store.children('illustration', chat)).toHaveLength(0);
+    }, plugin(heard, async () => { if (fail) throw new Error('no ink'); }));
+  });
+
+  it('shows a picture refused for its cost as the run’s, with no notice of the plugin’s, and draws it once the user spends', async () => {
+    const heard: Heard[] = [];
+    const answers: unknown[] = [];
+    let session!: Session;
+    await server.withSession(async (opened) => {
+      session = opened;
+      const chat = await painted(session);
+      await holding(session);
+      const reply = await replied(session, chat);
+      const version = shown(reply).id;
+      const log = stubRelay(inTurn([free(false), picture()]));
+      session.illustrator.draw(chat, reply.id, version);
+      await vi.waitFor(() => expect(session.illustrator.snapshot().get(reply.id)).toMatchObject({ writing: false, failure: { kind: 'costs', why: 'allowance' } }));
+      expect(session.scriptInteractions.snapshot().notes).toEqual([]);
+      session.illustrator.draw(chat, reply.id, version, { spend: true });
+      await vi.waitFor(() => expect(session.illustrator.snapshot().size).toBe(0));
+      expect(answers).toMatchObject([{ ok: false, reason: 'costs' }, { ok: true }]);
+      expect(log.map(({ sent }) => sent.url)).toEqual(['https://image.example/free', 'https://image.example/generate']);
+      expect(session.store.children('illustration', chat)).toHaveLength(1);
+    }, plugin(heard, async (chat, unit, ask, host) => {
+      const drawn = await host.draw({ prompt: '1girl' }, { kind: 'module', id: unit.module });
+      answers.push(drawn);
+      if (drawn.ok) await attachIllustration(session, chat, { module: unit.module, name: '화실' }, { message: ask.message.id, version: ask.message.version }, png(), { caption: null, paragraph: 0, slot: '' });
+    }));
+  });
+
+  it('holds for the first plugin in pack order alone, tells the other once, and leaves the app’s own 삽화 to a module that was not let', async () => {
+    const heard: Heard[] = [];
+    await server.withSession(async (session) => {
+      const chat = await painted(session);
+      const first = await holding(session);
+      const second = await holding(session, 'studio');
+      const reply = await replied(session, chat);
+      session.illustrator.draw(chat, reply.id, shown(reply).id);
+      await vi.waitFor(() => expect(session.illustrator.snapshot().get(reply.id)).toMatchObject({ writing: false, by: { module: first } }));
+      expect(heard).toHaveLength(1);
+      expect(session.scriptInteractions.snapshot().notes).toMatchObject([{ kind: 'illustrate-held', by: '화실', from: { kind: 'module', id: second } }]);
+      session.illustrator.dismiss(reply.id);
+      for (const module of [first, second]) await session.store.update('module', module, (current) => ({ ...current, takesIllustrate: false }));
+      stubRelay(inTurn([saying(JSON.stringify(scene)), free(true), picture()]));
+      session.illustrator.draw(chat, reply.id, shown(reply).id);
+      await vi.waitFor(() => expect(session.store.children('illustration', chat)).toMatchObject([{ value: { scene: { paragraph: 1 } } }]), { timeout: 5000 });
+      expect(heard).toHaveLength(1);
+    }, plugin(heard, async () => {}));
+  });
 });

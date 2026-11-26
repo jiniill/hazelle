@@ -1,6 +1,7 @@
 import type { ChatScope } from '../../engine/render';
 import type { ToolEvent } from '../../engine/script-api';
 import type { ToolIdentity } from '../../model/tool';
+import { paragraphsOf } from '../../model/illustration';
 import { atOf } from '../../runtime/scripts/selection';
 import { argsOf } from '../../runtime/models/tool-loop';
 import type { DraftState } from '../../runtime/tools/drafts';
@@ -12,7 +13,7 @@ export const draftTitle = (identity: ToolIdentity) => identity.displayName || '�
 export const DRAFT_STATES: Record<Exclude<DraftState, 'applied'>, string> = { unapplied: '적용 안 함', differs: '적용한 버전과 다름' };
 
 export const SEE_IN_CODE = '코드에서 보기';
-export const USE_TAGS: Record<ToolUse, string> = { model: MODULE_MODELS, embed: ROLE_TAGS.embed, decide: ROLE_TAGS.decide, draw: PLUGIN_DRAWS, memory: FEATURE_NAMES.memory, network: NETWORK };
+export const USE_TAGS: Record<ToolUse, string> = { model: MODULE_MODELS, embed: ROLE_TAGS.embed, decide: ROLE_TAGS.decide, draw: PLUGIN_DRAWS, memory: FEATURE_NAMES.memory, illustrate: FEATURE_NAMES.illustrate, network: NETWORK };
 
 // What 테스트 can run a draft on: a saved reply, then the turn's stages in their order, a message shown or changed, then
 // each item its header declares. text: the event takes the text typed for it. request: it runs on the chat's next
@@ -28,6 +29,7 @@ export const testPicks = (manifest: ToolManifest): TestPick[] => [
   { value: 'replying', label: '응답을 저장하기 전', sub: 'replying · 마지막 응답', text: false },
   { value: 'showing', label: '메시지를 표시할 때', sub: 'showing · 마지막 메시지', text: false },
   { value: 'change', label: '메시지를 수정한 뒤', sub: 'change · 마지막 메시지', text: false },
+  ...(manifest.uses.includes('illustrate') ? [{ value: 'illustrate', label: '삽화를 만들 때', sub: 'illustrate · 마지막 응답', text: false }] : []),
   ...manifest.menu.map(({ id, label }) => ({ value: `menu:${id}`, label: `⋯ 메뉴 · ${label}`, sub: 'menu', text: false })),
   ...(manifest.actions ?? []).map(({ id, label }) => ({ value: `action:${id}`, label: `메시지 버튼 · ${label}`, sub: 'action · 마지막 메시지', text: false })),
   ...(manifest.inputs ?? []).map(({ id, label }) => ({ value: `input:${id}`, label: `입력창 버튼 · ${label}`, sub: 'input', text: true })),
@@ -50,6 +52,8 @@ export function testEvent(pick: string, scope: ChatScope, text: string, manifest
     case 'replying': return reply ? { kind: 'replying', text: reply.text } : null;
     case 'showing': { const last = scope.messages.at(-1); return last ? { kind: 'showing', shown: [{ at: told.length ? at(last) : null, text: last.text }] } : null; }
     case 'change': { const changed = at(told.at(-1)); return changed && { kind: 'change', change: { ...changed, kind: 'edit' } }; }
+    // As a press asks: one picture, the count a reply of any length is given at the least.
+    case 'illustrate': { const message = at(reply); return message && { kind: 'illustrate', ask: { message, paragraphs: paragraphsOf(reply!.text), count: 1, auto: false } }; }
     case 'menu': return { kind: 'menu', item };
     case 'action': { const message = at(told.at(-1)); return message && { kind: 'action', item, message }; }
     case 'tool': { const args = argsOf(text.trim() || '{}'); return args && { kind: 'tool', name: item, args }; }

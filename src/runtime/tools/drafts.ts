@@ -97,7 +97,7 @@ export type FileImport = ToolImport & { carried: Stored<'tooldraft'> | null };
 export async function importFile(store: ObjectStore, files: Files, tool: ImportedTool): Promise<ApiResult<FileImport>> {
   const module = sameTool(store, tool.manifest)?.parent;
   if (module && live(store.get('module', module))) {
-    const reset = await store.update('module', module, (current) => (['botModels', 'takesMemory', 'network'] as const).reduce((value, answer) => without(value, answer), current));
+    const reset = await store.update('module', module, (current) => (['botModels', 'takesMemory', 'takesIllustrate', 'network'] as const).reduce((value, answer) => without(value, answer), current));
     if (!reset.ok) return reset;
   }
   const installed = await importTool(store, files, tool);
