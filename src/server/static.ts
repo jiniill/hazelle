@@ -56,7 +56,7 @@ export function clientFiles(clientDir: string, sources: PageSources, visit: (pag
     const started = performance.now();
     await next();
     if (c.req.method === 'GET' && c.res.ok && c.res.headers.get('Content-Type')?.startsWith('text/html') && !c.req.path.startsWith('/assets/') && c.req.path !== '/api' && !c.req.path.startsWith('/api/')) {
-      visit({ kind: 'visit', address: c.req.header(VISITOR_HEADER)!, agent: c.req.header('user-agent') ?? '' });
+      visit({ kind: 'visit', address: c.req.header(VISITOR_HEADER)!, agent: c.req.header('user-agent') ?? '', referrer: c.req.header('referer') ?? '', host: new URL(c.req.url).hostname });
     }
     c.res.headers.set('Server-Timing', `static;dur=${(performance.now() - started).toFixed(1)}`);
     if (c.res.ok && /^(?:text\/|application\/(?:javascript|json|wasm)|image\/svg\+xml)/.test(c.res.headers.get('Content-Type') ?? '')) c.res.headers.set('Vary', 'Accept-Encoding');

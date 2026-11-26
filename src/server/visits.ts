@@ -1,7 +1,7 @@
 import { createHmac, randomBytes } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import { Hono } from 'hono';
-import { FIRST_PAGE_STEPS, GUEST_STEPS, VISITORS_PER_ADDRESS, type FirstPageStep, type GuestStep, type VisitDay } from '../contracts/admin';
+import { FIRST_PAGE_STEPS, GUEST_STEPS, VISITORS_PER_ADDRESS, type FirstPageStep, type GuestStep, type VisitDay, type VisitSource } from '../contracts/admin';
 import type { Db } from './db/service-db';
 import { transaction } from './db/transaction';
 import { countVisit, DAY_MS, fail, ID, readObject, visitDay, visitorOf, type AppEnv } from './http';
@@ -9,7 +9,8 @@ import { dailyDistinct } from './limits';
 
 const BOTS = /bot|crawl|spider|slurp|preview/i;
 
-export type PageVisit = { kind: 'visit'; address: string; agent: string };
+// referrer: the Referer as sent; host: the name this page was asked by.
+export type PageVisit = { kind: 'visit'; address: string; agent: string; referrer: string; host: string };
 export type FrontendMessage = 'listening' | 'draining' | 'closed' | PageVisit;
 
 // API owns visit rows; public worker reports HTML over IPC, never a public endpoint.
@@ -24,7 +25,7 @@ export function openVisits(db: DatabaseSync, clock: () => number = Date.now) {
   close();
   return {
     close,
-    page: ({ address, agent }: PageVisit) => {
+    page: ({ address, agent, referrer, host }: PageVisit) => {
       if (BOTS.test(agent) || browsers.add(address, agent) === 'full') return;
       close();
       const day = visitDay(clock());
@@ -34,6 +35,8 @@ export function openVisits(db: DatabaseSync, clock: () => number = Date.now) {
         const hash = createHmac('sha256', key).update(JSON.stringify([address, agent])).digest('hex');
         const added = db.prepare('INSERT INTO visit_hashes (day, hash) VALUES (?, ?) ON CONFLICT DO NOTHING').run(day, hash);
         db.prepare('INSERT INTO visit_days (day, visitors) VALUES (?, ?) ON CONFLICT (day) DO UPDATE SET visitors = visitors + excluded.visitors').run(day, Number(added.changes));
+        const source = URL.parse(referrer)?.hostname;
+        if (added.changes && source && source !== host) db.prepare('INSERT INTO visit_sources (day, source, visitors) VALUES (?, ?, 1) ON CONFLICT (day, source) DO UPDATE SET visitors = visitors + 1').run(day, source);
       });
     },
   };
@@ -54,6 +57,11 @@ export async function readVisits(db: Db, now = Date.now()): Promise<VisitDay[]> 
     const day = today - index * DAY_MS;
     return days.get(day) ?? { day, visitors: 0, opened: 0, connected: 0, guests: 0, accounts: 0, converted: 0, shown: 0, read: 0, door: 0, asked: 0, granted: 0, keyed: 0, entered: 0 };
   });
+}
+
+export async function readSources(db: Db, now = Date.now()): Promise<VisitSource[]> {
+  const today = visitDay(now);
+  return (await db.prepare('SELECT day, source, visitors FROM visit_sources WHERE day >= ? AND day <= ? ORDER BY day DESC, visitors DESC, source').bind(today - 13 * DAY_MS, today).all<VisitSource>()).results;
 }
 
 // A guest's steps (runtime/models/relay.ts) never pass this server otherwise: its id is a person of the step's day and, for a

@@ -10,6 +10,8 @@ export type GuestStep = (typeof GUEST_STEPS)[number];
 // provider's sign-in, came back from it with a key, entered a key (that one or a pasted one), went into the app.
 export const FIRST_PAGE_STEPS = ['shown', 'read', 'door', 'asked', 'granted', 'keyed', 'entered'] as const;
 export type FirstPageStep = (typeof FIRST_PAGE_STEPS)[number];
+// A day's visitors who came by a link on another site, per that site's host (migration 0038).
+export type VisitSource = { day: number; source: string; visitors: number };
 export type VisitDay = { day: number; visitors: number; opened: number; connected: number; guests: number; accounts: number; converted: number } & Record<FirstPageStep, number>;
 // weeks: the closed weeks shown, oldest first. people lines up with weeks; null is under PULSE_FLOORS.row.
 export type VisitCohorts = { weeks: number[]; rows: { cohort: number; signed: number; people: (number | null)[] }[] };
@@ -156,7 +158,7 @@ type OlderDetails = {
 type Rows<T> = { [A in keyof T]: { id: number; at: number; action: A; target: string; detail: T[A] } }[keyof T];
 export type LogRow = Rows<LogDetails> | Rows<OlderDetails>;
 // pulse: the last PULSE_DAYS_SHOWN closed days kept, oldest first.
-export type Visits = { days: VisitDay[]; cohorts: VisitCohorts; pulse: PulseDay[] };
+export type Visits = { days: VisitDay[]; sources: VisitSource[]; cohorts: VisitCohorts; pulse: PulseDay[] };
 // A share in any state: its versions, the manifest's file id of each.
 export type ShareVersion = { version: number; manifest: string; createdAt: number };
 

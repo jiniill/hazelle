@@ -16,7 +16,7 @@ import { requireSession } from './session';
 import { tellUnread, VISIBLE } from './unread';
 import { readCohorts, readPulseDays } from './pulse';
 import { forgetDiagnoses, readDiagnoses } from './diagnoses';
-import { readVisits } from './visits';
+import { readSources, readVisits } from './visits';
 
 const KEEP_MS = KEEP_YEARS * 365 * DAY_MS;
 
@@ -60,7 +60,7 @@ export const admin = new Hono<AppEnv>();
 admin.use(requireSession);
 admin.use(operator);
 
-admin.get('/visits', async (c) => c.json({ days: await readVisits(c.env.db), cohorts: await readCohorts(c.env.db), pulse: await readPulseDays(c.env.db) } satisfies Visits));
+admin.get('/visits', async (c) => c.json({ days: await readVisits(c.env.db), sources: await readSources(c.env.db), cohorts: await readCohorts(c.env.db), pulse: await readPulseDays(c.env.db) } satisfies Visits));
 admin.get('/diagnoses', async (c) => {
   const limit = limitOf(c);
   const listed = limit === null ? null : await readDiagnoses(c.env.db, c.req.query('after'), limit);

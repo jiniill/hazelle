@@ -13,6 +13,13 @@ const GUESTS = '손님 응답';
 const CONVERTED = '손님 출신';
 const FIRST_PAGE = '첫 페이지';
 const COHORTS = '가입 주별 재방문';
+const SOURCES = '유입 경로';
+const SOURCE_COLUMNS: TableColumn[] = [
+  { label: '날짜', track: 'figure' },
+  { label: '사이트', track: 'fill' },
+  { label: '방문자', track: 'figure' },
+];
+const SOURCES_HELP = '다른 사이트의 링크로 들어온 방문자를 그 사이트별로 집계해요. 브라우저가 그날 처음 연 페이지만 세고, 사이트 이름 말고는 저장하지 않아요. 링크 없이 왔거나 사이트가 출처를 알려 주지 않은 방문은 빠져요.';
 const COLUMNS: TableColumn[] = [
   { label: '날짜', track: 'fill' },
   { label: '방문자', track: 'figure' },
@@ -93,6 +100,13 @@ export function VisitsSection() {
           summary: `열람 ${count(day.shown)} → 예시 대화 ${count(day.read)} → 체험 ${count(day.door)} → 로그인 시작 ${count(day.asked)} → 키 발급 ${count(day.granted)} → 키 입력 ${count(day.keyed)} → 앱 입장 ${count(day.entered)}`,
           cells: [seoulDate(day.day), count(day.shown), count(day.read), count(day.door), count(day.asked), count(day.granted), count(day.keyed), count(day.entered)],
         }))} />}
+      </Panel>
+      <Panel title={SOURCES} note="최근 14일 · 한국 시간" help={SOURCES_HELP}>
+        {loaded.data && (loaded.data.sources.length === 0 ? <Empty variant="section">집계된 유입이 없어요.</Empty> : <Table label={SOURCES} columns={SOURCE_COLUMNS} rows={loaded.data.sources.map(({ day, source, visitors }) => ({
+          key: `${day} ${source}`,
+          summary: `${source} ${count(visitors)}`,
+          cells: [seoulDate(day), source, count(visitors)],
+        }))} />)}
       </Panel>
       <Panel title={COHORTS} note="최근 4주 · 한국 시간" help={COHORTS_HELP}>
         {loaded.data && <Cohorts {...loaded.data.cohorts} />}

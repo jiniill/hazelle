@@ -9,7 +9,7 @@ import { migrate } from './db/migrate';
 import { serviceDb } from './db/service-db';
 import { DAY_MS, visitDay } from './http';
 import { clientFiles } from './static';
-import { openVisits, readVisits } from './visits';
+import { openVisits, readSources, readVisits, type PageVisit } from './visits';
 
 const MIDNIGHT = Date.parse('2026-10-21T15:00:00Z');
 let now: number;
@@ -33,12 +33,13 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 const load = (path = '/', agent = 'Browser', address = '192.0.2.1') => client.request(path, { headers: { accept: 'text/html', 'user-agent': agent, [VISITOR_HEADER]: address } });
+const direct = (address: string, agent: string): PageVisit => ({ kind: 'visit', address, agent, referrer: '', host: 'localhost' });
 const today = async () => (await readVisits(serviceDb(raw), now))[0];
 
 it('counts HTML loads once per address and browser per KST day, including across an API restart', async () => {
   await Promise.all([load(), load('/chats/abc'), load('/privacy')]);
   visits = openVisits(raw, () => now);
-  visits.page({ kind: 'visit', address: '192.0.2.1', agent: 'Browser' });
+  visits.page(direct('192.0.2.1', 'Browser'));
   expect(await today()).toMatchObject({ day: visitDay(now), visitors: 1 });
   await load('/', 'Other browser');
   await load('/', 'Browser', '192.0.2.2');
@@ -49,6 +50,18 @@ it('counts HTML loads once per address and browser per KST day, including across
   expect(days).toHaveLength(14);
   expect(days.slice(0, 2).map(({ visitors }) => visitors)).toEqual([1, 3]);
   expect(days.map(({ day }) => day)).toEqual(Array.from({ length: 14 }, (_, index) => MIDNIGHT - index * DAY_MS));
+});
+
+it('counts a visitor under the host of the link that brought the first page of the day, never this site or a later page', async () => {
+  const from = (referer: string, agent: string) => client.request('/', { headers: { accept: 'text/html', 'user-agent': agent, [VISITOR_HEADER]: '192.0.2.1', referer } });
+  await from('https://arca.live/b/characterai/1?q=secret', 'A');
+  await from('https://www.google.com/', 'A');
+  await from('https://arca.live/', 'B');
+  await from('http://localhost/guide', 'C');
+  await from('not a url', 'D');
+  await load('/', 'E');
+  expect(await readSources(serviceDb(raw), now)).toEqual([{ day: visitDay(now), source: 'arca.live', visitors: 2 }]);
+  expect(await today()).toMatchObject({ visitors: 5 });
 });
 
 it('does not count assets, API paths, failed documents, HEAD requests or crawler user agents', async () => {
@@ -75,8 +88,8 @@ it('closes a day without another visit, deleting its key and hashes while preser
 });
 
 it('counts at most VISITORS_PER_ADDRESS browsers of one address a day, and keeps a guest id 7 days for 손님 출신', async () => {
-  for (let index = 0; index <= VISITORS_PER_ADDRESS; index++) visits.page({ kind: 'visit', address: '192.0.2.1', agent: `Browser ${index}` });
-  visits.page({ kind: 'visit', address: '192.0.2.2', agent: 'Browser 0' });
+  for (let index = 0; index <= VISITORS_PER_ADDRESS; index++) visits.page(direct('192.0.2.1', `Browser ${index}`));
+  visits.page(direct('192.0.2.2', 'Browser 0'));
   expect(await today()).toMatchObject({ visitors: VISITORS_PER_ADDRESS + 1 });
   const guest = raw.prepare("INSERT INTO visit_guests (day, guest, step) VALUES (?, ?, 'replied')");
   guest.run(visitDay(now) - 6 * DAY_MS, 'kept');
