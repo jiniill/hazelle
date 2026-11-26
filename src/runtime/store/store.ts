@@ -2,7 +2,7 @@ import { ChatFold } from '../../model/chat';
 import { KINDS, type AppendOnly, type Kind, type Singleton, type Stored, type StoreRead, type Values } from '../../model/kinds';
 import { objectKey } from '../../vault/objects';
 import type { VaultKey } from '../../vault/keys';
-import type { FeedAnswer, SealedChange } from '../../contracts/objects';
+import type { FeedAnswer, SealedChange, TimelineBy } from '../../contracts/objects';
 import type { ApiFailure, ApiResult } from '../api';
 import { feedQuery, type Backend } from './backend';
 import { ConnectionWait } from './connection-wait';
@@ -24,6 +24,9 @@ export type PullProgress = { objects: number; pages: number; waiting: boolean; t
 type PullOptions = { signal?: AbortSignal; progress?: (progress: PullProgress) => void };
 
 export type Pin = { timeline: string };
+// dropped: the unsent writes the ended store held. by: null when another tab heard the server, and this one only saw
+// the device copy change.
+export type Rewound = { dropped: number; by: TimelineBy | null };
 const MAX_ATTEMPTS = 3;
 // fillChats: fewer chats left to read than this go one pull each (chatEntries), which costs less than walking the
 // account's feed; its pass saves where it got to this often, so a cut-short pass goes on from there.
@@ -57,8 +60,8 @@ export class ObjectStore {
   // every feed and batch, and adopted only from the answer to a bootstrap sent with none.
   private timeline: string | null = null;
   // Once the store ended for a restore: how many of the person's writes it dropped.
-  private rewound: number | null = null;
-  private readonly rewoundListeners = new Set<(dropped: number) => void>();
+  private rewound: Rewound | null = null;
+  private readonly rewoundListeners = new Set<(rewound: Rewound) => void>();
   private known = 0;
   private restored = false;
   private openingFailure: ApiFailure | null = null;
@@ -191,7 +194,7 @@ export class ObjectStore {
   }
 
   // Report dropped writes once on rewind; late subscribers receive the result immediately.
-  readonly subscribeRewound = (listener: (dropped: number) => void) => {
+  readonly subscribeRewound = (listener: (rewound: Rewound) => void) => {
     if (this.rewound !== null) {
       listener(this.rewound);
       return () => {};
@@ -202,9 +205,9 @@ export class ObjectStore {
 
   // A refused timeline or another tab's cache generation ends this store; count and drop unsent writes, never replay them.
   // clear also invalidates the device copy. Workspace opens the next store after ObjectCacheSession clears it.
-  private rewind(clear: boolean) {
+  private rewind(clear: boolean, by: TimelineBy | null = null) {
     if (this.closing.signal.aborted) return;
-    this.rewound = this.pending.dropUnsent();
+    this.rewound = { dropped: this.pending.dropUnsent(), by };
     if (clear) this.cachedObjects.clear();
     // After rewound is set: work the abort cuts short answers timeline-changed (halted).
     this.closing.abort();
@@ -401,7 +404,7 @@ export class ObjectStore {
   // Every feed and batch answer's failure: cache-reset says the server dropped this store's timeline, which ends it.
   private serverFailure(failure: ApiFailure): ApiFailure {
     if (failure.error !== 'cache-reset') return failure;
-    this.rewind(true);
+    this.rewind(true, failure.by);
     return this.halted();
   }
 

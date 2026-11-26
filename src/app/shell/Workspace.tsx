@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import type { TimelineBy } from '../../contracts/objects';
 import { underWay, type ServerWork } from '../../contracts/work';
 import { hearServedBuild, serverWork } from '../../runtime/api';
 import { markSeen } from '../../runtime/chat/chat-context';
@@ -6,7 +7,7 @@ import type { AccountFacts } from '../../runtime/account/account';
 import { Drafts } from '../../runtime/device/drafts';
 import { BUILT_VERSION, PAGE_BUILD, readRelease, selfHost } from '../../runtime/installation';
 import { openGuestSession, openSession, type Session } from '../../runtime/session';
-import type { ObjectStore, PullProgress } from '../../runtime/store/store';
+import type { ObjectStore, PullProgress, Rewound } from '../../runtime/store/store';
 import type { Unlocked } from '../account/AccountFlow';
 import { UnreachableScreen } from '../account/UnreachableScreen';
 import { ARIN } from '../common/arin';
@@ -19,7 +20,7 @@ import { openedNewRelease, TOURS, tourToShow, type Tour } from '../common/releas
 import { TourDialog } from '../common/Tour';
 import { TutorialProvider, useTutorials } from '../common/Tutorial';
 import { count } from '../common/typedNumber';
-import { WORK_OFF, workAhead, workUnderWay } from '../common/work';
+import { WORK, WORK_OFF, workAhead, workUnderWay } from '../common/work';
 import { playSound, unlockSound } from '../common/sounds';
 import { DisplayProvider, useDisplay } from '../display';
 import { BOARD, inSettings, NOTICES, LOADING_TITLE, OPEN_STEPS, PURGE_FREES, SEE } from '../common/words';
@@ -50,13 +51,18 @@ const DEVICE: DeviceStorage = { read: (key) => readPersisted<string | null>(key,
 
 // Said once in the session opened after the last one heard the account was restored, with the writes the restore
 // dropped. The ref: StrictMode runs a mount's effect twice.
-function Restored({ dropped }: { dropped: number }) {
+const REOPENED: Record<TimelineBy | 'unheard', string> = {
+  account: '계정을 복원해서 다시 열었어요',
+  server: `${WORK}이 끝나서 다시 열었어요`,
+  unheard: '계정을 다시 열었어요',
+};
+function Restored({ dropped, by }: Rewound) {
   const toast = useToast();
   const said = useRef(false);
   useEffect(() => {
     if (said.current) return;
     said.current = true;
-    toast.show('계정을 복원해서 다시 열었어요', dropped ? { detail: `방금 바꾼 내용 ${dropped}개는 저장되지 않았어요` } : {});
+    toast.show(REOPENED[by ?? 'unheard'], dropped ? { detail: `방금 바꾼 내용 ${dropped}개는 저장되지 않았어요` } : {});
   }, []);
   return null;
 }
@@ -235,7 +241,7 @@ export function Workspace({ accountId, vaultKey, username, ...account }: Unlocke
   const [session, setSession] = useState<Session | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
-  const [rewound, setRewound] = useState<number | null>(null);
+  const [rewound, setRewound] = useState<Rewound | null>(null);
   const drafts = useMemo(() => new Drafts(), [accountId]);
   useEffect(() => {
     void drafts.persist(accountId, vaultKey);
@@ -268,8 +274,8 @@ export function Workspace({ accountId, vaultKey, username, ...account }: Unlocke
   useEffect(() => {
     if (!session) return;
     const timer = setTimeout(() => session.startBackground(), 0);
-    const unrewound = session.store.subscribeRewound((dropped) => {
-      setRewound(dropped);
+    const unrewound = session.store.subscribeRewound((heard) => {
+      setRewound(heard);
       setSession(null);
       setAttempt((held) => held + 1);
     });
@@ -292,7 +298,7 @@ export function Workspace({ accountId, vaultKey, username, ...account }: Unlocke
       <DisplayProvider>
         <StandingToasts store={session.store} facts={account.facts}>
           <PlaceNote />
-          {rewound !== null && <Restored dropped={rewound} />}
+          {rewound && <Restored {...rewound} />}
           <Unread facts={account.facts} kind="unreadNotices" />
           <Unread facts={account.facts} kind="unreadBoard" />
           <Stale />

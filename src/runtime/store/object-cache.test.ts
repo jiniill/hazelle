@@ -401,7 +401,7 @@ it('ends the store at a restore and at its undo, and the store opened after each
   f.restore(before, 't1');
   expect(await store.pull()).toEqual({ ok: false, error: 'timeline-changed' });
   const restored = await after(store, () => f.open());
-  expect(told.mock.calls).toEqual([[0]]);
+  expect(told.mock.calls).toEqual([[{ dropped: 0, by: null }]]);
   expect(f.cache.rows.size).toBe(0);
   expect(await restored.pull()).toBeNull();
   expect(ids(restored)).toEqual(['kept']);
@@ -442,7 +442,7 @@ it('tells a restore at once, and the store opened after it opens the device copy
 
   f.restore(before, 't1');
   expect(await store.pull()).toEqual({ ok: false, error: 'timeline-changed' });
-  expect(told.mock.calls).toEqual([[0]]);
+  expect(told.mock.calls).toEqual([[{ dropped: 0, by: null }]]);
   store.close();
   const read = vi.spyOn(f.cache, 'open');
   const opening = f.open();
@@ -511,7 +511,7 @@ it('drops and counts a write a restore cut short, whose late 409 or 503 neither 
     f.restore(f.snapshot(), 't1');
     expect(await store.pull()).toEqual({ ok: false, error: 'timeline-changed' });
     const next = await after(store, () => f.open(writer.request));
-    expect(told.mock.calls).toEqual([[1]]);
+    expect(told.mock.calls).toEqual([[{ dropped: 1, by: null }]]);
     answer(late);
     expect(await writing).toEqual({ ok: false, error: 'timeline-changed' });
     expect(f.resets()).toBe(1);
@@ -536,7 +536,7 @@ it('waits out a restore under way for the time the 503 names, then drops and cou
   const writing = store.create('connection', { ...connection, starred: [] });
   await vi.waitFor(() => expect(store.waiting()).toBe(true));
   expect(await writing).toEqual({ ok: false, error: 'timeline-changed' });
-  expect(told.mock.calls).toEqual([[1]]);
+  expect(told.mock.calls).toEqual([[{ dropped: 1, by: null }]]);
   expect(f.rows.size).toBe(0);
   store.close();
 });

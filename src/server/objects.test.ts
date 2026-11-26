@@ -88,8 +88,10 @@ describe('objects', () => {
     ];
     for (const response of sent) {
       expect(response.status).toBe(409);
-      expect(await response.json()).toEqual({ error: 'cache-reset' });
+      expect(await response.json()).toEqual({ error: 'cache-reset', by: 'server' });
     }
+    await t.env.db.prepare("INSERT INTO restores (incarnation, report_id, timeline, phase, created_at, updated_at) SELECT incarnation, 0, timeline, 'done', 0, 0 FROM accounts").run();
+    expect(await (await t.get(`objects?since=0&timeline=${other}`, cookie)).json()).toEqual({ error: 'cache-reset', by: 'account' });
     expect((await (await t.get('objects?since=0', cookie)).json()) as object).toMatchObject({ changes: [] });
     expect((await t.post('objects/batch', { writes: [{ id: A, kind: 'chat', parent: null, body: 'eA==', baseRev: null }] }, cookie)).status).toBe(400);
   });

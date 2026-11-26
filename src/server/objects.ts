@@ -1,11 +1,11 @@
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { createMiddleware } from 'hono/factory';
 import { ACCOUNT_USAGE_HEADERS } from '../contracts/http';
 import { FILE_ID } from '../contracts/files';
-import { BATCH_LIMITS, KIND, refusedWrites, type BatchAnswer, type FeedAnswer, type FeedQuery, type SealedWrite } from '../contracts/objects';
+import { BATCH_LIMITS, KIND, refusedWrites, type BatchAnswer, type CacheReset, type FeedAnswer, type FeedQuery, type SealedWrite } from '../contracts/objects';
 import { fail, ID, isPositive, readObject, refused, RETRY_SECONDS, type AppEnv } from './http';
 import { isRecord } from '../record';
-import { store } from './lifecycle';
+import { store, timelineBy } from './lifecycle';
 import { canWrite, requireSession } from './session';
 import { claimFiles } from './files/claims';
 import { tokenBucket } from './limits';
@@ -25,6 +25,8 @@ const throttle = createMiddleware<AppEnv>(async (c, next) => {
 export const objects = new Hono<AppEnv>();
 
 objects.use(requireSession);
+
+const reset = async (c: Context<AppEnv>) => fail(c, 409, 'cache-reset', { by: await timelineBy(c.env.db, c.get('account').incarnation) } satisfies CacheReset);
 
 // The store keeps the account's objects and answers only on its current timeline (account-store.ts). A device that
 // holds nothing yet sends no timeline and adopts the one its first page states.
@@ -48,7 +50,7 @@ objects.get('/', async (c) => {
   const page = await store(c.env, account.incarnation).feed(account.incarnation, query);
   c.set('storeMs', Date.now() - asked);
   if ('refused' in page || 'unavailable' in page) return refused(c, page);
-  if ('stale' in page || 'reset' in page) return fail(c, 409, 'cache-reset');
+  if ('stale' in page || 'reset' in page) return reset(c);
   c.header(ACCOUNT_USAGE_HEADERS.bytes, String(page.bytes));
   await tellUnread(c);
   return c.json({
@@ -97,7 +99,7 @@ objects.post('/batch', canWrite, throttle, async (c) => {
     c.header(ACCOUNT_USAGE_HEADERS.bytes, String(done.bytes));
     return c.json({ revs: done.revs, timeline: done.timeline } satisfies BatchAnswer);
   }
-  if ('stale' in done) return fail(c, 409, 'cache-reset');
+  if ('stale' in done) return reset(c);
   if ('unavailable' in done) return refused(c, done);
   switch (done.refused) {
     case 'busy':

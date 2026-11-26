@@ -85,7 +85,7 @@ it('restores an account to a time on its operator-only post: its open device dro
   const run = await beginRestore(accountId, { post, at });
   expect(run).toEqual({ ok: true, data: { id: expect.any(Number), phase: 'done', verified: true, error: null } });
   expect(await store.pull()).toEqual({ ok: false, error: 'timeline-changed' });
-  await vi.waitFor(() => expect(rewound).toHaveBeenCalledWith(0));
+  await vi.waitFor(() => expect(rewound).toHaveBeenCalledWith({ dropped: 0, by: 'account' }));
   const reopened = await open();
   expect(await reopened.pull()).toBeNull();
   expect(reopened.list('connection')).toEqual([kept.ok && kept.data]);

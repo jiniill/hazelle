@@ -11,6 +11,10 @@ export type SealedChange = { id: string; kind: string; parent: string | null; re
 export type FeedQuery = { timeline: string | null; since: number; known: number; until: number | null; bootstrap: boolean; metadata: boolean; excluded: string[]; parent: string | null; kind: string | null; count: boolean };
 export type FeedAnswer = { limits: BatchLimits; timeline: string; until?: number; changes: SealedChange[]; cursor: number; more: boolean; total?: number };
 export type BatchAnswer = { revs: number[]; timeline: string };
+// What gave the account the timeline a cache-reset turns a device to: the account's own restore, or the whole service
+// restored from a backup, which starts every account's anew.
+export type TimelineBy = 'account' | 'server';
+export type CacheReset = { by: TimelineBy };
 
 // A feed page stops at its row count or its body budget, always admitting its first row (server/account-store,
 // runtime/account/guest-store). A metadata row is a hundred bytes, so a backup's walk over a whole account takes few round trips.

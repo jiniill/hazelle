@@ -1,5 +1,6 @@
 import type { Context, ExecutionContext } from 'hono';
 import { BEFORE_ARMED, NEWEST_RESTORE_MINUTES, OLDEST_RESTORE_DAYS, SELF_RESTORES_PER_DAY, type Restore, type RestoreAction, type RestoreError, type RestorePhase, type RestorePoint, type RestoreRun, type SnapshotKind } from '../contracts/admin';
+import type { TimelineBy } from '../contracts/objects';
 import type { Life, Unavailable } from './account-store';
 import { landing, RETENTION_MS } from './db/account-db';
 import type { Db } from './db/service-db';
@@ -199,6 +200,10 @@ export async function runRestore(env: Services, id: number): Promise<RestoreRun 
     return end && run(end);
   }
 }
+
+// A restore's row holds the timeline it ended on; a timeline no row holds came from a restored service (backup/restore.ts).
+export const timelineBy = async (db: Db, incarnation: string): Promise<TimelineBy> =>
+  (await db.prepare('SELECT 1 FROM restores r JOIN accounts a ON a.incarnation = r.incarnation AND a.timeline = r.timeline WHERE a.incarnation = ?').bind(incarnation).first()) ? 'account' : 'server';
 
 // Gives the account back with its timeline unchanged, possible only before the rewind is armed. too-late: armed or
 // later, from where an operation only goes forward.

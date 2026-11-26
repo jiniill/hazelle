@@ -1,9 +1,10 @@
 import { ACCOUNT_HEADER, RELAY_HEADER, ACCOUNT_USAGE_HEADERS, PULSE_HEADER, UNREAD_BOARD_HEADER, UNREAD_NOTICES_HEADER, BUILD_HEADER, type ServerError } from '../contracts/http';
+import type { TimelineBy } from '../contracts/objects';
 import { pulseHeader, type PulseLabel } from '../contracts/pulse';
 import { readWorkHeader, WORK_HEADER, type ServerWork } from '../contracts/work';
 import { isRecord } from '../record';
 
-export type ApiFailure = { ok: false; error: string; retryAfter?: number; status?: number };
+export type ApiFailure = { ok: false; error: string; retryAfter?: number; status?: number; by?: TimelineBy };
 export type ApiResult<T> = { ok: true; data: T } | ApiFailure;
 
 // What an answer says of the account the page holds rather than of the request.
@@ -153,7 +154,7 @@ export async function api<T = unknown>(method: 'GET' | 'POST' | 'PUT' | 'DELETE'
   if (response.ok && data !== null) return { ok: true, data: data as T };
   if (isRecord(data) && typeof data.error === 'string') {
     const retryAfter = typeof data.retryAfter === 'number' ? data.retryAfter : undefined;
-    return { ok: false, error: data.error, retryAfter };
+    return { ok: false, error: data.error, retryAfter, ...((data.by === 'account' || data.by === 'server') && { by: data.by }) };
   }
   if (response.status >= 500) return { ok: false, error: 'offline' };
   return { ok: false, error: 'server-error', status: response.status };
