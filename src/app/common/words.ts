@@ -191,6 +191,7 @@ export const DEFAULT_MODELS_FAILED = `${DEFAULT_MODELS}을 바꾸지 못했어�
 export const MODEL_SETTINGS = '모델 설정';
 // Choosing a model: the chat's chip with none chosen, and a key form's button, which the tutorial names.
 export const PICK_MODEL = '모델 선택';
+export const KEY_KEPT = '키는 암호화해서 저장하고, 서버에는 남기지 않아요.';
 
 // A kind of the user's own things: what it is called and what it is counted in.
 export const THINGS: Record<Removable, { noun: string; unit: string }> = {

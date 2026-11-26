@@ -1,9 +1,10 @@
-import { useRef, type KeyboardEvent } from 'react';
+import { useRef, useState, type KeyboardEvent } from 'react';
 import type { GapCause } from '../../contracts/auto-diagnosis';
 import { refOf } from '../../connectors/assignment';
 import { importable } from '../../engine/import/extensions';
 import { toolId } from '../../model/tool';
 import type { DraftAttachment } from '../../runtime/device/drafts';
+import { grantReturn } from '../../runtime/account/grant';
 import { leavingCauses } from '../../runtime/tasks/memory-view';
 import type { Blocked } from '../../runtime/chat/turn-context';
 import { describeTurnFailure } from '../common/failure';
@@ -16,12 +17,13 @@ import type { PromptDoor } from '../common/TaskPrompt';
 import { navigate } from '../shell/router';
 import { SHORTCUTS, typing, useSendKeys, useShortcut } from '../shortcuts';
 import { useDisplay } from '../display';
-import { useRemembering, useSettings, useTools } from '../session';
+import { useConnections, useRemembering, useSettings, useTools } from '../session';
 import { useImport } from '../common/importing';
 import { Attachments, type Attached, Callout, Composer, DropOverlay, Hint, pressed, pressedKey, SendButton, SendNote, titled, useAside, useFileDrop, useMenuOpener } from '../ui';
 import { ChatAsk } from './ChatAsk';
 import { attachTool } from './ChatAttach';
 import { ChatCache } from './ChatCache';
+import { ChatFirstKey, FIRST_KEY, UNCONNECTED } from './ChatFirstKey';
 import { ChatModel } from './ChatModel';
 import { composerTool } from './ChatComposerTools';
 import { illustrateTool } from './ChatIllustrate';
@@ -68,6 +70,10 @@ export function ChatComposer({ chat, fold }: { chat: OpenChat; fold: ComposerFol
     persona: { onClick: () => actions.openDialog('persona') },
     profile: { onClick: () => navigate(profilePage) },
   };
+  // With nothing connected the model menu has nothing to pick, so the chat says so before anything is sent and takes
+  // the first key itself. Open again on the way back from a provider's sign-in, whose key the form inside takes.
+  const [keying, setKeying] = useState(() => grantReturn() !== null);
+  const unconnected = useConnections().length === 0;
   const editPrompt = (door: PromptDoor) => actions.side(promptEditor(door));
   const storedTools = useTools();
   const aside = useAside();
@@ -151,7 +157,9 @@ export function ChatComposer({ chat, fold }: { chat: OpenChat; fold: ComposerFol
 
   return (
     <>
-      {problem && (
+      {keying && <ChatFirstKey onClose={() => setKeying(false)} />}
+      {unconnected && <Callout tone="tip" action={{ label: FIRST_KEY, onClick: () => setKeying(true) }}>{UNCONNECTED}</Callout>}
+      {problem && !unconnected && (
         <Callout tone="warn" action={{ label: FIX[problem.kind].label, onClick: chips[FIX[problem.kind].chip].onClick }}>
           {describeTurnFailure(problem)}
         </Callout>

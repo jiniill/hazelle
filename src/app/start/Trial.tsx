@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type FormEvent } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from 'react';
 import { isFree } from '../../connectors/pricing';
 import type { ConnectionType, LeftMeter, Model } from '../../connectors/types';
 import { countFirstPage } from '../../runtime/service/first-page';
@@ -8,8 +8,8 @@ import { ARIN } from '../common/arin';
 import { describeCatalogFailure, describeFailure, describeKeyFailure, describeTurnFailure } from '../common/failure';
 import { href } from '../shell/routes';
 import { meterLabel, meterLeft } from '../common/meters';
-import { Button, Callout, List, ListItem, Progress, Said, SendRow, Stack, TalkBox, Text, TextField } from '../ui';
-import { searchOf } from '../common/words';
+import { Connecting, ModelPick } from '../common/ModelPick';
+import { Button, Callout, Said, SendRow, Stack, TalkBox, Text, TextField } from '../ui';
 
 type Phase =
   | { kind: 'connecting' }
@@ -49,7 +49,7 @@ export function Trial({ type, secret, kept, onStep, onReplied, onRefused }: { ty
     };
   }, [type, secret]);
 
-  if (phase.kind === 'connecting') return <Progress title="모델 불러오는 중" steps={[{ label: `${type.label} 연결` }]} />;
+  if (phase.kind === 'connecting') return <Connecting type={type} />;
   if (phase.kind === 'listless') {
     return (
       <Stack>
@@ -73,24 +73,6 @@ export function Trial({ type, secret, kept, onStep, onReplied, onRefused }: { ty
     />
   );
 }
-
-function ModelPick({ models, failure, onPick }: { models: Model[]; failure: string | null; onPick: (model: Model) => void }) {
-  const [search, setSearch] = useState('');
-  const shown = useMemo(() => models.filter((model) => `${model.name} ${model.id}`.toLowerCase().includes(search.trim().toLowerCase())), [models, search]);
-  return (
-    <Stack>
-      <TextField label={searchOf('모델')} showLabel={false} placeholder={`모델 ${models.length}개 검색`} help={models.some(isFree) ? FREE_HELP : undefined} value={search} onChange={setSearch} />
-      {failure && <Callout tone="warn" alert>{failure}</Callout>}
-      <List label="모델" box>
-        {/* eslint-disable-next-line no-restricted-syntax -- a picker's first matches, which typing narrows */}
-        {shown.slice(0, MODELS_SHOWN).map((model) => <ListItem key={model.id} title={model.name} code={model.id} tags={isFree(model) ? ['무료'] : undefined} onClick={() => onPick(model)} />)}
-      </List>
-    </Stack>
-  );
-}
-const MODELS_SHOWN = 8;
-// True of every provider's free models, not one's rule: a 0 price also comes from models.dev (Google, Mistral, Groq).
-const FREE_HELP = '무료 모델은 제공자마다 사용 한도가 있고, 대화 내용이 학습에 쓰일 수 있어요.';
 
 function allowanceLine(meter: LeftMeter) {
   const { amount, of } = meterLeft(meter);

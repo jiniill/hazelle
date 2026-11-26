@@ -251,7 +251,8 @@ test('the example conversation never moves the page, and the next notch goes on 
   await expect.poll(scrollTop, { timeout: 5000 }).toBeGreaterThan(stop + 500);
 });
 
-test('the room lets a visitor without a key open the app', async ({ page }) => {
+test('the room lets a visitor without a key open the app, where a chat takes the first key', async ({ page }) => {
+  const seen = await fakeOpenRouter(page);
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await page.evaluate(`document.getElementById('trial').scrollIntoView()`);
@@ -261,14 +262,25 @@ test('the room lets a visitor without a key open the app', async ({ page }) => {
   }
   await page.getByRole('button', { name: '키 없이 둘러보기' }).click();
   await expect(page.getByRole('heading', { name: '비어 있어요', exact: true })).toBeVisible();
-  // A new guest starts with her; with no connection, the model button leads straight to 새 연결.
+  // A new guest starts with her; with no connection, the chat takes the key and the model where it stands.
   await page.getByRole('button', { name: /아린과 대화/ }).click();
+  await expect(page.getByText('저는 아린이에요')).toBeVisible();
+  await expect(page.getByText('아직 연결한 모델이 없어요.')).toBeVisible();
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/chat-unconnected.png` });
+  await page.getByRole('button', { name: '모델 연결', exact: true }).click();
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/chat-first-key.png` });
+  await page.getByRole('button', { name: 'OpenRouter로 무료 시작', exact: true }).click();
+  // Back from the sign-in the dialog stands open again, on the models, the free one first.
+  const first = page.getByRole('dialog', { name: '모델 연결', exact: true }).getByRole('list', { name: '모델' }).getByRole('button').first();
+  await expect(first).toContainText('Gift E2E');
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/chat-first-model.png` });
+  await first.click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.getByText('저는 아린이에요')).toBeVisible();
   await page.getByPlaceholder('메시지').fill('안녕하세요');
   await page.keyboard.press('Enter');
-  await page.getByRole('button', { name: '모델 선택', exact: true }).last().click();
-  await page.getByRole('menuitem', { name: '새 연결' }).click();
-  await expect(page).toHaveURL(/\/connections\/new$/);
+  await expect(page.getByRole('main').getByText('무료로 온 답이에요.')).toBeVisible();
+  expect(seen.said.at(-1)).toContain('maker/gift');
 });
 
 test('someone already using the app can walk it again and try it, uncounted, keeping nothing', async ({ page }) => {
