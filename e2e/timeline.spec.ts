@@ -133,7 +133,7 @@ class FakeServer {
 
   private reset(why: string) {
     this.refused.push(why);
-    return { status: 409, json: { error: 'cache-reset' } };
+    return { status: 409, json: { error: 'cache-reset', by: 'account' } };
   }
 
   private facts() {

@@ -223,8 +223,8 @@ test('a stale timeline is refused by both the batch and the feed without writing
   const account = await ready(request);
   const stale = account.timeline === 'f'.repeat(32) ? '0'.repeat(32) : 'f'.repeat(32);
   const item = write('stale');
-  expect(await json(await batch(request, { ...account, timeline: stale }, [item]), 409)).toEqual({ error: 'cache-reset' });
-  expect(await json(await feed(request, account, { timeline: stale }), 409)).toEqual({ error: 'cache-reset' });
+  expect(await json(await batch(request, { ...account, timeline: stale }, [item]), 409)).toEqual({ error: 'cache-reset', by: 'server' });
+  expect(await json(await feed(request, account, { timeline: stale }), 409)).toEqual({ error: 'cache-reset', by: 'server' });
   expect(inspect(account)).toMatchObject({ objects: 0, head: { rev: 0, bytes: 0, timeline: account.timeline } });
   expect(await json(await batch(request, account, [item]))).toEqual({ revs: [1], timeline: account.timeline });
 });
