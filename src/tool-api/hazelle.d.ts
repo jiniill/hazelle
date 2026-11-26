@@ -38,7 +38,11 @@ declare namespace Hazelle {
   type DecideAnswer = { ok: true; model: string; answers: { [id: string]: Decision } } | { ok: false; reason: ModelRefusal };
   // A picture asked of the chat's image model (삽화's) in the tags or words that model takes; the plugin never learns
   // which model it is. shape: portrait when absent. seed: 0 to 4294967295, random when absent.
-  type DrawRequest = { prompt: string; negative?: string; shape?: 'portrait' | 'landscape' | 'square'; seed?: number };
+  // characters: the figures of the picture, at most 6, each in tags of its own so that one's hair, clothes and pose
+  // are not drawn on another; prompt then holds what is not theirs (how many they are, the place, the framing).
+  type DrawRequest = { prompt: string; negative?: string; characters?: DrawCharacter[]; shape?: 'portrait' | 'landscape' | 'square'; seed?: number };
+  // center: where the figure stands, 0 to 1 from the top left; the middle when absent.
+  type DrawCharacter = { prompt: string; negative?: string; center?: { x: number; y: number } };
   // costs: the picture is not known to cost nothing, and the chat's 삽화 draws such a picture only when asked.
   type DrawAnswer = { ok: true; type: string; bytes: Uint8Array } | { ok: false; reason: ModelRefusal | 'costs' };
   // refused: the relay or the app refused the call, code naming why (not-https, not-public, upstream-redirect,

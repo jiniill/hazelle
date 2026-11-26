@@ -242,12 +242,22 @@ function tuned(picture: IllustratePrompt['picture'], shape: Shape, random: numbe
   return { ...pictureSizes({ picture })[shape], seed, steps, scale, rescale, sampler };
 }
 
+// The most figures a request names (Chat.draw): what every drawing model takes, NovelAI V4.5's six being the fewest.
+export const DRAW_CHARACTERS = 6;
+const isDrawCharacter = (value: unknown): value is Hazelle.DrawCharacter =>
+  isRecord(value) && typeof value.prompt === 'string' && value.prompt.trim() !== '' && (value.negative === undefined || typeof value.negative === 'string')
+  && (value.center === undefined || isRecord(value.center) && isPlace(value.center.x) && isPlace(value.center.y));
+
 export const isDrawRequest = (value: unknown): value is Hazelle.DrawRequest =>
   isRecord(value) && typeof value.prompt === 'string' && value.prompt.trim() !== '' && (value.negative === undefined || typeof value.negative === 'string')
+  && (value.characters === undefined || Array.isArray(value.characters) && value.characters.length <= DRAW_CHARACTERS && value.characters.every(isDrawCharacter))
   && (value.shape === undefined || typeof value.shape === 'string' && Object.hasOwn(SIZES.normal, value.shape))
   && (value.seed === undefined || Number.isInteger(value.seed) && (value.seed as number) >= 0 && (value.seed as number) <= 0xffffffff);
 
 // A picture asked for in its own words (Chat.draw): sized and tuned as picture, a 삽화 prompt's, says, with none of
-// that prompt's tags; the seed asked for stands over the prompt's.
-export const plainPicture = (model: Model, { prompt, negative = '', shape = 'portrait', seed }: Hazelle.DrawRequest, picture: IllustratePrompt['picture'], random: number): PictureRequest =>
-  ({ model, prompt, negative, characters: [], ...tuned(picture, shape, random), ...(seed !== undefined && { seed }) });
+// that prompt's tags; the seed asked for stands over the prompt's. A figure given no place stands in the middle.
+export const plainPicture = (model: Model, { prompt, negative = '', characters = [], shape = 'portrait', seed }: Hazelle.DrawRequest, picture: IllustratePrompt['picture'], random: number): PictureRequest => ({
+  model, prompt, negative,
+  characters: characters.map((each) => ({ prompt: each.prompt, negative: each.negative ?? '', center: each.center ?? { x: 0.5, y: 0.5 } })),
+  ...tuned(picture, shape, random), ...(seed !== undefined && { seed }),
+});
