@@ -19,7 +19,7 @@ const SOURCE_COLUMNS: TableColumn[] = [
   { label: '사이트', track: 'fill' },
   { label: '방문자', track: 'figure' },
 ];
-const SOURCES_HELP = '다른 사이트의 링크로 들어온 방문자를 그 사이트별로 집계해요. 브라우저가 그날 처음 연 페이지만 세고, 사이트 이름 말고는 저장하지 않아요. 링크 없이 왔거나 사이트가 출처를 알려 주지 않은 방문은 빠져요.';
+const SOURCES_HELP = '다른 사이트 링크로 들어온 방문자를 사이트별로 집계해요. 브라우저가 그날 처음 연 페이지만 세고, 사이트 이름 말고는 저장하지 않아요. 링크 없이 왔거나 사이트가 출처를 알려 주지 않은 방문은 빠져요.';
 const COLUMNS: TableColumn[] = [
   { label: '날짜', track: 'fill' },
   { label: '방문자', track: 'figure' },
@@ -102,7 +102,7 @@ export function VisitsSection() {
         }))} />}
       </Panel>
       <Panel title={SOURCES} note="최근 14일 · 한국 시간" help={SOURCES_HELP}>
-        {loaded.data && (loaded.data.sources.length === 0 ? <Empty variant="section">집계된 유입이 없어요.</Empty> : <Table label={SOURCES} columns={SOURCE_COLUMNS} rows={loaded.data.sources.map(({ day, source, visitors }) => ({
+        {loaded.data && (loaded.data.sources.length === 0 ? <Empty variant="section">집계된 유입 기록이 없어요.</Empty> : <Table label={SOURCES} columns={SOURCE_COLUMNS} rows={loaded.data.sources.map(({ day, source, visitors }) => ({
           key: `${day} ${source}`,
           summary: `${source} ${count(visitors)}`,
           cells: [seoulDate(day), source, count(visitors)],

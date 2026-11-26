@@ -528,7 +528,7 @@ export function describeIllustrateFailure(failure: IllustrateFailure): string {
     case 'empty':
       return '내용이 비어 있는 메시지예요.';
     case 'held':
-      return failure.why === 'failed' ? `${failure.name} 플러그인이 삽화를 만들다가 멈췄어요.` : `${failure.name} 플러그인이 삽화를 만들지 않았어요.`;
+      return failure.why === 'failed' ? `${failure.name} 플러그인이 삽화를 만들지 못했어요.` : `${failure.name} 플러그인이 삽화를 만들지 않았어요.`;
     case 'unsaved':
       return `삽화를 저장하지 못했어요. ${describeFailure(failure.failure)}`;
   }

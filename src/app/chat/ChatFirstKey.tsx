@@ -54,7 +54,7 @@ export function ChatFirstKey({ onClose }: { onClose: () => void }) {
       {phase.kind === 'listless' && (
         <Stack>
           <Callout tone="warn" alert>{phase.message}</Callout>
-          <div><Button onClick={() => navigate({ kind: 'connection', id: phase.connection })}>연결에서 이어 가기</Button></div>
+          <div><Button onClick={() => navigate({ kind: 'connection', id: phase.connection })}>연결 설정 이어 가기</Button></div>
         </Stack>
       )}
     </Dialog>

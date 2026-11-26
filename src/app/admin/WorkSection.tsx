@@ -11,7 +11,7 @@ import { Button, Callout, NumberInput, Row, Section, SettingGroup, SettingRow, T
 const TITLE = ACTIONS['set-work'];
 const START = '시작 시각';
 const MINUTES = '예상 시간';
-const HELP = '앱을 열어 둔 사람에게 알림으로 알려요. 시작 시각부터는 서버에 연결되지 않을 때 작업 중이라고 안내해요. 시작 시각이 지난 뒤 서버가 다시 켜지면 예고가 지워져요.';
+const HELP = '앱을 열어 둔 사람에게 알림을 보내요. 시작 시각부터는 서버에 연결되지 않을 때 작업 중이라고 안내해요. 시작 시각이 지난 뒤 서버가 다시 켜지면 예고가 지워져요.';
 const CLOCK = /^([01]?\d|2[0-3]):([0-5]\d)$/;
 
 // The next time the clock reads what was typed.
@@ -46,7 +46,7 @@ export function WorkSection({ work, onSaved }: { work: ServerWork | null; onSave
       title={TITLE}
       action={
         <Button variant="secondary" busy={busy} disabled={at === null || minutes === null} onClick={() => void save({ at: at!, minutes: minutes! })}>
-          예고
+          예고하기
         </Button>
       }
     >
@@ -66,7 +66,7 @@ export function WorkSection({ work, onSaved }: { work: ServerWork | null; onSave
       </SettingGroup>
       {work ? (
         <Row kind="spread">
-          <Text variant="note">{`${workSpan(work, now)} 예고했어요.`}</Text>
+          <Text variant="note">{`${workSpan(work, now)} 작업을 예고했어요.`}</Text>
           <Button variant="secondary" busy={busy} onClick={() => void save(null)}>
             예고 취소
           </Button>
