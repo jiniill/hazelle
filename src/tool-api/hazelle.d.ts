@@ -71,6 +71,13 @@ declare namespace Hazelle {
   // id: what Chat.asset reads it by. saved: the name of the asset this tool saved (Assets) that holds the same file,
   // null when it saved none such.
   interface CardAsset { id: string; name: string; type: string; saved: string | null }
+  // A 삽화 프로필: one figure as the chat's pictures draw it, in the tags the image model reads. aliases: its other
+  // names. look: body and face. outfits: named sets of clothes, the first worn where a scene names none. artist: the
+  // artist tags its pictures lead with. source: user for one the user wrote or changed, else what it was made from.
+  interface Portrait { name: string; aliases: string[]; look: string; outfits: { name: string; tags: string }[]; artist: string; source: 'metadata' | 'vision' | 'text' | 'user' }
+  // owner: whose profiles they are, with that one's id: the chat's character, one of its 등장인물, its persona, or a
+  // module on in it.
+  interface Portraits { owner: { kind: 'character' | 'cast' | 'persona' | 'module'; id: string }; portraits: Portrait[] }
   // What of a card a tool rewrites; greeting takes the place of the first. lore: entries of the character's lorebook,
   // each written over the one of its name, whose other settings stay, or added when it has none; a name the lorebook
   // or the edit holds more than once throws. assets: assets this tool saved, joining the character's under a name,
@@ -90,8 +97,10 @@ declare namespace Hazelle {
   interface Script { name: string; find: string; replace: string; stage: 'input' | 'output' | 'process' | 'display' | 'translation'; flags: string | null }
   // persona: the id of the persona this chat speaks as, null when it is gone. limits: the chat model's context and reply
   // lengths in tokens, null where unknown or no model is set. modules: those on in the chat, in pack order, a
-  // conversation prompt's own included, each with its regex scripts that are on, in its order.
-  interface Setup { persona: string | null; limits: { context: number | null; reply: number | null }; modules: { id: string; name: string; regex: Script[] }[] }
+  // conversation prompt's own included, each with its regex scripts that are on, in its order. illustrate: the chat's
+  // 삽화 as the user set it. auto: the app draws a picture after each reply by itself (자동 삽화), so a plugin that
+  // draws on reply would add a second. note: the chat's 삽화 노트. pov, comic: 페르소나 시점 and 만화 형식.
+  interface Setup { illustrate: { auto: boolean; note: string; pov: boolean; comic: boolean }; persona: string | null; limits: { context: number | null; reply: number | null }; modules: { id: string; name: string; regex: Script[] }[] }
 
   interface ChatState {                         // this tool's own per-chat variables, replayed with the story
     get<T extends Json = Json>(key: string): Promise<T | undefined>;
@@ -126,6 +135,11 @@ declare namespace Hazelle {
     messages(from?: number, to?: number): Promise<Message[]>;
     greeting(): Promise<string | null>;         // the character's opening message, before index 0
     card(): Promise<Card | null>;               // null in a chat with no character
+    cast(): Promise<Card[]>;                    // the chat's 등장인물, in the order they joined, each as card gives the character
+    // The 삽화 프로필 of everyone the chat's pictures draw from, in the order they are read: the packs on in the chat
+    // (its character among them), its 등장인물, its persona. One whose profiles are not made yet has none, and reading
+    // makes none.
+    portraits(): Promise<Portraits[]>;
     readonly state: ChatState;
     readonly variables: ChatVariables;
     readonly data: ChatData;
@@ -163,7 +177,8 @@ declare namespace Hazelle {
     // A picture the chat holds, by the name a message's raw text gives it in {{inlay::name}}: its MIME type and bytes.
     // null when the chat holds no picture by that name; throws when its file cannot be read.
     inlay(name: string): Promise<{ type: string; bytes: Uint8Array } | null>;
-    // One of the card's assets, by its id, as inlay reads a picture. null when the character has none by that id.
+    // An asset of the card or of a 등장인물's (cast), by its id, as inlay reads a picture. null when none of them has
+    // one by that id.
     asset(id: string): Promise<{ type: string; bytes: Uint8Array } | null>;
     // An entry of the chat's own lorebook, taking the place of every one of its name there, as Lua's
     // upsertLocalLoreBook does; lands with the event's outcome.

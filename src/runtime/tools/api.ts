@@ -23,6 +23,9 @@ import type { Lane } from '../evaluation/evaluation';
 import type { RanAway } from '../../engine/pipeline';
 import { changedTail } from '../evaluation/history-delta';
 import { attachIllustration } from '../tasks/illustrate';
+import { chatIllustrate } from '../tasks/features';
+import { portraitOwners } from '../tasks/likeness';
+import { likenessId } from '../../model/likeness';
 import type { ScriptOutcome } from '../scripts/lua/event';
 import { cardAssets } from '../library/characters';
 import { toolLore } from '../library/lore';
@@ -177,9 +180,7 @@ function trialCall(entry: Entry, trial: EntryTrial, method: string, first: unkno
 const scriptsOf = ({ regex }: Pack): Hazelle.Script[] => regex.flatMap(({ name, find, replace, stage, flags, off }) => off ? [] : [{ name, find, replace, stage, flags }]);
 // saved: a file a module holds is one its tool saved only under the id a save gives that name (toolAssetId); another
 // asset of the module is the user's.
-async function cardOf(store: Session['store'], module: string, character: string | null, scope: ChatScope): Promise<Hazelle.Card | null> {
-  const { card } = scope;
-  if (!card || character === null) return null;
+async function cardOf(store: Session['store'], module: string, character: string, card: NonNullable<ChatScope['card']>): Promise<Hazelle.Card> {
   const held = store.children('asset', module);
   const assets = await Promise.all(cardAssets(store, character).map(async ({ id, value }) => {
     const same = held.find((asset) => asset.value.file.id === value.file.id);
@@ -410,10 +411,21 @@ export class ToolApi {
           frame.messages = messages;
           return tail;
         }
-        if (method === 'chat.card') return cardOf(this.session.store, entry.module, live(this.session.store.get('chat', context.chat))?.value.character ?? null, context.scope);
+        if (method === 'chat.card') {
+          const character = live(this.session.store.get('chat', context.chat))?.value.character ?? null;
+          return character === null || !context.scope.card ? null : cardOf(this.session.store, entry.module, character, context.scope.card);
+        }
+        if (method === 'chat.cast') return Promise.all(context.scope.cast.map(({ id, card }) => cardOf(this.session.store, entry.module, id, card)));
+        if (method === 'chat.portraits') {
+          const { store } = this.session;
+          const chat = live(store.get('chat', context.chat))!.value;
+          const cast = new Set(context.scope.cast.map(({ id }) => id));
+          const kind = (owner: string) => owner === chat.character ? 'character' : cast.has(owner) ? 'cast' : store.get('persona', owner) ? 'persona' : 'module';
+          return portraitOwners(store, chat).map((id) => ({ owner: { kind: kind(id), id }, portraits: store.get('likeness', likenessId(id))?.value.portraits ?? [] })) satisfies Hazelle.Portraits[];
+        }
         if (method === 'chat.asset' && typeof first === 'string') {
           const character = live(this.session.store.get('chat', context.chat))?.value.character ?? null;
-          const asset = character === null ? undefined : cardAssets(this.session.store, character).find(({ id }) => id === first);
+          const asset = [...(character === null ? [] : [character]), ...context.scope.cast.map(({ id }) => id)].flatMap((owner) => cardAssets(this.session.store, owner)).find(({ id }) => id === first);
           if (!asset) return null;
           const read = await this.session.files.read(asset.value.file, { signal: context.signal });
           if (!read.ok) throw new Error(read.error);
@@ -432,7 +444,9 @@ export class ToolApi {
           const { store } = this.session;
           const chat = live(store.get('chat', context.chat))!.value;
           const persona = chatPersona(store, chat);
+          const { auto, pov, comic } = chatIllustrate(store, chat);
           return {
+            illustrate: { auto, note: chat.illustrateNote ?? '', pov, comic },
             persona: persona.kind === 'persona' ? persona.persona.id : null,
             limits: limitsOf(store, chat),
             modules: packsOf(store, chat).flatMap(({ id, pack, module }) => module ? [{ id, name: store.get('module', id)!.value.name, regex: scriptsOf(pack) }] : []),

@@ -12,6 +12,7 @@ import { SIGNATURE } from '../../engine/assets';
 import { keepAttachments } from '../files/attachments';
 import { appendScripted, appendTranslation, appendUserMessage, editMessage, startChat } from '../chat/chat-log';
 import { setModuleAlways, setModuleDeleted } from '../library/modules';
+import { importPortraits } from '../tasks/likeness';
 import { ToolLate, ToolStuck } from '../scripts/binding';
 import type { Session } from '../session';
 import { answerable, stubRelay, testServer } from '../testing';
@@ -1065,7 +1066,7 @@ it('reads the chat\'s lorebook by owner, how the chat is set up with its modules
     const account = await api.account();
     expect(account.characters).toEqual([{ id: character, name: 'Mira' }]);
     const setup = await api.page!.chat!.setup();
-    expect(setup).toEqual({ persona: account.personas.find(({ current }) => current)?.id ?? null, limits: { context: null, reply: null }, modules: [{ id: f.module, name: 'test', regex: [bold] }] });
+    expect(setup).toEqual({ illustrate: { auto: false, note: '', pov: false, comic: false }, persona: account.personas.find(({ current }) => current)?.id ?? null, limits: { context: null, reply: null }, modules: [{ id: f.module, name: 'test', regex: [bold] }] });
   } finally { close(); host.close(); }
 }));
 
@@ -1158,6 +1159,32 @@ it('reads the card\'s later greetings, scripts that are on and own assets, and a
     await expect(chat.editCard({ lore: [{ ...entry, name: '' }] })).rejects.toThrow('More than one lore entry is named ');
     await expect(chat.editCard({ lore: [entry, entry] })).rejects.toThrow('More than one lore entry is named Data');
     await expect(chat.editCard({ assets: [{ name: 'x', saved: 'none' }] })).rejects.toThrow('This tool saved no asset named none');
+  } finally { close(); host.close(); }
+}));
+
+it('reads the cards and assets of the chat\'s 등장인물 and the 삽화 프로필 of everyone in it, making none', () => withTools(async (session, connect) => {
+  const f = await fixture(session, undefined, 'Hello.');
+  const character = session.store.get('chat', f.chat)!.value.character!;
+  const guest = await session.store.create('character', { card: { ...blankCard('Noa'), description: 'A pilot' }, folder: null, loreFolders: [] });
+  if (!guest.ok) throw new Error(guest.error);
+  const wing = new Uint8Array([137, 80, 78, 71, 3]);
+  const held = await session.files.save([wing]);
+  if (!held.ok) throw new Error(held.error);
+  await session.store.create('asset', { name: 'wing', type: 'image/png', size: 5, file: held.data[0]! }, { parent: guest.data.id });
+  await session.store.update('chat', f.chat, (chat) => ({ ...chat, cast: [guest.data.id] }));
+  const portrait = { name: 'Noa', aliases: [], look: 'girl, short hair', outfits: [{ name: 'flight', tags: 'flight suit' }], artist: '', source: 'user' as const };
+  await importPortraits(session.store, guest.data.id, [portrait]);
+  const transport = inProcessTools(() => {});
+  const host = connect(transport.open);
+  const close = host.page(f.module, page(f.chat));
+  try {
+    await vi.waitFor(() => expect(transport.frames[0]?.api).not.toBeNull());
+    const chat = transport.frames[0]!.api!.page!.chat!;
+    const cast = await chat.cast();
+    expect(cast).toMatchObject([{ id: guest.data.id, name: 'Noa', description: 'A pilot', assets: [{ name: 'wing', saved: null }] }]);
+    expect(await chat.asset(cast[0]!.assets[0]!.id)).toEqual({ type: 'image/png', bytes: wing });
+    expect(await chat.portraits()).toEqual(expect.arrayContaining([{ owner: { kind: 'character', id: character }, portraits: [] }, { owner: { kind: 'module', id: f.module }, portraits: [] }, { owner: { kind: 'cast', id: guest.data.id }, portraits: [portrait] }]));
+    expect(session.store.list('likeness')).toHaveLength(1);
   } finally { close(); host.close(); }
 }));
 

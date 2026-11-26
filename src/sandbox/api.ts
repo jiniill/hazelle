@@ -106,6 +106,8 @@ export function connectApi(port: Port, execute: (code: string, api: Hazelle.Api)
       },
       greeting: () => call<string | null>('chat.greeting', [], event),
       card: () => call<Hazelle.Card | null>('chat.card', [], event),
+      cast: () => call('chat.cast', [], event),
+      portraits: () => call('chat.portraits', [], event),
       state: {
         get: <T extends Json>(key: string) => overlaid<T>('writes', 'chat.state.get', key),
         set: (key, value) => { pending().writes.set(key, value); changed(); },

@@ -89,6 +89,14 @@ export async function importPortraits(store: ObjectStore, owner: string, portrai
   return written.ok ? { ok: true, data: { before, replaced: merged.replaced } } : written;
 }
 
+// Whose portraits a chat's pictures draw from, in pack → cast → persona order. A 등장인물 is drawn from its own card's
+// portraits, after the packs, as its lorebook and pictures are read.
+export function portraitOwners(store: ObjectStore, chat: Chat): string[] {
+  const cast = (chat.cast ?? []).filter((member) => live(store.get('character', member)));
+  const persona = chatPersona(store, chat);
+  return [...new Set([...packsOf(store, chat).map(({ id }) => id), ...cast, ...(persona.kind === 'persona' ? [persona.persona.id] : [])])];
+}
+
 export const removeLikeness = (store: ObjectStore, owner: string) => store.take('likeness', likenessId(owner));
 
 export const restoreLikeness = (store: ObjectStore, before: Stored<'likeness'>) => store.restore(before);
@@ -109,10 +117,7 @@ export class Likenesses {
   // Build missing profiles first in pack → cast → persona order; failures omit that owner, never the picture.
   async portraits(chat: Chat, signal: AbortSignal): Promise<Portrait[]> {
     const { store } = this.deps;
-    // A 등장인물 is drawn from its own card's portraits, after the packs, as its lorebook and pictures are read.
-    const cast = (chat.cast ?? []).filter((member) => live(store.get('character', member)));
-    const persona = chatPersona(store, chat);
-    const owners = [...new Set([...packsOf(store, chat).map(({ id }) => id), ...cast, ...(persona.kind === 'persona' ? [persona.persona.id] : [])])];
+    const owners = portraitOwners(store, chat);
     await Promise.all(owners.filter((owner) => !store.get('likeness', likenessId(owner))).map((owner) => this.start(owner, chat, signal)));
     return owners.flatMap((owner) => store.get('likeness', likenessId(owner))?.value.portraits ?? []);
   }
