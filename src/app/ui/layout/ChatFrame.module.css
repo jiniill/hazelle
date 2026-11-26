@@ -16,8 +16,10 @@
   /* The story's left edge: centred alone, or centred with its stage (ChatFrame.tsx), never nearer the page's edge than
      --read-stage-least. */
   --story-lead: max(0px, calc((100% - var(--read-width)) / 2));
-  /* Bound stage illustrations by header/composer room minus foot so sticky MarginPictures cannot overlap the composer. */
-  --story-illustration-most: calc(100dvh - var(--header-height) - var(--footer-space) - var(--control-chip) - 3 * var(--space-8));
+  /* Bound stage illustrations by header/composer room minus foot so sticky MarginPictures cannot overlap the composer. The
+     composer's height is taken off on each picture's frame (StoryPicture), since a length here that moves restyles every
+     story. */
+  --story-illustration-room: calc(100dvh - var(--header-height) - var(--control-chip) - 3 * var(--space-8));
   /* What the 맨 아래로 pill (.above) takes above the footer. A message's foot rises by it (StoryMessage.module.css), so the
      story's end reaches past it: else the last foot counts as stuck even at the very end and hides its switcher. */
   --story-pill-room: calc(var(--space-12) + var(--control-chip) + var(--space-8));

@@ -5,9 +5,11 @@
   margin: 0;
 }
 
-/* --ratio is the picture's width over its height, set by StoryPicture. --picture-grow and --picture-at-end are set where
-   it stands on the stage (MarginPictures): on a stage left of the story, a picture stands at its right, by the text. */
+/* --ratio is the picture's width over its height and --footer-space the composer's height, set by StoryPicture.
+   --picture-grow and --picture-at-end are set where it stands on the stage (MarginPictures): on a stage left of the
+   story, a picture stands at its right, by the text. */
 .frame {
+  --story-illustration-most: calc(var(--story-illustration-room) - var(--footer-space));
   --fitted: min(100%, calc(var(--story-illustration-most) * var(--ratio)));
   --grown: min(max(100%, var(--picture-grow, 100%)), calc(var(--story-illustration-most) * var(--ratio)));
 

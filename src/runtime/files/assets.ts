@@ -30,6 +30,7 @@ export class AssetUrls {
   private readonly changes = new ChangeSignal();
   private readonly unsubscribe: () => void;
   private version = 0;
+  private telling = false;
   private closed = false;
 
   constructor(
@@ -55,7 +56,18 @@ export class AssetUrls {
         }
         changed = true;
       }
-      if (changed) this.changes.notify();
+      if (changed) this.changed();
+    });
+  }
+
+  // Told on a later task, once for all that changed before it: pictures that land in a burst move a watch once, so a bot's
+  // CSS that names them builds the chat's sheet once.
+  private changed() {
+    if (this.telling) return;
+    this.telling = true;
+    setTimeout(() => {
+      this.telling = false;
+      this.changes.notify();
     });
   }
 
@@ -142,7 +154,7 @@ export class AssetUrls {
         loading.bytes = read.data.byteLength;
         loading.stamp = ++this.version;
         if (!this.pins.has(file.id)) this.rest(file.id, loading);
-        this.changes.notify();
+        this.changed();
       });
     }
     named(file.id, cached.stamp);

@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { expect, it } from 'vitest';
 import { Veil, VeilContext } from '../foundation/veil';
+import { FooterSpace } from '../layout/ChatFrame';
 import { StoryPicture } from './StoryPicture';
 
 it('puts 가리기 on a picture tapped open only while the veil is on', () => {
@@ -25,4 +26,9 @@ it('makes a shown picture the button that enlarges it, and a veiled one not', ()
 it('steps through no versions when its place holds one', () => {
   const picture = <StoryPicture src="blob:x" label="삽화" width={2} height={3} pages={{ at: 0, versions: ['12:00'], onPage: () => {} }} />;
   expect(renderToStaticMarkup(picture)).not.toContain('figcaption');
+});
+
+it('takes the composer height off its own frame, from the chat it stands in', () => {
+  const picture = <StoryPicture src="blob:x" label="삽화" width={2} height={3} />;
+  expect(renderToStaticMarkup(<FooterSpace.Provider value={120}>{picture}</FooterSpace.Provider>)).toContain('--footer-space:120px');
 });

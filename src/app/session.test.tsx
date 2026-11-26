@@ -134,11 +134,15 @@ function mountedPictures() {
   }
   return {
     shown, revoke, read,
-    render: (rows: [string, string][]) => act(() => root.render(
-      <SessionProvider session={session} account={account}>
-        {rows.map(([row, picture]) => <Row key={row} row={row} picture={picture} />)}
-      </SessionProvider>,
-    )),
+    // And the task its pictures are told in, once read.
+    render: async (rows: [string, string][]) => {
+      await act(() => root.render(
+        <SessionProvider session={session} account={account}>
+          {rows.map(([row, picture]) => <Row key={row} row={row} picture={picture} />)}
+        </SessionProvider>,
+      ));
+      await act(() => new Promise((resolve) => setTimeout(resolve)));
+    },
     close: async () => {
       await act(() => root.unmount());
       assets.close();

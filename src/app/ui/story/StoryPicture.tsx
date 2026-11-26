@@ -1,5 +1,6 @@
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { useContext, useState, type CSSProperties, type ReactNode } from 'react';
 import { useVeilTaps } from '../foundation/veil';
+import { FooterSpace } from '../layout/ChatFrame';
 import { PictureView } from '../overlays/PictureView';
 import styles from './StoryPicture.module.css';
 import { Switcher } from './Switcher';
@@ -22,10 +23,11 @@ export function StoryPicture({ src, label, width, height, status, foot, pages }:
   const step = (by: -1 | 1) => pages!.onPage((pages!.at + by + count) % count);
   const { veil } = useVeilTaps();
   const [open, setOpen] = useState(false);
+  const footer = useContext(FooterSpace);
   const veiled = veil !== null && src !== undefined && !open && !veil.shows(src);
   return (
     <figure className={styles.picture}>
-      <div className={status ? `${styles.frame} ${styles.making}` : styles.frame} style={{ '--ratio': width / height } as CSSProperties}>
+      <div className={status ? `${styles.frame} ${styles.making}` : styles.frame} style={{ '--ratio': width / height, '--footer-space': `${footer}px` } as CSSProperties}>
         {status ? (
           <span className={styles.status}>{status}</span>
         ) : veiled ? (
