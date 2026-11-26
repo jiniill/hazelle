@@ -66,7 +66,7 @@ function isQuestion(value: unknown): value is Question {
   return value.kind === 'select' && (value.text === undefined || typeof value.text === 'string') && Array.isArray(value.options) && value.options.every((option) => typeof option === 'string');
 }
 function isModelMessages(value: unknown): value is ModelMessage[] {
-  return Array.isArray(value) && value.every((message) => isRecord(message) && (message.role === 'system' || message.role === 'user' || message.role === 'assistant') && typeof message.content === 'string');
+  return Array.isArray(value) && value.every((message) => isRecord(message) && (message.role === 'system' || message.role === 'user' || message.role === 'assistant') && typeof message.content === 'string' && (message.cache === undefined || message.cache === true));
 }
 // A tool's fetch as the sandbox sends it: one of the relay's methods, text headers, and a body of text or bytes, never
 // with GET.
@@ -95,7 +95,7 @@ const isCardEdit = (value: unknown): value is Hazelle.CardEdit => isRecord(value
     : key === 'lore' ? Array.isArray(field) && field.every(isLore)
     : key === 'assets' && Array.isArray(field) && field.every((asset) => isRecord(asset) && typeof asset.name === 'string' && typeof asset.saved === 'string'));
 const isRequestMessages = (value: unknown): value is Hazelle.RequestMessage[] => Array.isArray(value) && value.every((message) => isModelMessages([message])
-  && (message.message === undefined || typeof message.message === 'string') && (message.cache === undefined || message.cache === true));
+  && (message.message === undefined || typeof message.message === 'string'));
 const answers = (event: ToolEvent['kind'] | undefined, value: unknown) => {
   if (value === undefined) return true;
   switch (event) {
@@ -461,7 +461,7 @@ export class ToolApi {
         if (method === 'model' && typeof first === 'string' && isModelMessages(second)) {
           if (first !== 'main' && first !== 'aux' && !entry.tool.manifest.models?.some(({ id }) => id === first)) throw new Error(`No model named ${first}: declare it with //@model`);
           if (!entry.tool.manifest.uses.includes('model')) return { ok: false, reason: 'not-declared' };
-          const result = await context.host.model(first, second.map(({ role, content }) => ({ role, content })), owner, context.signal);
+          const result = await context.host.model(first, second.map(({ role, content, cache }) => ({ role, content, ...(cache && { cache }) })), owner, context.signal);
           return result.success ? { ok: true, text: result.result } : { ok: false, reason: result.reason };
         }
         if (method === 'fetch' && typeof first === 'string' && URL.canParse(first) && isRequest(second)) {

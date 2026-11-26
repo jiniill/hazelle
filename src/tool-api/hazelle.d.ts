@@ -8,10 +8,11 @@ declare namespace Hazelle {
   // its text is the user's own words and raw the translation sent.
   interface Message { index: number; id: string; version: string; role: Role; text: string; raw: string; time: number; translation: { text: string; sent: boolean } | null }
   type At = { index: number; id: string; version: string };
-  interface ModelMessage { role: 'system' | 'user' | 'assistant'; content: string }
+  // cache marks the end of a prefix the provider caches, where the model called has its cache on; a request keeps at
+  // most four, the first three and the last.
+  interface ModelMessage { role: 'system' | 'user' | 'assistant'; content: string; cache?: true }
   // Retaining message on a replacement request message preserves its pictures.
-  // cache marks the end of the provider-cached prefix.
-  interface RequestMessage extends ModelMessage { message?: string; cache?: true }
+  interface RequestMessage extends ModelMessage { message?: string }
   // A message about to be shown; at: null for the greeting.
   type Shown = { at: At | null; text: string };
   // flood: past 20 model, embed, decide, draw and fetch calls a minute in the chat, its bot's scripts and every tool counted together.

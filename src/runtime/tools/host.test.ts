@@ -342,6 +342,21 @@ it('refuses undeclared spending and forged event contexts, and isolates module s
   } finally { host.close(); }
 }));
 
+it('passes a model call its cache points and nothing else of a message', () => withTools(async (session, connect) => {
+  const f = await fixture(session);
+  const transport = inProcessTools((api) => api.on('prompt', async (chat) => {
+    await chat.model('aux', [{ role: 'system', content: 'rules', cache: true, extra: 1 } as Hazelle.ModelMessage, { role: 'user', content: 'hi' }]);
+    return null;
+  }));
+  const host = connect(transport.open);
+  try {
+    const context = f.context();
+    const model = vi.fn<Host['model']>(() => Promise.resolve({ success: true, result: '' }));
+    await host.run(f.chat, f.tool(), context.scope, { kind: 'prompt', turn: { memory: false } }, { ...context.host, model });
+    expect(model.mock.calls[0]![1]).toEqual([{ role: 'system', content: 'rules', cache: true }, { role: 'user', content: 'hi' }]);
+  } finally { host.close(); }
+}));
+
 it('hands a tool a bot script\'s model call with the model it asks for, takes the list it answers, refuses one that is no message list and saves nothing in it', () => withTools(async (session, connect) => {
   const f = await fixture(session);
   let wrote = '';
