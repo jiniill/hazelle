@@ -309,6 +309,11 @@ describe('OpenRouter hosts', () => {
     ]);
   });
 
+  it('names the app on every call it authorizes', () => {
+    const route = connection('openrouter');
+    expect(withCredential(route, route.codec.listModels(route.endpoint!), 'sk-or-v1-x').headers).toEqual({ authorization: 'Bearer sk-or-v1-x', 'HTTP-Referer': 'https://hazelle.app', 'X-OpenRouter-Title': 'Hazelle', 'X-OpenRouter-Categories': 'roleplay' });
+  });
+
   it('sends a picked host alone, and flex where 할인 받기 is on', () => {
     const body = JSON.parse(prepareChat(connection('openrouter'), { model: { ...model(), host: 'google-ai-studio' }, messages: [{ role: 'user', content: '안녕' }], settings: { discount: true } }).request.body!);
     expect(body).toMatchObject({ provider: { order: ['google-ai-studio'], allow_fallbacks: false }, service_tier: 'flex' });

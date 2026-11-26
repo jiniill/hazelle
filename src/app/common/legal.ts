@@ -1,3 +1,4 @@
+import { HOSTED } from '../../contracts/installation';
 import { AUTO_KEEP_DAYS } from '../../contracts/auto-diagnosis';
 import { GUESTS_PER_ADDRESS, KEEP_YEARS, RETENTION_DAYS, SELF_RESTORES_PER_DAY, VISITORS_PER_ADDRESS } from '../../contracts/admin';
 import { COMMENTS_PER_DAY, GUEST_ADDRESS_CAP_MULTIPLIER, HOLD_DAYS_MAX, POSTS_PER_DAY } from '../../contracts/board';
@@ -19,6 +20,7 @@ export type LegalText = { path: string; title: string; sections: { title: string
 
 export const CONTACT = 'contact@hazelle.app';
 const ASK = `문의는 게시판에서 운영자에게만 보내기로 보내 주시기 바랍니다. 계정이 없거나 로그인할 수 없으면 ${CONTACT}으로 보내 주시기 바랍니다.`;
+const OPENROUTER_NAMED = `OpenRouter에 보내는 요청에는 앱의 이름(Hazelle), 주소(${HOSTED}), 분류(roleplay)가 함께 전달됩니다. OpenRouter는 이를 앱별 사용량 집계와 순위 표시에 사용합니다.`;
 
 export const TERMS: LegalText = {
   path: '/terms',
@@ -248,6 +250,7 @@ export const PRIVACY: LegalText = {
           '응답은 탭을 닫거나 새로 고쳐도 끝까지 받을 수 있도록 서버에 암호화된 상태로 일시 저장합니다. 암호화에 쓴 키는 저장하지 않으므로 운영자도 열 수 없습니다. 응답이 채팅에 저장되면 즉시 삭제하고, 어느 기기도 받으러 오지 않으면 하루 뒤에 삭제합니다.',
           '전송한 요청의 원문은 저장하지 않습니다. 페이지를 닫으면 사라집니다.',
           '손님의 호출은 위 내용 대신 "손님"에 적은 대로 브라우저가 직접 보냅니다.',
+          OPENROUTER_NAMED,
           '제공자가 전달받은 내용을 처리하는 방법은 해당 제공자의 개인정보 처리방침에 따릅니다.',
         ],
       ],
@@ -349,6 +352,7 @@ export const OUTBOUND: LegalText = {
       body: [
         [
           '모델 호출과 모델 목록 조회는 이 설치의 서버가 이용자가 연결한 제공자에게 보냅니다. 제공자는 이 서버의 IP 주소를 알 수 있습니다.',
+          OPENROUTER_NAMED,
           '모델 정보(가격, 컨텍스트 길이)는 이 서버가 models.dev에서 받아 옵니다.',
           '이 서버가 한 시간마다 GitHub에 최신 버전을 묻습니다. 윈도우에서 도커 없이 쓰면 켤 때마다 한 번 더 묻습니다.',
         ],

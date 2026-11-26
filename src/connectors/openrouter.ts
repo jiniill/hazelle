@@ -1,9 +1,12 @@
-import { bareModel, listedSettings } from './chat-completions';
+import { bareModel, chatCompletions, listedSettings } from './chat-completions';
 import { effortLevels, type ReasoningTakes } from './settings';
 import { statedPrice } from './pricing';
 import type { ConnectionType, Host, Meter, MeterReset, Model } from './types';
 import { amount, count, modalities, modelEntries, perMillion } from './values';
 import { isRecord } from '../record';
+import { HOSTED } from '../contracts/installation';
+
+const APP = 'Hazelle';
 
 // mandatory: reasoning cannot be turned off. supports_max_tokens: a token budget can be asked for.
 function reasoningTakes(raw: Record<string, unknown>): ReasoningTakes {
@@ -103,10 +106,14 @@ export const openRouter: ConnectionType = {
   // The code runs out 10 minutes after the page hands it over.
   grant: {
     site: 'openrouter.ai',
-    page: (challenge, state, back) => `https://openrouter.ai/auth?${new URLSearchParams({ callback_url: back, code_challenge: challenge, code_challenge_method: 'S256', state, key_label: 'Hazelle' })}`,
+    page: (challenge, state, back) => `https://openrouter.ai/auth?${new URLSearchParams({ callback_url: back, code_challenge: challenge, code_challenge_method: 'S256', state, key_label: APP })}`,
     exchange: (code, verifier) => ({ url: 'https://openrouter.ai/api/v1/auth/keys', method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code, code_verifier: verifier, code_challenge_method: 'S256' }) }),
     parse: (payload) => (isRecord(payload) && typeof payload.key === 'string' && payload.key ? payload.key : null),
   },
+
+  // App attribution (openrouter.ai/docs/app-attribution): the address is the app's identity there, so a self-host
+  // names hazelle.app too and never its own.
+  headers: (secret) => ({ ...chatCompletions.authHeaders(secret), 'HTTP-Referer': HOSTED, 'X-OpenRouter-Title': APP, 'X-OpenRouter-Categories': 'roleplay' }),
 
   reasoningBudget: (tokens) => ({ reasoning: { max_tokens: tokens } }),
 
