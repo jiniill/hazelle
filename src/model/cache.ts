@@ -55,7 +55,8 @@ export type CacheCause =
   | { kind: 'tag'; tag: string; before: string; after: string; script?: true }
   | { kind: 'lore'; id: string; name: string; before: CacheLore | null; after: CacheLore | null }
   | { kind: 'moved'; before: number; after: number; depth: number | null }
-  | { kind: 'edited' | 'memory' | 'unknown' };
+  // request: the bot's scripts rewrote the message as it was sent (editRequest).
+  | { kind: 'edited' | 'memory' | 'request' | 'unknown' };
 export type CacheLore = { fired: true; why: Fired['why'] } | { fired: false; why: Silent['why'] };
 // Positions address wire order. A null diff lacks text; an empty causes list lacks even a provable cause.
 // unknown is reserved for text we compared but cannot attribute. missing counts the null diffs.
@@ -98,7 +99,8 @@ export type CacheShortfall = { expected: number; actual: number; ratio: number |
 // Page memory only, alongside the request log; index is the prompt position, not the wire position.
 export type CacheText = { content: string; index: number }[];
 
-export type CacheComparison = { forecast: Forecast; before: { prompt?: Assembled; wire?: CacheText } | null; after: { prompt: Assembled; wire: CacheText } };
+// rewritten: the prompt positions whose message the bot's scripts rewrote as it was sent.
+export type CacheComparison = { forecast: Forecast; before: { prompt?: Assembled; wire?: CacheText } | null; after: { prompt: Assembled; wire: CacheText; rewritten?: number[] } };
 
 // Diagnosis replays source, matching rendered to actual wire text; no per-send trace is stored.
 // place pairs renders across sends by part id or `${id}:…` for split parts.

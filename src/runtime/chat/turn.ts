@@ -236,7 +236,11 @@ async function prepare(session: Session, chat: string, gathered: TurnContext, si
   const last = prior(session.store, chat, session.read.chat(chat).snapshot()!.messages, Date.now());
   const predicted = send && forecast(last, send);
   const against = predicted?.against;
-  const diagnose: Ask['diagnose'] = predicted && needsDiagnosis(predicted) ? (prompt, wire) => diagnoseCache(session.store.evaluation, chat, scope, predicted, last ? session.log.entry(chat, last.print.call) : null, prompt, wire) : undefined;
+  // Message for message while the scripts and 토큰 절약 kept their count, so a position names the same message in both.
+  const scripted = prompt.messages.length === sent.messages.length && prompt.messages.length === requested.messages.length
+    ? prompt.messages.flatMap((message, index) => (JSON.stringify(message) === JSON.stringify(requested.messages[index]) ? [] : [index]))
+    : [];
+  const diagnose: Ask['diagnose'] = predicted && needsDiagnosis(predicted) ? (prompt, wire) => diagnoseCache(session.store.evaluation, chat, scope, predicted, last ? session.log.entry(chat, last.print.call) : null, prompt, wire, undefined, scripted) : undefined;
   const refit: Ask['refit'] = async (refusal, measurement) => {
     const decision = calibration.refused(refusal, measurement);
     if (!decision) return null;

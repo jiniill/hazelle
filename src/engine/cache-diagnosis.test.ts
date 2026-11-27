@@ -89,3 +89,9 @@ it('marks a changed tag that read a variable the bot\'s scripts write', () => {
   expect(cacheTags('Mood sad.', 'Mood glad.', 'Mood {{getvar::mood}}.', trace, new Set(['mood']))).toEqual([{ kind: 'tag', tag: '{{getvar::mood}}', before: 'sad', after: 'glad', script: true }]);
   expect(cacheTags('Mood sad.', 'Mood glad.', 'Mood {{getvar::mood}}.', trace, new Set(['other']))).toEqual([{ kind: 'tag', tag: '{{getvar::mood}}', before: 'sad', after: 'glad' }]);
 });
+
+it('names the bot\'s scripts where they rewrote the changed message as it was sent, and nothing else explains it', () => {
+  const input = comparison(prompt('Old text.'), prompt('New text.'));
+  expect(cacheDiagnosis(input, scope).parts[0]!.causes).toEqual([{ kind: 'unknown' }]);
+  expect(cacheDiagnosis({ ...input, after: { ...input.after, rewritten: [0] } }, scope).parts[0]!.causes).toEqual([{ kind: 'request' }]);
+});

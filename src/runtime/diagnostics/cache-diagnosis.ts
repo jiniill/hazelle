@@ -9,9 +9,9 @@ import { tokenProjection } from '../models/token-calibration';
 
 export const needsDiagnosis = (forecast: Forecast) => !!forecast.against?.broken || forecast.parts.some(({ change }) => change !== null) || forecast.removed.length > 0;
 
-export function diagnoseCache(evaluation: Evaluation, chat: string, scope: ChatScope, forecast: Forecast, before: LogEntry | null, prompt: Assembled, wire: CacheText, signal?: AbortSignal): Promise<CacheDiagnosis | null> {
+export function diagnoseCache(evaluation: Evaluation, chat: string, scope: ChatScope, forecast: Forecast, before: LogEntry | null, prompt: Assembled, wire: CacheText, signal?: AbortSignal, rewritten?: number[]): Promise<CacheDiagnosis | null> {
   if (!needsDiagnosis(forecast)) return Promise.resolve(null);
-  return evaluation.cacheDiagnosis(chat, scope, { forecast, before: before && { prompt: before.prompt, wire: before.wire }, after: { prompt, wire } }, signal).catch(() => null);
+  return evaluation.cacheDiagnosis(chat, scope, { forecast, before: before && { prompt: before.prompt, wire: before.wire }, after: { prompt, wire, ...(rewritten && { rewritten }) } }, signal).catch(() => null);
 }
 
 // The chat's reply calls, newest first, each once, at the earliest version that holds it.

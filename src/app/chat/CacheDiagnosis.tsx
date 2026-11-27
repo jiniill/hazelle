@@ -53,6 +53,8 @@ function cause(cause: CacheCause): { line: string; shown?: ReactNode; help: stri
       return { line: '대화 메시지가 수정됐어요.', help: null };
     case 'memory':
       return { line: '장기 기억이 새로 정리됐어요.', help: '장기 기억이 새로 정리될 때마다 그 뒤에 오는 내용의 캐시가 한 번 깨져요.' };
+    case 'request':
+      return { line: '봇 스크립트가 보내기 직전에 이 메시지를 고쳐 썼어요.', help: '봇의 Lua(editRequest)가 매번 다르게 고쳐 쓰면 그 뒤의 캐시를 읽지 못해요.' };
     case 'unknown':
       return { line: '정확한 원인을 찾지 못했어요.', help: '스크립트나 토큰 절약이 보낼 내용을 바꿨거나, 여러 항목이 합쳐진 부분일 수 있어요.' };
   }
@@ -70,7 +72,7 @@ export function breakCauses(diagnosis: CacheDiagnosis | null | undefined, broken
 export const diagnosed = (diagnosis: CacheDiagnosis | null | undefined, kind: BrokenPart['kind'], at: number) =>
   diagnosis?.parts.find((part) => part.kind === kind && (kind === 'removed' ? part.before : part.after) === at) ?? null;
 
-const CAUSES: Record<CacheCause['kind'], string> = { tag: '값 바뀜', lore: '켜졌다 꺼짐', moved: '자리 밀림', edited: '메시지 수정', memory: '기억 정리', unknown: '원인 모름' };
+const CAUSES: Record<CacheCause['kind'], string> = { tag: '값 바뀜', lore: '켜졌다 꺼짐', moved: '자리 밀림', edited: '메시지 수정', memory: '기억 정리', request: '스크립트가 고침', unknown: '원인 모름' };
 // What kind of leak a part is, in a word each: its causes', else how the part itself differs.
 export const leakWords = (part: BrokenPart) => (part.causes.length ? [...new Set(part.causes.map(({ kind }) => CAUSES[kind]))] : [KINDS[part.kind]]);
 

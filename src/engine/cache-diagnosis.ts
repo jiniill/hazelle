@@ -97,6 +97,7 @@ export function cacheDiagnosis({ forecast, before, after }: CacheComparison, sco
       if (from.slot === 'chat' && oldPart.origin === nextPart.origin) causes.push({ kind: 'edited' });
       if (from.slot === 'memory') causes.push({ kind: 'memory' });
     }
+    if (!causes.length && nextWire && after.rewritten?.includes(nextWire.index)) causes.push({ kind: 'request' });
     if (!causes.length && known) causes.push({ kind: 'unknown' });
     return { ...row, diff: known ? cacheDiff(oldText, nextText) : null, causes };
   });
