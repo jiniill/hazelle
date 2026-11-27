@@ -78,7 +78,7 @@ export const leakWords = (part: BrokenPart) => (part.causes.length ? [...new Set
 export function causeFacts(each: CacheCause): FactItem[] {
   switch (each.kind) {
     case 'tag':
-      return [{ label: '태그', value: each.tag }, { label: '값', value: `${quoted(each.before)} → ${quoted(each.after)}` }];
+      return [{ label: '태그', value: each.tag }, { label: '값', value: `${quoted(each.before)} → ${quoted(each.after)}` }, ...(each.script ? [{ label: '값을 쓴 곳', value: '봇 스크립트' }] : [])];
     case 'lore': {
       const fired = each.after?.fired ?? false;
       return [{ label: '로어북 항목', value: loreName(each.name) }, { label: '지금', value: fired ? '켜짐' : each.after && !each.after.fired ? `꺼짐 · ${silentReason(each.after.why)}` : '꺼짐' }];
@@ -164,12 +164,13 @@ export function ShortfallNote({ receipt, entry }: { receipt: Receipt; entry: Log
   );
 }
 
-const subject = ({ edit, from, role }: CachePrescription) => (edit.kind === 'lore' ? `로어북 '${loreName(edit.name)}'` : edit.kind === 'toggle' ? `토글 '${edit.name}'` : `'${partName(from, role)}'`);
+const subject = ({ edit, from, role }: CachePrescription) => (edit.kind === 'lore' ? `로어북 '${loreName(edit.name)}'` : edit.kind === 'toggle' ? `토글 '${edit.name}'` : edit.kind === 'script' ? `정규식 '${edit.name.trim() || edit.id}'` : `'${partName(from, role)}'`);
 const ACTIONS: Record<CachePrescription['action'], { title: string; button: string }> = {
   'after-chat': { title: '대화 뒤로 옮기기', button: '옮기기' },
   'before-chat': { title: '대화 앞으로 옮기기', button: '옮기기' },
   constant: { title: '항상 켜기', button: '항상 켜기' },
   toggle: { title: '바꾸기', button: '바꾸기' },
+  off: { title: '끄기', button: '끄기' },
 };
 const titleOf = (prescription: CachePrescription) => {
   const { edit } = prescription;
@@ -190,6 +191,7 @@ function saved(now: CacheBreakCost | null, after: CacheBreakCost | null): Cost |
 
 function changes({ edit, action }: CachePrescription): string {
   if (edit.kind === 'toggle') return `이 토글을 읽는 다른 블록도 함께 바뀌어요. ${PLACED}`;
+  if (edit.kind === 'script') return `이 정규식이 메시지를 매 턴 다르게 고쳐 써서 캐시가 깨져요. 끄면 이 정규식이 하던 일도 멈춰요. ${PLACED}`;
   if (action === 'before-chat') return `프롬프트에서 이 블록의 순서가 대화 앞으로 바뀌어요. ${PLACED}`;
   if (edit.kind === 'prompt') return '프롬프트에서 이 블록의 순서가 대화 뒤로 바뀌어요.';
   return edit.field === 'constant' ? '키워드와 상관없이 매번 보내서 그만큼 토큰이 들어요.' : '항목이 대화 맨 뒤(깊이 0)에 들어가요.';

@@ -14,7 +14,7 @@ const loreState = (prompt: Assembled, id: string): CacheLore | null => {
 };
 
 // Literal separators must identify one split, not merely an edit-distance alignment of repeated output.
-export function cacheTags(before: string, after: string, source: string, trace: CbsTrace): Extract<CacheCause, { kind: 'tag' }>[] {
+export function cacheTags(before: string, after: string, source: string, trace: CbsTrace, scripted?: ReadonlySet<string>): Extract<CacheCause, { kind: 'tag' }>[] {
   if (trace.omitted || trace.steps.some((step) => step.erased || step.truncated)) return [];
   const steps = trace.steps.filter((step) => step.depth === 0);
   if (!steps.length) return [];
@@ -40,8 +40,11 @@ export function cacheTags(before: string, after: string, source: string, trace: 
     values.push(before.slice(at, next));
     at = next + literal.length;
   }
-  return steps.flatMap((step, index) => values[index] === step.result ? [] : [{ kind: 'tag', tag: source.slice(step.at, step.headEnd ?? step.end), before: values[index]!, after: step.result }]);
+  return steps.flatMap((step, index) => values[index] === step.result ? [] : [{ kind: 'tag', tag: source.slice(step.at, step.headEnd ?? step.end), before: values[index]!, after: step.result, ...(step.variable !== undefined && scripted?.has(step.variable) && { script: true as const }) }]);
 }
+
+// The variables the bot's scripts wrote on any message.
+const scriptWrites = (scope: ChatScope) => new Set(scope.messages.flatMap(({ before = [], after = [] }) => [...before, ...after].map(([name]) => name)));
 
 function tags(scope: ChatScope, variables: () => ReadonlyMap<string, string>, old: CacheRender[] | undefined, next: CacheRender[] | undefined, before: string, after: string): Extract<CacheCause, { kind: 'tag' }>[] {
   if (before === after || !old || !next) return [];
@@ -58,7 +61,7 @@ function tags(scope: ChatScope, variables: () => ReadonlyMap<string, string>, ol
     if (piece.cast !== undefined && !cast) return [];
     const rendered = renderAfter(cast ? { ...scope, card: cast.card } : scope, piece.text, { seed: piece.seed }, null, trace, variables());
     if (typeof rendered !== 'string' || rendered.trim() !== piece.rendered) return [];
-    return cacheTags(was.rendered, piece.rendered, piece.text, trace);
+    return cacheTags(was.rendered, piece.rendered, piece.text, trace, scriptWrites(scope));
   });
 }
 

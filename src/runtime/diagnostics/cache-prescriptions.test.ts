@@ -6,7 +6,7 @@ import { accountSettings } from '../account-settings';
 import { setDefaultModel } from '../models/assignment';
 import { breakCost, forecast, type Prior } from './cache';
 import { applyCacheEdit, priceCachePrescriptions } from './cache-prescriptions';
-import { appendUserMessage, startChat } from '../chat/chat-log';
+import { appendReply, appendUserMessage, startChat } from '../chat/chat-log';
 import { addLore, editLore } from '../library/lore';
 import { editPrompt } from '../library/prompts';
 import type { Session } from '../session';
@@ -77,7 +77,7 @@ it('prices a proven tag block moved back after the chat without writing, then ap
   expect(input.scope.clock).toBe(next.input.scope.clock);
   expect(session.store.get('prompt', prompt)!.value.blocks.map(({ id }) => id)).toEqual(['stable', 'clock', 'chat']);
   const unmovable = { ...diagnosis, parts: diagnosis.parts.map((part) => ({ ...part, from: { kind: 'block' as const, id: 'description', name: null, slot: 'description' as const } })) };
-  expect(cacheCandidates(unmovable, current, next.input.scope, { prompt, character: null, toggles: [], held: {} })).toEqual([]);
+  expect(cacheCandidates(unmovable, current, next.input.scope, { prompt, character: null, toggles: [], held: {}, packs: [] })).toEqual([]);
   const applied = await applyCacheEdit(session.store, prescription.edit);
   if (!applied.ok) throw new Error(applied.error);
   expect(session.store.get('prompt', prompt)!.value.blocks.map(({ id }) => id)).toEqual(['stable', 'chat', 'clock']);
@@ -153,4 +153,35 @@ it('prices a block the chat pushes along: the toggle its wrapper reads, and its 
   expect((await applyCacheEdit(store, toggle.edit)).ok).toBe(false);
   expect((await applyCacheEdit(store, applied.data)).ok).toBe(true);
   expect(store.get('character', character)!.value.toggles).toEqual({});
+}));
+
+it('names the regex script that writes an old message anew each turn, and stops only that one', () => server.withSession(async (session) => {
+  const { store } = session;
+  const { chat, send } = await setup(session, [stable, chatSlot]);
+  const character = store.get('chat', chat)!.value.character!;
+  const script = (id: string, find: string, replace: string) => ({ id, name: id, find, replace, stage: 'process' as const, flags: null });
+  await store.update('character', character, (value) => ({ ...value, card: { ...value.card, regex: [script('still', 'nothing here', 'x'), script('counts', 'opening', 'opening seen at {{lastmessageid}}')] } }));
+  let follows: string | null = null;
+  const turn = async (text: string) => {
+    const said = crypto.randomUUID();
+    expect((await appendUserMessage(store, chat, { id: said, text, follows })).ok).toBe(true);
+    follows = crypto.randomUUID();
+    expect((await appendReply(store, chat, { id: follows, message: follows, replaces: null, follows: said, at: Date.now(), text: `reply to ${text}`, receipt: { id: crypto.randomUUID(), connection: 'c', source: 'S', model: 'm', modelName: 'M', state: 'done', cut: null, error: null, finishReason: 'stop', usage: null, cost: null, replyId: null, firstTextMs: null, totalMs: 1, cache: null }, seed: follows })).ok).toBe(true);
+  };
+  await turn('the opening line');
+  const old = await send('second');
+  await turn('second');
+  const next = await send('third');
+  const { prior, current, diagnosis } = await compare(session, chat, old, next);
+  expect(diagnosis.parts[0]!.causes).toEqual([{ kind: 'unknown' }]);
+  const prescriptions = await priceCachePrescriptions(store, chat, next, diagnosis, current, prior, null, new AbortController().signal);
+  expect(prescriptions!.map(({ cause, action, edit }) => [cause, action, edit.kind === 'script' && edit.id])).toEqual([['script', 'off', 'counts']]);
+  const fix = prescriptions![0]!;
+  expect(fix.turn!.before.read).toBeLessThan(fix.turn!.before.of);
+  expect(fix.turn!.after.read).toBe(fix.turn!.after.of);
+  const applied = await applyCacheEdit(store, fix.edit);
+  if (!applied.ok) throw new Error(applied.error);
+  expect(store.get('character', character)!.value.card.regex.map(({ off }) => off)).toEqual([undefined, true]);
+  expect((await applyCacheEdit(store, applied.data)).ok).toBe(true);
+  expect(store.get('character', character)!.value.card.regex.map(({ off }) => off)).toEqual([undefined, undefined]);
 }));

@@ -1,5 +1,5 @@
 import type { CacheCandidate, CacheDiagnosis, CacheEdit, Forecast } from '../model/cache';
-import type { Lore } from '../model/library';
+import type { Lore, PackOwner } from '../model/library';
 import type { Prompt, Toggle, ToggleValues } from '../model/prompt';
 import { TOGGLE_GLOBAL } from './cbs/tags';
 import { parseDecorators } from './lorebook/decorators';
@@ -15,12 +15,15 @@ function withDecorator(content: string, line: string, replaces: readonly string[
 }
 
 // prompt: the stored prompt the blocks are, null when they are not one's. character: whose chats hold the toggle values,
-// null for 캐릭터 없이's. held: those values as stored.
-export type CacheOwners = { prompt: string | null; character: string | null; toggles: readonly Toggle[]; held: ToggleValues };
+// null for 캐릭터 없이's. held: those values as stored. packs: who holds each of the scope's packs, in their order.
+export type CacheOwners = { prompt: string | null; character: string | null; toggles: readonly Toggle[]; held: ToggleValues; packs: readonly PackOwner[] };
+
+// The stages a request's text passes: a message's own as it is replayed, then the request's.
+const SENT_STAGES = new Set(['input', 'output', 'process']);
 
 const held = (values: ToggleValues, key: string) => (Object.hasOwn(values, key) ? values[key]! : null);
 
-export function cacheCandidates(diagnosis: CacheDiagnosis, forecast: Forecast, scope: PromptInput['scope'], { prompt, character, toggles, held: values }: CacheOwners): CacheCandidate[] {
+export function cacheCandidates(diagnosis: CacheDiagnosis, forecast: Forecast, scope: PromptInput['scope'], { prompt, character, toggles, held: values, packs }: CacheOwners): CacheCandidate[] {
   const candidates = new Map<string, CacheCandidate>();
   const blocks = conversationBlocks(scope);
   const chat = blocks.findLastIndex((block) => block.kind === 'slot' && block.slot === 'chat');
@@ -54,6 +57,13 @@ export function cacheCandidates(diagnosis: CacheDiagnosis, forecast: Forecast, s
           });
         }
       }
+      // Text that differs with nothing to name: a regex script may write it anew each turn (one that reads how far back
+      // a message stands). Each running one is a guess that only pricing settles.
+      if (cause.kind === 'unknown') {
+        scope.packs.forEach((pack, at) => {
+          for (const script of pack.regex) if (!script.off && SENT_STAGES.has(script.stage)) add({ cause: 'script', action: 'off', edit: { kind: 'script', owner: packs[at]!, pack: at, id: script.id, name: script.name, before: false, after: true } });
+        });
+      }
       if (cause.kind === 'lore') {
         const entry = scope.lore.find(({ id }) => id === cause.id);
         if (!entry) continue;
@@ -83,6 +93,11 @@ export function cacheToggled<T extends { toggles?: ToggleValues }>(holder: T, ed
 
 export function cacheOverlay(scope: PromptInput['scope'], edit: CacheEdit): PromptInput['scope'] | null {
   if (edit.kind === 'toggle') return edit.after === null ? null : { ...scope, toggles: new Map([...scope.toggles, [edit.key, edit.after]]) };
+  if (edit.kind === 'script') {
+    const pack = scope.packs[edit.pack];
+    if (!pack?.regex.some(({ id, off }) => id === edit.id && (off ?? false) === edit.before)) return null;
+    return { ...scope, packs: scope.packs.with(edit.pack, { ...pack, regex: pack.regex.map((script) => (script.id === edit.id ? { ...script, off: true as const } : script)) }) };
+  }
   if (edit.kind === 'prompt') {
     const prompt = scope.prompt && cacheEditedPrompt(scope.prompt, edit);
     return prompt && { ...scope, prompt };
