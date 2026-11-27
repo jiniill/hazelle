@@ -1,4 +1,4 @@
-import { ArrowRightLeft, ListPlus, PenLine, Scissors } from 'lucide-react';
+import { ArrowRightLeft, CloudOff, ListPlus, PenLine, Scissors } from 'lucide-react';
 import { useState, useSyncExternalStore, type ReactNode } from 'react';
 import { refOf } from '../../connectors/assignment';
 import type { From } from '../../engine/pipeline';
@@ -15,7 +15,7 @@ import { CACHE_GUARD, COUNTING, MODEL_SETTINGS, opens, UNKNOWN, CACHE_BROKEN, CA
 import { useLab } from '../common/labs';
 import { useCaptured, useSession } from '../session';
 import { navigate } from '../shell/router';
-import { Button, Callout, Disclosure, Empty, Facts, List, ListItem, Row, RunMarks, Section, SendLine, SendRuns, SettingGroup, Stack, Tag, Text, type SendFate, type SendRun } from '../ui';
+import { Button, Callout, Disclosure, Empty, Facts, Hint, List, ListItem, Row, RunMarks, Section, SendLine, SendRuns, SettingGroup, Stack, Tag, Text, type SendFate, type SendRun } from '../ui';
 import { BrokenPartView, breakCauses, breakKind, causeFacts, leakWords, PartDiff, PrescriptionView, RecurrenceNote, ShortfallNote } from './CacheDiagnosis';
 import { nextWarning, profileName, why } from './ChatCache';
 import { partName } from './ChatSent';
@@ -179,7 +179,10 @@ function NextCache({ next, recurrence, replies, editor, onEdit }: NextCacheProps
   const off = against?.broken?.kind === 'off' ? { label: opens(MODEL_SETTINGS), onClick: () => navigate({ kind: 'model', ...refOf(route.connection.id, route.model) }) } : undefined;
   const line = sendLine(next);
   const { recent, runs, legend } = sendRuns(replies);
-  const leaks = diagnosis?.parts ?? [];
+  const leaks = against?.broken && 'from' in against.broken ? (diagnosis?.parts ?? []) : [];
+  const breaks = !!against?.broken && 'from' in against.broken;
+  const missed = runs.map(({ state }) => state === 'missed');
+  const misses = missed.filter(Boolean).length;
   return (
     <Stack gap="group">
       {whole && <Callout tone="warn" action={off}>{`${warning.words}: ${warning.why}`}</Callout>}
@@ -210,10 +213,10 @@ function NextCache({ next, recurrence, replies, editor, onEdit }: NextCacheProps
           <SendRuns label={`최근 응답 ${runs.length}번이 캐시에서 읽은 비율`} runs={runs} ends={[`${runs.length}번 전`, '방금']} legend={legend} />
         </Section>
       )}
-      {against?.broken && 'from' in against.broken && (
-        <Section level={3} title={`새는 곳 ${leaks.length || ''}`.trim()} help="캐시에서 읽지 못하고 다시 보내는 부분과 그 원인이에요. 토큰 수는 그 부분부터 다시 보내는 양이에요.">
-          {diagnosis === undefined && <Text variant="note">분석 중…</Text>}
-          {prescriptions === null && <Text variant="note">해결 방법을 계산하지 못했어요.</Text>}
+      {(breaks || misses > 0) && (
+        <Section level={3} title={`새는 곳 ${leaks.length + (misses ? 1 : 0) || ''}`.trim()} help="캐시에서 읽지 못하고 다시 보내는 부분과 그 원인이에요. 토큰 수는 그 부분부터 다시 보내는 양이에요.">
+          {breaks && diagnosis === undefined && <Text variant="note">분석 중…</Text>}
+          {breaks && prescriptions === null && <Text variant="note">해결 방법을 계산하지 못했어요.</Text>}
           <List label="새는 곳" box>
             {leaks.map((part, index) => {
               const key = `leak:${index}`;
@@ -254,6 +257,28 @@ function NextCache({ next, recurrence, replies, editor, onEdit }: NextCacheProps
                 />
               );
             })}
+            {misses > 0 && (
+              <ListItem
+                leading={<Tag icon={CloudOff} />}
+                title="제공자가 캐시를 놓침"
+                tags={['요청은 그대로']}
+                note={`${misses}번`}
+                expanded={open === 'missed'}
+                onClick={() => setOpen(open === 'missed' ? null : 'missed')}
+                detail={
+                  open === 'missed' && (
+                    <Stack gap="group">
+                      <RunMarks on={missed} note={`최근 ${missed.length}번 중 ${misses}번`} />
+                      <Facts items={[{ label: '연결', value: recent[missed.lastIndexOf(true)]!.receipt.source }, { label: '모델', value: recent[missed.lastIndexOf(true)]!.receipt.modelName }, { label: '고칠 곳', value: '요청 쪽에는 없음' }]} />
+                      <Text variant="note">
+                        요청은 지난번과 같았는데 제공자가 캐시에서 읽지 않았어요.
+                        <Hint label="제공자가 캐시를 놓침">제공자가 캐시를 일찍 지웠거나, 요청이 캐시를 가진 서버가 아닌 곳으로 갔을 수 있어요. 자주 일어나면 다른 연결을 써 보세요.</Hint>
+                      </Text>
+                    </Stack>
+                  )
+                }
+              />
+            )}
           </List>
         </Section>
       )}
