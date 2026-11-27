@@ -10,6 +10,10 @@ import { chatPrompt } from '../library/prompts';
 import type { ObjectStore } from '../store/store';
 import { cacheSend, type Sending } from '../chat/turn-context';
 
+// An edit to where a part stands is offered when it mends this share of what a turn loses: a block of a few tokens
+// that the chat also pushes along is not worth moving.
+const MENDS = 0.1;
+
 // The send after this one: a reply and a message stand in for the ones to come, under the seed a new reply rolls.
 const following = (input: Sending['input']): Sending['input'] => ({
   ...input,
@@ -37,6 +41,7 @@ export async function priceCachePrescriptions(store: ObjectStore, chat: string, 
   };
   let standing: CacheTurn | null | undefined;
   const lost = ({ read, of }: CacheTurn) => of - read;
+  const mends = (edited: CacheTurn, standing: CacheTurn) => lost(standing) - lost(edited) >= lost(standing) * MENDS;
   try {
     // A bot may hold dozens of scripts: all are stopped at once first, and each is tried only when that helped.
     const scripts = all.filter(({ cause }) => cause === 'script');
@@ -48,7 +53,7 @@ export async function priceCachePrescriptions(store: ObjectStore, chat: string, 
       standing = await turnOf(sending.input, sending.prompt);
       const edited = standing && !('kind' in sent) ? await turnOf(input, sent) : null;
       if (signal.aborted) return null;
-      guilty = !!standing && !!edited && lost(edited) < lost(standing);
+      guilty = !!standing && !!edited && mends(edited, standing);
     }
     const candidates = guilty ? all : all.filter(({ cause }) => cause !== 'script');
     // One job per distinct edit, sequential on the composer's lane, with its original clock, seed and calibration.
@@ -72,7 +77,7 @@ export async function priceCachePrescriptions(store: ObjectStore, chat: string, 
       standing ??= await turnOf(sending.input, sending.prompt);
       const edited = standing && await turnOf(input, prompt);
       if (signal.aborted) return null;
-      if (standing && edited && lost(edited) < lost(standing)) prescriptions.push({ ...price, turn: { before: standing, after: edited } });
+      if (standing && edited && mends(edited, standing)) prescriptions.push({ ...price, turn: { before: standing, after: edited } });
     }
     return prescriptions;
   } catch {

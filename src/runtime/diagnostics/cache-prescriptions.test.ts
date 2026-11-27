@@ -122,7 +122,7 @@ it('prices a block the chat pushes along: the toggle its wrapper reads, and its 
   const sheet = (id: string, on: string): Block => ({ id, kind: 'slot', slot: 'description', name: id, role: 'system', wrapper: `{{#if_pure {{? {{getglobalvar::toggle_place}}=${on}}}}}About the bot: {{slot}}{{/if_pure}}` });
   const past: Block = { id: 'past', kind: 'slot', name: null, slot: 'chat', range: { from: 0, to: -1 } };
   const last: Block = { id: 'last', kind: 'slot', name: null, slot: 'chat', range: { from: -1, to: null } };
-  const { chat, prompt, send } = await setup(session, [stable, sheet('early', '0'), past, sheet('late', '1'), last]);
+  const { chat, prompt, send } = await setup(session, [stable, sheet('early', '0'), past, text('tiny', 'ok'), sheet('late', '1'), last]);
   await editPrompt(store, prompt, { toggles: [{ key: 'place', label: 'Place', kind: 'choice', options: ['Early', 'Late'], default: '1' }] });
   const character = store.get('chat', chat)!.value.character!;
   await store.update('character', character, (value) => ({ ...value, card: { ...value.card, description: 'A long description of the bot. '.repeat(40) } }));
@@ -146,7 +146,9 @@ it('prices a block the chat pushes along: the toggle its wrapper reads, and its 
   // The send that takes the edit reads no more for it; every send after it reads all the one before cached.
   expect(toggle.after.read).not.toBeGreaterThan(toggle.before.read);
   expect(toggle.turn!.before.read).toBeLessThan(toggle.turn!.before.of);
-  expect(toggle.turn!.after.read).toBe(toggle.turn!.after.of);
+  // 'tiny' still rides the chat, and moving its few tokens is not offered.
+  expect(toggle.turn!.after.read).toBeGreaterThan(toggle.turn!.before.read);
+  expect(toggle.turn!.after.of - toggle.turn!.after.read).toBeLessThan(10);
   const applied = await applyCacheEdit(store, toggle.edit);
   if (!applied.ok) throw new Error(applied.error);
   expect(store.get('character', character)!.value.toggles).toEqual({ place: '0' });
