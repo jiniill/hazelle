@@ -6,7 +6,7 @@ import { cacheShortfall, shortfallPlace } from '../../runtime/diagnostics/cache-
 import { applyCacheEdit } from '../../runtime/diagnostics/cache-prescriptions';
 import type { LogEntry } from '../../runtime/models/request-log';
 import { cost, tokens } from '../common/receipt';
-import { loreName, APPLY_FAILED, CACHE_READ } from '../common/words';
+import { loreName, onOff, APPLY_FAILED, CACHE_READ } from '../common/words';
 import { useStore } from '../session';
 import { useToast } from '../toast';
 import { useState, type ReactNode } from 'react';
@@ -136,12 +136,20 @@ export function ShortfallNote({ receipt, entry }: { receipt: Receipt; entry: Log
   );
 }
 
-const subject = ({ edit, from, role }: CachePrescription) => (edit.kind === 'lore' ? `로어북 '${loreName(edit.name)}'` : `'${partName(from, role)}'`);
+const subject = ({ edit, from, role }: CachePrescription) => (edit.kind === 'lore' ? `로어북 '${loreName(edit.name)}'` : edit.kind === 'toggle' ? `토글 '${edit.name}'` : `'${partName(from, role)}'`);
 const ACTIONS: Record<CachePrescription['action'], { title: string; button: string }> = {
   'after-chat': { title: '대화 뒤로 옮기기', button: '옮기기' },
+  'before-chat': { title: '대화 앞으로 옮기기', button: '옮기기' },
   constant: { title: '항상 켜기', button: '항상 켜기' },
+  toggle: { title: '바꾸기', button: '바꾸기' },
 };
-const titleOf = (prescription: CachePrescription) => `${subject(prescription)} ${ACTIONS[prescription.action].title}`;
+const titleOf = (prescription: CachePrescription) => {
+  const { edit } = prescription;
+  const value = edit.kind === 'toggle' ? `: ${edit.says ?? onOff(edit.after === '1')}` : '';
+  return `${subject(prescription)} ${ACTIONS[prescription.action].title}${value}`;
+};
+const EVERY_TURN = '매 턴';
+const PLACED = '바꾼 직후 한 번은 캐시를 새로 쓰고, 그다음 전송부터 덜 보내요.';
 
 // What the next send would pay less, against its price as it stands; null where either is unpriced or the units differ.
 // An edit that mends every break leaves no breakCost, so it pays what reading the whole cache would.
@@ -152,7 +160,9 @@ function saved(now: CacheBreakCost | null, after: CacheBreakCost | null): Cost |
   return amount > 0 ? { ...now.paid, amount } : null;
 }
 
-function preview({ edit }: CachePrescription): ReactNode {
+function preview({ edit, action }: CachePrescription): ReactNode {
+  if (edit.kind === 'toggle') return <Text>{`이 토글을 읽는 다른 블록도 함께 바뀌어요. ${PLACED}`}</Text>;
+  if (action === 'before-chat') return <Text>{`프롬프트에서 이 블록의 순서가 대화 앞으로 바뀌어요. ${PLACED}`}</Text>;
   if (edit.kind === 'lore') {
     if (edit.field === 'constant') return <Text>키워드와 상관없이 매번 보내서 그만큼 토큰이 들어요.</Text>;
     return <TextDiff runs={cacheDiff(edit.before, edit.after).runs} label="항목 내용: 변경 전후" />;
@@ -173,7 +183,7 @@ export function Prescriptions({ prescriptions, cost: now }: { prescriptions: Cac
     toast.undoable('적용했어요.', () => applyCacheEdit(store, done.data), titleOf(prescription));
   }
   const ranked = prescriptions
-    .map((prescription) => ({ prescription, less: saved(now, prescription.cost) }))
+    .map((prescription) => ({ prescription, less: prescription.turn ? saved(prescription.turn.before.cost, prescription.turn.after.cost) : saved(now, prescription.cost) }))
     .sort((a, b) => (b.less?.amount ?? -1) - (a.less?.amount ?? -1));
   return (
     <Section level={3} title="해결 방법" help="여러 항목을 함께 적용하면 절약되는 금액이 각각의 합과 다를 수 있어요.">
@@ -182,8 +192,10 @@ export function Prescriptions({ prescriptions, cost: now }: { prescriptions: Cac
           <ListItem
             key={index}
             title={titleOf(prescription)}
-            note={`${CACHE_READ} ${tokens(prescription.before.read)} → ${tokens(prescription.after.read)}`}
-            tags={less ? [`${cost(less)} 절약`] : []}
+            note={prescription.turn
+              ? `${EVERY_TURN} 다시 보냄 ${tokens(prescription.turn.before.of - prescription.turn.before.read)} → ${tokens(prescription.turn.after.of - prescription.turn.after.read)}`
+              : `${CACHE_READ} ${tokens(prescription.before.read)} → ${tokens(prescription.after.read)}`}
+            tags={less ? [`${prescription.turn ? `${EVERY_TURN} ` : ''}${cost(less)} 절약`] : []}
             expanded={open === index}
             onClick={() => setOpen(open === index ? null : index)}
             detail={

@@ -6,7 +6,7 @@ import { accountSettings } from '../account-settings';
 import { setDefaultModel } from '../models/assignment';
 import { breakCost, forecast, type Prior } from './cache';
 import { applyCacheEdit, priceCachePrescriptions } from './cache-prescriptions';
-import { startChat } from '../chat/chat-log';
+import { appendUserMessage, startChat } from '../chat/chat-log';
 import { addLore, editLore } from '../library/lore';
 import { editPrompt } from '../library/prompts';
 import type { Session } from '../session';
@@ -77,7 +77,7 @@ it('prices a proven tag block moved back after the chat without writing, then ap
   expect(input.scope.clock).toBe(next.input.scope.clock);
   expect(session.store.get('prompt', prompt)!.value.blocks.map(({ id }) => id)).toEqual(['stable', 'clock', 'chat']);
   const unmovable = { ...diagnosis, parts: diagnosis.parts.map((part) => ({ ...part, from: { kind: 'block' as const, id: 'description', name: null, slot: 'description' as const } })) };
-  expect(cacheCandidates(unmovable, current, next.input.scope, prompt)).toEqual([]);
+  expect(cacheCandidates(unmovable, current, next.input.scope, { prompt, character: null, toggles: [], held: {} })).toEqual([]);
   const applied = await applyCacheEdit(session.store, prescription.edit);
   if (!applied.ok) throw new Error(applied.error);
   expect(session.store.get('prompt', prompt)!.value.blocks.map(({ id }) => id)).toEqual(['stable', 'chat', 'clock']);
@@ -115,4 +115,40 @@ it('prices both lore edits once and retains only the constant edit that restores
   expect(prescription.cost?.paid.amount).toBeGreaterThan(0);
   expect((await applyCacheEdit(session.store, applied.data)).ok).toBe(true);
   expect(session.store.get('lore', entry)!.value.constant).toBe(false);
+}));
+
+it('prices a block the chat pushes along: the toggle its wrapper reads, and its place before the chat', () => server.withSession(async (session) => {
+  const { store } = session;
+  const sheet = (id: string, on: string): Block => ({ id, kind: 'slot', slot: 'description', name: id, role: 'system', wrapper: `{{#if_pure {{? {{getglobalvar::toggle_place}}=${on}}}}}About the bot: {{slot}}{{/if_pure}}` });
+  const past: Block = { id: 'past', kind: 'slot', name: null, slot: 'chat', range: { from: 0, to: -1 } };
+  const last: Block = { id: 'last', kind: 'slot', name: null, slot: 'chat', range: { from: -1, to: null } };
+  const { chat, prompt, send } = await setup(session, [stable, sheet('early', '0'), past, sheet('late', '1'), last]);
+  await editPrompt(store, prompt, { toggles: [{ key: 'place', label: 'Place', kind: 'choice', options: ['Early', 'Late'], default: '1' }] });
+  const character = store.get('chat', chat)!.value.character!;
+  await store.update('character', character, (value) => ({ ...value, card: { ...value.card, description: 'A long description of the bot. '.repeat(40) } }));
+  const said = async (text: string, follows: string | null) => {
+    const id = crypto.randomUUID();
+    expect((await appendUserMessage(store, chat, { id, text, follows })).ok).toBe(true);
+    return id;
+  };
+  const second = await said('second', await said('first', null));
+  const old = await send('third');
+  await said('third', second);
+  const next = await send('fourth');
+  const { prior, current, diagnosis } = await compare(session, chat, old, next);
+  expect(diagnosis.parts.find(({ from }) => from.kind === 'block' && from.id === 'late')?.causes).toMatchObject([{ kind: 'moved', depth: null }]);
+  const prescriptions = await priceCachePrescriptions(store, chat, next, diagnosis, current, prior, null, new AbortController().signal);
+  expect(prescriptions!.map(({ cause, action }) => [cause, action])).toEqual([['moved', 'before-chat'], ['moved', 'toggle']]);
+  const toggle = prescriptions![1]!;
+  expect(toggle.edit).toEqual({ kind: 'toggle', character, key: 'place', name: 'Place', says: 'Early', before: null, after: '0' });
+  // The send that takes the edit reads no more for it; every send after it reads all the one before cached.
+  expect(toggle.after.read).not.toBeGreaterThan(toggle.before.read);
+  expect(toggle.turn!.before.read).toBeLessThan(toggle.turn!.before.of);
+  expect(toggle.turn!.after.read).toBe(toggle.turn!.after.of);
+  const applied = await applyCacheEdit(store, toggle.edit);
+  if (!applied.ok) throw new Error(applied.error);
+  expect(store.get('character', character)!.value.toggles).toEqual({ place: '0' });
+  expect((await applyCacheEdit(store, toggle.edit)).ok).toBe(false);
+  expect((await applyCacheEdit(store, applied.data)).ok).toBe(true);
+  expect(store.get('character', character)!.value.toggles).toEqual({});
 }));
