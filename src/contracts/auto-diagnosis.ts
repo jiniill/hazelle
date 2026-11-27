@@ -29,7 +29,7 @@ const FAILURES = ['unsent', 'unsaved', 'too-long', 'runaway', 'tokenizer', 'unst
 const GAP_CAUSES = ['working', 'failed', 'tool', 'off', 'no-slot', 'stale', 'over', 'forgotten', 'unrecorded', 'no-room', 'unknown'] as const;
 export type GapCause = (typeof GAP_CAUSES)[number];
 // The first cause a cache break proves, or the break's own kind without one.
-const CACHE_CAUSES = ['tag', 'lore', 'moved', 'edited', 'memory', 'request', 'model', 'account', 'reasoning', 'far', 'changed', 'added', 'removed'] as const;
+const CACHE_CAUSES = ['tag', 'lore', 'moved', 'edited', 'deleted', 'budget', 'source', 'memory', 'request', 'model', 'account', 'reasoning', 'far', 'changed', 'added', 'removed'] as const;
 export type CacheCauseWord = (typeof CACHE_CAUSES)[number];
 // Who asks the evaluation worker for a job, and the kinds of job it runs: runtime/evaluation/evaluation holds its lanes and its
 // jobs to these, so a word neither list has cannot be reported.

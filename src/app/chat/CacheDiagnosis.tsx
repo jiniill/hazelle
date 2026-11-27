@@ -52,6 +52,12 @@ function cause(cause: CacheCause): { line: string; shown?: ReactNode; help: stri
         : { line: `깊이 ${cause.depth}에 넣는 항목이라 대화가 길어지면서 들어가는 위치가 밀렸어요.`, help: '깊이 숫자를 작게 할수록 대화 뒤쪽에 들어가서 앞부분 캐시가 더 많이 유지돼요.' };
     case 'edited':
       return { line: '대화 메시지가 수정됐어요.', help: null };
+    case 'deleted':
+      return { line: '대화 메시지가 삭제됐어요.', help: null };
+    case 'budget':
+      return { line: '컨텍스트 한도에 맞추느라 오래된 메시지가 빠졌어요.', help: '메시지가 빠질 때마다 그 뒤에 오는 대화의 캐시가 깨져요. 장기 기억을 켜면 한꺼번에 정리해서 덜 자주 깨져요.' };
+    case 'source':
+      return { line: '이 항목의 내용이 수정됐어요.', help: null };
     case 'memory':
       return { line: '장기 기억이 새로 정리됐어요.', help: '장기 기억이 새로 정리될 때마다 그 뒤에 오는 내용의 캐시가 한 번 깨져요.' };
     case 'request':

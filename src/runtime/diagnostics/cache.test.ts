@@ -163,6 +163,11 @@ describe('forecast without points', () => {
     expect(made.parts.filter(({ change }) => change).map(({ from }) => from)).toEqual([from('추가 정보'), from('유저 인풋')]);
   });
 
+  it('expects the read to end before retrieval, which is found anew each send', () => {
+    const found = (chat: string[], record: string) => { const made = nureongi('mem1', chat); made.messages.splice(made.messages.findIndex(({ hash }) => hash === chat.at(-1)), 0, { role: 'user', hash: record, tokens: 10, from: { kind: 'retrieval' } }); made.messages = made.messages.filter(({ hash }) => !['추가 정보', '유저 인풋'].includes(hash)); return made; };
+    expect(forecast(prior(found(four, 'r1')), found(six, 'r2'))?.against).toEqual({ read: 60, of: 60, broken: null });
+  });
+
   it('takes a message sent again for growth, not for the one the last call sent', () => {
     expect(forecast(prior(nureongi('mem1', ['c1', '계속', 'c3'])), nureongi('mem1', ['c1', '계속', 'c3', '계속']))?.against?.broken).toEqual({ kind: 'moved', from: from('추가 정보'), role: 'user' });
     const plain = (chat: string[]) => { const made = nureongi('mem1', chat); made.messages = made.messages.filter(({ hash }) => !['추가 정보', '유저 인풋'].includes(hash)); return made; };

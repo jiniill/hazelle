@@ -144,7 +144,8 @@ const isChat = ({ from }: WireMessage) => from.kind === 'block' && from.slot ===
 
 // The chat's growth is the one change no prompt avoids. grown: the new send's first chat message after the last one the
 // last call also sent (after.length when none); end: the last call's part a prefix read can reach, its last chat
-// message when the chat grew, else its last part. Whatever stands between chat messages is expected to stay in place.
+// message when the chat grew, else its last part. Whatever stands between chat messages is expected to stay in place,
+// but retrieval: found anew each send, it and what the last call sent after it are not expected to be read.
 // Counted, so a message sent again ("계속") is not taken for the one the last call sent.
 function growth(before: WireMessage[], after: WireMessage[]) {
   const sent = new Map<string, number>();
@@ -155,7 +156,8 @@ function growth(before: WireMessage[], after: WireMessage[]) {
     if (left > 0) { sent.set(message.hash, left - 1); kept = index; }
   }
   const grown = after.findIndex((message, index) => index > kept && isChat(message));
-  return grown === -1 ? { grown: after.length, end: before.length - 1 } : { grown, end: before.findLastIndex(isChat) };
+  const found = before.findIndex(({ from }) => from.kind === 'retrieval');
+  return grown === -1 ? { grown: after.length, end: before.length - 1 } : { grown, end: before.findLastIndex((message, index) => isChat(message) && (found === -1 || index < found)) };
 }
 
 // Points: reuse only matching prefixes ending at an old point reachable from a new point's lookback, ignoring old points

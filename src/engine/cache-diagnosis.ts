@@ -43,6 +43,15 @@ export function cacheTags(before: string, after: string, source: string, trace: 
   return steps.flatMap((step, index) => values[index] === step.result ? [] : [{ kind: 'tag', tag: source.slice(step.at, step.headEnd ?? step.end), before: values[index]!, after: step.result, ...(step.variable !== undefined && scripted?.has(step.variable) && { script: true as const }) }]);
 }
 
+// Why a chat message the last call sent is not sent now; null when it still is. The greeting is the chat part with no
+// origin.
+function left(scope: ChatScope, { memory, dropped, parts }: Assembled, origin: string | undefined): 'memory' | 'budget' | 'deleted' | null {
+  const at = origin === undefined ? (scope.greeting === null ? -1 : 0) : scope.messages.findIndex(({ message }) => message === origin);
+  if (at === -1) return 'deleted';
+  if (at < (memory?.covered ?? 0)) return 'memory';
+  return dropped > 0 && !parts.some((part) => part.from.kind === 'block' && part.from.slot === 'chat' && part.origin === origin) ? 'budget' : null;
+}
+
 // The variables the bot's scripts wrote on any message.
 const scriptWrites = (scope: ChatScope) => new Set(scope.messages.flatMap(({ before = [], after = [] }) => [...before, ...after].map(([name]) => name)));
 
@@ -97,6 +106,10 @@ export function cacheDiagnosis({ forecast, before, after }: CacheComparison, sco
       if (from.slot === 'chat' && oldPart.origin === nextPart.origin) causes.push({ kind: 'edited' });
       if (from.slot === 'memory') causes.push({ kind: 'memory' });
     }
+    if (row.kind === 'changed' && nextPart?.cbs?.some((piece) => oldPart?.cbs?.some((was) => was.place === piece.place && was.text !== piece.text))) causes.push({ kind: 'source' });
+    if (row.kind === 'added' && from.kind === 'block' && from.slot === 'memory') causes.push({ kind: 'memory' });
+    const why = row.kind === 'removed' && from.kind === 'block' && from.slot === 'chat' && oldPart ? left(scope, after.prompt, oldPart.origin) : null;
+    if (why) causes.push({ kind: why });
     if (!causes.length && nextWire && after.rewritten?.includes(nextWire.index)) causes.push({ kind: 'request' });
     if (!causes.length && known) causes.push({ kind: 'unknown' });
     return { ...row, diff: known ? cacheDiff(oldText, nextText) : null, causes };

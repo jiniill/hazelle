@@ -74,6 +74,30 @@ it('attributes changed chat and memory sources, not merely their wrappers or ren
   expect(cacheDiagnosis(input, scope).parts[0]!.causes).toEqual([{ kind: 'memory' }]);
 });
 
+it('names memory where it is first sent, and why a chat message left: memory took it, the budget dropped it or it was deleted', () => {
+  const chat = { kind: 'block', id: 'chat', name: null, slot: 'chat' } as const;
+  const memory = { ...chat, id: 'memory', slot: 'memory' } as const;
+  const old = prompt('first', [{ from: chat, tokens: 10, origin: 'first' }]);
+  const next = prompt('summary', [{ from: memory, tokens: 10, source: 'summary' }]);
+  next.memory = { by: 'tool', text: 'summary', covered: 1, missing: 0, slot: true };
+  const input = comparison(old, next);
+  input.forecast.parts[0] = { ...part, from: memory, change: 'added', before: null };
+  input.forecast.removed = [{ from: chat, role: 'system', tokens: 10, before: 0 }];
+  const talked = { ...scope, messages: [{ message: 'first' }, { message: 'second' }] as ChatScope['messages'] };
+  expect(cacheDiagnosis(input, talked).parts.map(({ kind, causes }) => [kind, causes])).toEqual([['removed', [{ kind: 'memory' }]], ['added', [{ kind: 'memory' }]]]);
+  old.parts[0]!.origin = 'second';
+  expect(cacheDiagnosis(input, talked).parts[0]!.causes).toEqual([{ kind: 'unknown' }]);
+  next.dropped = 1;
+  expect(cacheDiagnosis(input, talked).parts[0]!.causes).toEqual([{ kind: 'budget' }]);
+  old.parts[0]!.origin = 'gone';
+  expect(cacheDiagnosis(input, talked).parts[0]!.causes).toEqual([{ kind: 'deleted' }]);
+});
+
+it('names a part whose own text was edited', () => {
+  const render = (text: string) => prompt(text, [{ from, tokens: 10, cbs: [{ place: 'clock', text, rendered: text, seed: 'seed' }] }]);
+  expect(cacheDiagnosis(comparison(render('Old rule.'), render('New rule.')), scope).parts[0]!.causes).toEqual([{ kind: 'source' }]);
+});
+
 it('names a newly firing entry merged into the changed lore part', () => {
   const old = prompt('base');
   old.silent = [{ id: 'merged', name: 'Merged', why: { kind: 'unmatched' } }];

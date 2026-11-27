@@ -8,9 +8,11 @@ export type CachePart = { cache: true };
 
 // Cache before/at chat, never request end: following blocks change each turn. Depth/retrieval entries count as chat.
 // Cache before leading memory too so boundary updates do not rewrite the fixed prefix (design §6.2).
-export function autoCachePoints(roles: readonly ('chat' | 'depth' | 'memory' | null)[]): number[] {
-  const first = roles.findIndex((role) => role === 'chat' || role === 'depth');
-  const last = roles.lastIndexOf('chat');
+// The last point stands before retrieval: found anew each send, it would take the chat cached with it along.
+export function autoCachePoints(roles: readonly ('chat' | 'depth' | 'retrieval' | 'memory' | null)[]): number[] {
+  const first = roles.findIndex((role) => role === 'chat' || role === 'depth' || role === 'retrieval');
+  const retrieval = roles.indexOf('retrieval');
+  const last = roles.lastIndexOf('chat', retrieval === -1 ? Infinity : retrieval);
   const memory = roles.indexOf('memory');
   const anchor = memory > 0 && (first === -1 || memory < first) ? [memory - 1] : [];
   return [...new Set([...anchor, ...(first > 0 ? [first - 1] : []), ...(last === -1 ? [] : [last])])];
@@ -26,9 +28,9 @@ export function cachePoints(parts: (Sent | CachePart)[]): Sent[] {
     if (!('cache' in part)) sent.push(part);
     else if (sent.length) point(sent.length - 1);
   }
-  // Retrieval sits among the chat's messages and changes with them, so it counts as the chat's: first in a short chat, it
-  // must not take the point meant for the memory block's end.
-  const role = ({ from }: Sent) => (from.kind === 'depth' ? 'depth' : from.kind === 'retrieval' ? 'chat' : from.kind === 'block' && (from.slot === 'chat' || from.slot === 'memory') ? from.slot : null);
+  // Retrieval sits among the chat's messages, so it starts the chat as they do: first in a short chat, it must not take
+  // the point meant for the memory block's end.
+  const role = ({ from }: Sent) => (from.kind === 'depth' ? 'depth' : from.kind === 'retrieval' ? 'retrieval' : from.kind === 'block' && (from.slot === 'chat' || from.slot === 'memory') ? from.slot : null);
   for (const index of autoCachePoints(sent.map(role))) point(index);
   return sent;
 }

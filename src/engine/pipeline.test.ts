@@ -568,6 +568,7 @@ describe('assemble with memory', () => {
     const at = result.parts.findIndex(({ from }) => from.kind === 'retrieval');
     expect(result.messages[at]).toEqual({ role: 'user', content: `${RETRIEVED_HEADING}\n\n[When: unknown · Where: the lighthouse · Present: Luna, jin]\nThe messages, word for word:\njin: I promise to come back.\nLuna: Luna nods.` });
     expect(result.messages.slice(at + 1).map(({ content }) => content)).toEqual(['Morning comes.', 'Luna is calm.', 'Go on.']);
+    expect(result.messages.slice(at).some(({ cache }) => cache)).toBe(false);
     expect(withMemory(memory, 25_000, {}, []).parts.some(({ from }) => from.kind === 'retrieval')).toBe(false);
   });
 

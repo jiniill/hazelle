@@ -55,8 +55,9 @@ export type CacheCause =
   | { kind: 'tag'; tag: string; before: string; after: string; script?: true }
   | { kind: 'lore'; id: string; name: string; before: CacheLore | null; after: CacheLore | null }
   | { kind: 'moved'; before: number; after: number; depth: number | null }
-  // request: the bot's scripts rewrote the message as it was sent (editRequest).
-  | { kind: 'edited' | 'memory' | 'request' | 'unknown' };
+  // request: the bot's scripts rewrote the message as it was sent (editRequest). deleted, budget: a chat message left,
+  // gone from the chat or dropped to fit the model. source: the part's own text was edited.
+  | { kind: 'edited' | 'deleted' | 'budget' | 'source' | 'memory' | 'request' | 'unknown' };
 export type CacheLore = { fired: true; why: Fired['why'] } | { fired: false; why: Silent['why'] };
 // Positions address wire order. A null diff lacks text; an empty causes list lacks even a provable cause.
 // unknown is reserved for text we compared but cannot attribute. missing counts the null diffs.
