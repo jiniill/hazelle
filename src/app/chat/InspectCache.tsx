@@ -33,7 +33,7 @@ export function Cache({ chat, next, cache }: { chat: string; next: ReactNode; ca
       <SettingGroup label="캐시 표시">
         <CacheNoteRow />
       </SettingGroup>
-      <Section title="다음 전송" help="토큰 수는 추정치예요.">
+      <Section title={NEXT_SEND} help="토큰 수는 추정치예요.">
         {next}
       </Section>
       <Section title="지난 응답" help="마지막으로 새로고침한 뒤에 받은 응답만 어디가 어떻게 바뀌었는지 비교해 볼 수 있어요.">
@@ -124,7 +124,10 @@ function cacheRows(parts: ForecastPart[]): CacheRow[] {
   return out;
 }
 
-const FATES: Record<SendFate, string> = { read: '읽음', again: '다시 보냄', fresh: '새로 보냄' };
+const NEXT_SEND = '다음 전송';
+const LEAKS = '새는 곳';
+const DROPPED = '지난 전송에서 빠진 내용';
+const FATES: Record<SendFate, string> = { read: CACHE_READ, again: '다시 보냄', fresh: '새로 보냄' };
 const fateOf = ({ state, again }: ForecastPart): SendFate => (state === 'read' ? 'read' : again ? 'again' : 'fresh');
 const sum = (parts: { tokens: number }[]) => parts.reduce((total, { tokens }) => total + tokens, 0);
 const isChat = ({ from }: { from: From }) => from.kind === 'block' && from.slot === 'chat';
@@ -186,14 +189,14 @@ function NextCache({ next, recurrence, replies, editor, onEdit }: NextCacheProps
     <Stack gap="group">
       {whole && <Callout tone="warn" action={off}>{`${warning.words}: ${warning.why}`}</Callout>}
       <SendLine
-        label={`다음 전송 ${tokens(sum(forecast.parts))} 토큰 중 ${against ? tokens(against.read) : UNKNOWN} 토큰을 캐시에서 읽음`}
+        label={`${NEXT_SEND} ${tokens(sum(forecast.parts))} 토큰 · ${CACHE_READ} ${against ? tokens(against.read) : UNKNOWN}`}
         figure={line.share === null ? '–' : String(Math.round(line.share * 100))}
         unit="%"
         caption={CACHE_READ}
         tone={against?.broken ? 'warn' : 'plain'}
         segments={line.segments}
         was={line.was}
-        now="다음 전송"
+        now={NEXT_SEND}
         cut={line.cut}
         spans={line.spans}
         legend={line.legend}
@@ -209,14 +212,14 @@ function NextCache({ next, recurrence, replies, editor, onEdit }: NextCacheProps
       )}
       {runs.length > 1 && (
         <Section level={3} title={`최근 ${runs.length}번`}>
-          <SendRuns label={`최근 응답 ${runs.length}번이 캐시에서 읽은 비율`} runs={runs} ends={[`${runs.length}번 전`, '방금']} legend={legend} />
+          <SendRuns label={`최근 응답 ${runs.length}번의 캐시 읽음 비율`} runs={runs} ends={[`${runs.length}번 전`, '최근']} legend={legend} />
         </Section>
       )}
       {(breaks || misses > 0) && (
-        <Section level={3} title={`새는 곳 ${leaks.length + (misses ? 1 : 0) || ''}`.trim()} help="캐시에서 읽지 못하고 다시 보내는 부분과 그 원인이에요. 토큰 수는 그 부분부터 다시 보내는 양이에요.">
+        <Section level={3} title={`${LEAKS} ${leaks.length + (misses ? 1 : 0) || ''}`.trim()} help="캐시가 깨져 다시 보내는 부분과 원인이에요. 토큰 수는 그 지점부터 다시 보내는 양이에요.">
           {breaks && diagnosis === undefined && <Text variant="note">분석 중…</Text>}
           {breaks && prescriptions === null && <Text variant="note">해결 방법을 계산하지 못했어요.</Text>}
-          <List label="새는 곳" box>
+          <List label={LEAKS} box>
             {leaks.map((part, index) => {
               const key = `leak:${index}`;
               const at = part.after ?? 0;
@@ -241,7 +244,7 @@ function NextCache({ next, recurrence, replies, editor, onEdit }: NextCacheProps
                         {fixes.map((prescription, fix) => (
                           <PrescriptionView key={fix} prescription={prescription} cost={price} />
                         ))}
-                        {guard && prescriptions?.length === 0 && <Text variant="note">{`${CACHE_GUARD}로 해결할 수 있는 원인은 아니에요.`}</Text>}
+                        {guard && prescriptions?.length === 0 && <Text variant="note">{`${CACHE_GUARD}로 해결할 수 없는 원인이에요.`}</Text>}
                         <PartDiff part={part} />
                         {side && (
                           <Row kind="actions">
@@ -268,10 +271,10 @@ function NextCache({ next, recurrence, replies, editor, onEdit }: NextCacheProps
                   open === 'missed' && (
                     <Stack gap="group">
                       <RunMarks on={missed} note={`최근 ${missed.length}번 중 ${misses}번`} />
-                      <Facts items={[{ label: '연결', value: recent[missed.lastIndexOf(true)]!.receipt.source }, { label: '모델', value: recent[missed.lastIndexOf(true)]!.receipt.modelName }, { label: '고칠 곳', value: '요청 쪽에는 없음' }]} />
+                      <Facts items={[{ label: '연결', value: recent[missed.lastIndexOf(true)]!.receipt.source }, { label: '모델', value: recent[missed.lastIndexOf(true)]!.receipt.modelName }, { label: '고칠 곳', value: '내 설정에는 없음' }]} />
                       <Text variant="note">
-                        요청은 지난번과 같았는데 제공자가 캐시에서 읽지 않았어요.
-                        <Hint label="제공자가 캐시를 놓침">제공자가 캐시를 일찍 지웠거나, 요청이 캐시를 가진 서버가 아닌 곳으로 갔을 수 있어요. 자주 일어나면 다른 연결을 써 보세요.</Hint>
+                        요청은 같았는데 제공자가 캐시에서 읽지 않았어요.
+                        <Hint label="놓치는 이유">제공자가 캐시를 일찍 지웠거나, 캐시가 없는 다른 서버로 연결됐을 수 있어요. 자주 일어나면 다른 연결을 써 보세요.</Hint>
                       </Text>
                     </Stack>
                   )
@@ -289,14 +292,14 @@ function NextCache({ next, recurrence, replies, editor, onEdit }: NextCacheProps
                 key={index}
                 title={row.count > 1 ? `${row.name} ${row.count}개` : row.name}
                 badge={row.change ? breakKind(row.change) : undefined}
-                tags={[STATES[row.state], ...(row.point === 'cache' ? ['캐시 지점'] : row.point === 'short' ? ['캐시 지점 · 분량이 짧아 저장 안 됨'] : [])]}
+                tags={[STATES[row.state], ...(row.point === 'cache' ? ['캐시 지점'] : row.point === 'short' ? ['캐시 지점 · 최소 분량 미만'] : [])]}
                 note={tokens(row.tokens)}
               />
             ))}
           </List>
           {removed.length > 0 && (
-            <Section level={3} title="이전보다 제외된 내용">
-              <List label="이전보다 제외된 내용">
+            <Section level={3} title={DROPPED}>
+              <List label={DROPPED}>
                 {removed.map((part, index) => (
                   <ListItem key={index} title={partName(part.from, part.role)} note={tokens(part.tokens)} />
                 ))}

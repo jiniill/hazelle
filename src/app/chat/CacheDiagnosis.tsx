@@ -54,7 +54,7 @@ function cause(cause: CacheCause): { line: string; shown?: ReactNode; help: stri
     case 'memory':
       return { line: '장기 기억이 새로 정리됐어요.', help: '장기 기억이 새로 정리될 때마다 그 뒤에 오는 내용의 캐시가 한 번 깨져요.' };
     case 'request':
-      return { line: '봇 스크립트가 보내기 직전에 이 메시지를 고쳐 썼어요.', help: '봇의 Lua(editRequest)가 매번 다르게 고쳐 쓰면 그 뒤의 캐시를 읽지 못해요.' };
+      return { line: '봇 스크립트가 보내기 직전에 이 메시지를 바꿨어요.', help: '봇 스크립트가 매번 내용을 다르게 바꾸면 그 뒤부터 캐시를 읽지 못해요.' };
     case 'unknown':
       return { line: '정확한 원인을 찾지 못했어요.', help: '스크립트나 토큰 절약이 보낼 내용을 바꿨거나, 여러 항목이 합쳐진 부분일 수 있어요.' };
   }
@@ -72,7 +72,7 @@ export function breakCauses(diagnosis: CacheDiagnosis | null | undefined, broken
 export const diagnosed = (diagnosis: CacheDiagnosis | null | undefined, kind: BrokenPart['kind'], at: number) =>
   diagnosis?.parts.find((part) => part.kind === kind && (kind === 'removed' ? part.before : part.after) === at) ?? null;
 
-const CAUSES: Record<CacheCause['kind'], string> = { tag: '값 바뀜', lore: '켜졌다 꺼짐', moved: '자리 밀림', edited: '메시지 수정', memory: '기억 정리', request: '스크립트가 고침', unknown: '원인 모름' };
+const CAUSES: Record<CacheCause['kind'], string> = { tag: '값 바뀜', lore: '켜짐·꺼짐', moved: '위치 밀림', edited: '메시지 수정', memory: '기억 정리', request: '스크립트 수정', unknown: '원인 모름' };
 // What kind of leak a part is, in a word each: its causes', else how the part itself differs.
 export const leakWords = (part: BrokenPart) => (part.causes.length ? [...new Set(part.causes.map(({ kind }) => CAUSES[kind]))] : [KINDS[part.kind]]);
 
@@ -80,13 +80,13 @@ export const leakWords = (part: BrokenPart) => (part.causes.length ? [...new Set
 export function causeFacts(each: CacheCause): FactItem[] {
   switch (each.kind) {
     case 'tag':
-      return [{ label: '태그', value: each.tag }, { label: '값', value: `${quoted(each.before)} → ${quoted(each.after)}` }, ...(each.script ? [{ label: '값을 쓴 곳', value: '봇 스크립트' }] : [])];
+      return [{ label: '태그', value: each.tag }, { label: '값', value: `${quoted(each.before)} → ${quoted(each.after)}` }, ...(each.script ? [{ label: '바꾼 곳', value: '봇 스크립트' }] : [])];
     case 'lore': {
       const fired = each.after?.fired ?? false;
       return [{ label: '로어북 항목', value: loreName(each.name) }, { label: '지금', value: fired ? '켜짐' : each.after && !each.after.fired ? `꺼짐 · ${silentReason(each.after.why)}` : '꺼짐' }];
     }
     case 'moved':
-      return each.depth === null ? [{ label: '자리', value: `${each.before + 1}번째 → ${each.after + 1}번째` }] : [{ label: '깊이', value: `@@depth ${each.depth}` }, { label: '자리', value: `${each.before + 1}번째 → ${each.after + 1}번째` }];
+      return each.depth === null ? [{ label: '위치', value: `${each.before + 1}번째 → ${each.after + 1}번째` }] : [{ label: '깊이', value: `@@depth ${each.depth}` }, { label: '위치', value: `${each.before + 1}번째 → ${each.after + 1}번째` }];
     default:
       return [];
   }
@@ -120,7 +120,7 @@ export function BrokenPartView({ part }: { part: BrokenPart }) {
         return (
           <Text key={index}>
             {shown ?? line}
-            {help && <Hint label="깨지지 않게 하려면">{help}</Hint>}
+            {help && <Hint label="자세한 설명">{help}</Hint>}
           </Text>
         );
       })}
@@ -179,8 +179,9 @@ const titleOf = (prescription: CachePrescription) => {
   const value = edit.kind === 'toggle' ? `: ${edit.says ?? onOff(edit.after === '1')}` : '';
   return `${subject(prescription)} ${ACTIONS[prescription.action].title}${value}`;
 };
-const EVERY_TURN = '매 턴';
-const PLACED = '바꾼 직후 한 번은 캐시를 새로 쓰고, 그다음 전송부터 덜 보내요.';
+const EVERY_TURN = '매번';
+const CHANGING = '바뀌는 내용';
+const PLACED = '바꾼 직후 첫 전송은 캐시를 새로 저장하고, 다음 전송부터 캐시에서 읽어요.';
 
 // What the next send would pay less, against its price as it stands; null where either is unpriced or the units differ.
 // An edit that mends every break leaves no breakCost, so it pays what reading the whole cache would.
@@ -192,10 +193,10 @@ function saved(now: CacheBreakCost | null, after: CacheBreakCost | null): Cost |
 }
 
 function changes({ edit, action }: CachePrescription): string {
-  if (edit.kind === 'toggle') return `이 토글을 읽는 다른 블록도 함께 바뀌어요. ${PLACED}`;
-  if (edit.kind === 'script') return `이 정규식이 메시지를 매 턴 다르게 고쳐 써서 캐시가 깨져요. 끄면 이 정규식이 하던 일도 멈춰요. ${PLACED}`;
-  if (action === 'before-chat') return `프롬프트에서 이 블록의 순서가 대화 앞으로 바뀌어요. ${PLACED}`;
-  if (edit.kind === 'prompt') return '프롬프트에서 이 블록의 순서가 대화 뒤로 바뀌어요.';
+  if (edit.kind === 'toggle') return `이 토글을 쓰는 다른 블록도 함께 바뀌어요. ${PLACED}`;
+  if (edit.kind === 'script') return `이 정규식이 보낼 때마다 내용을 다르게 바꿔서 캐시가 깨져요. 끄면 이 정규식이 하던 일도 멈춰요. ${PLACED}`;
+  if (action === 'before-chat') return `이 프롬프트의 블록 순서가 대화 앞으로 바뀌어요. ${PLACED}`;
+  if (edit.kind === 'prompt') return '이 프롬프트의 블록 순서가 대화 뒤로 바뀌어요.';
   return edit.field === 'constant' ? '키워드와 상관없이 매번 보내서 그만큼 토큰이 들어요.' : '항목이 대화 맨 뒤(깊이 0)에 들어가요.';
 }
 
@@ -232,8 +233,8 @@ export function PrescriptionView({ prescription, cost: now }: { prescription: Ca
         </Row>
       </Compare>
       {prescription.edit.kind === 'lore' && prescription.edit.field === 'content' && (
-        <Disclosure label="항목 내용: 변경 전후">
-          <TextDiff runs={cacheDiff(prescription.edit.before, prescription.edit.after).runs} label="항목 내용: 변경 전후" />
+        <Disclosure label={CHANGING}>
+          <TextDiff runs={cacheDiff(prescription.edit.before, prescription.edit.after).runs} label={CHANGING} />
         </Disclosure>
       )}
     </Stack>

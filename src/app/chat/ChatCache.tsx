@@ -93,7 +93,7 @@ export function ChatCache({ cache, onOpen }: { cache: CacheNotes; onOpen: () => 
   const share = next ? readShare(next.forecast) : null;
   const bar = share === null ? {} : { share };
   // A provider caching on its own tells no time to count down: the share it is expected to read, or only a warning.
-  if (next?.forecast.prefix) return share !== null ? <SendNote label={`예상 ${percent(share)}`} title={PREFIX_TITLE} {...bar} warning={warning} onClick={onOpen} /> : warning ? <SendNote label={PREFIX_TITLE} title={PREFIX_TITLE} warning={warning} spareLabel onClick={onOpen} /> : null;
+  if (next?.forecast.prefix) return share !== null ? <SendNote label={`캐시 ${percent(share)}`} title={PREFIX_TITLE} {...bar} warning={warning} onClick={onOpen} /> : warning ? <SendNote label={PREFIX_TITLE} title={PREFIX_TITLE} warning={warning} spareLabel onClick={onOpen} /> : null;
   if (cache.until === null || now >= cache.until) return null;
   return <SendNote label={share === null ? clock(cache.until - now) : `${percent(share)} · ${clock(cache.until - now)}`} title={TITLE} {...bar} warning={warning} onClick={onOpen} />;
 }
