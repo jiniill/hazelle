@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { SETTINGS_ID } from '../../model/settings';
-import type { Counted } from '../../model/usage';
+import type { CacheNoted, Counted } from '../../model/usage';
+import type { Filling } from '../../runtime/models/usage';
 import { useSession, useSettings } from '../session';
 import { Callout, Text } from '../ui';
 import { ACTS } from './acts';
@@ -55,6 +56,20 @@ export function usePurposes(): boolean {
   return filled;
 }
 
+// The replies' cache rows as of the ledger read the view holds; unfilled, how many chats 지난 기록 읽기 would
+// read; caching, that fill while it runs, which only fill starts.
+export function useCacheLedger(): { view: LedgerView; retry: () => void; noted: readonly CacheNoted[] | null; unfilled: number; caching: Filling; fill: () => void } {
+  const { usage } = useSession();
+  const { view, retry } = useLedger();
+  const { caches } = useSettings();
+  const caching = useSyncExternalStore(usage.subscribe, usage.caching);
+  const read = view.kind === 'read' ? view.calls : null;
+  const noted = useMemo(() => (read ? usage.cacheRows() : null), [usage, read]);
+  // caches: the mark a fill leaves moves what is left to read.
+  const unfilled = useMemo(() => (read ? usage.unfilledCaches().length : 0), [usage, read, caches]);
+  return { view, retry, noted, unfilled, caching, fill: () => void usage.fillCaches() };
+}
+
 const progress = (what: string, { read, of }: { read: number; of: number }) => `${what}계산하는 중 · 채팅 ${count(of)}개 중 ${count(read)}개`;
 
 export function PurposesWait() {
@@ -62,6 +77,13 @@ export function PurposesWait() {
   const purposing = useSyncExternalStore(usage.subscribe, usage.purposing);
   if (purposing === 'failed') return <Callout tone="warn" action={{ label: ACTS.retry.label, onClick: () => void usage.fillPurposes() }}>쓰임별 사용량을 계산하지 못했어요.</Callout>;
   return <Text variant="note">{purposing?.of ? progress('', purposing) : COUNTING}</Text>;
+}
+
+export function CacheWait() {
+  const { usage } = useSession();
+  const caching = useSyncExternalStore(usage.subscribe, usage.caching);
+  if (caching === 'failed') return <Callout tone="warn" action={{ label: ACTS.retry.label, onClick: () => void usage.fillCaches() }}>지난 기록을 읽지 못했어요.</Callout>;
+  return <Text variant="note">{caching?.of ? `지난 기록을 읽는 중 · 채팅 ${count(caching.of)}개 중 ${count(caching.read)}개` : `지난 기록을 읽는 중…`}</Text>;
 }
 
 // failed: the screen's own words for a read that failed.

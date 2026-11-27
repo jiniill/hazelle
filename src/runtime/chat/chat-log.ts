@@ -24,7 +24,8 @@ import { toolChatId } from '../tools/store';
 import { without } from '../../model/fields';
 import type { ObjectStore } from '../store/store';
 import type { Write } from '../store/object-writes';
-import { chatPlace, costRow, receiptRow } from '../models/usage';
+import { cacheRow, chatPlace, costRow, receiptRow } from '../models/usage';
+import { chatPrompt } from '../library/prompts';
 
 // Chat/entry writes live here except assignment's models, lore's folders, character purges and backup restores.
 // Risu moves save chatWrites' entries before addCharacter saves the root; chat-file imports use saveNewChats.
@@ -390,6 +391,14 @@ export type Written = { id: string; message: string | null; replaces: string | n
 // message null: a new message, whose id is the reply's own.
 export const replyMessage = ({ id, message }: Pick<Written, 'id' | 'message'>) => message ?? id;
 
+// prompt: the chat's conversation prompt as the reply is saved, which is the one its request was built from.
+function cacheRows(store: ObjectStore, chat: string, rounds: Receipt[], at: number): Write[] {
+  const held = store.get('chat', chat)?.value;
+  const choice = held && chatPrompt(store, held);
+  const prompt = choice?.kind === 'prompt' ? choice.prompt.id : null;
+  return rounds.flatMap(({ id, forecast }) => (forecast ? [cacheRow(id, at, { forecast, prompt })] : []));
+}
+
 export function appendReply(store: ObjectStore, chat: string, { id, message, replaces, follows, at, text, receipt, seed, before, reasoning, status }: Written) {
   const held = { at, text, receipt, ...(before && { before }), ...(reasoning && { reasoning }) };
   // A continued reply's receipt carries the one it continued, whose row its own save wrote; the rounds that called
@@ -397,7 +406,7 @@ export function appendReply(store: ObjectStore, chat: string, { id, message, rep
   const rounds = [receipt];
   for (let below = receipt.continues; below?.tools; below = below.continues) rounds.push(below);
   const place = chatPlace(store, chat);
-  return append(store, chat, message === null ? { type: 'message', role: 'assistant', ...(follows !== undefined && { follows }), ...held } : { type: 'version', message, replaces, edit: false, ...held, ...(seed && { seed }) }, id, [...rounds.map((round) => receiptRow('reply', round, at, place)), ...(status ? [entryRow(chat, { type: 'status', version: id, ...status })] : [])]);
+  return append(store, chat, message === null ? { type: 'message', role: 'assistant', ...(follows !== undefined && { follows }), ...held } : { type: 'version', message, replaces, edit: false, ...held, ...(seed && { seed }) }, id, [...rounds.map((round) => receiptRow('reply', round, at, place)), ...cacheRows(store, chat, rounds, at), ...(status ? [entryRow(chat, { type: 'status', version: id, ...status })] : [])]);
 }
 
 // Edits keep old text's variable writes; adds chain from follows. vars attach after a version,

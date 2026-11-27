@@ -19,6 +19,7 @@ import type { ApiFailure } from '../api';
 import type { Route, RouteFailure } from '../models/assignment';
 import { noteStep } from '../diagnostics/auto-diagnosis';
 import { cacheKept, prefixKept, wireOf, wireTextOf, writePrint } from '../diagnostics/cache';
+import { causesKept, keepCauses } from '../models/usage';
 import { appendReply, appendUserMessage, replyMessage, savedElsewhere, type Said, type Written } from './chat-log';
 import { refuseTools, routeFields } from '../models/connections';
 import { TOOL_ROUNDS, toolLoop, type Tool } from '../models/tool-loop';
@@ -382,7 +383,13 @@ export class Talk {
     const wire = opening.cache ? wireTextOf(opening.cache) : undefined;
     const diagnose = forecast && wire && ready.diagnose;
     this.log.attach(chat, first.call, { prompt, forecast, wire, diagnosis: diagnose ? undefined : null });
-    if (diagnose) void diagnose(prompt, wire!).then((diagnosis) => this.log.attach(chat, first!.call, { diagnosis }));
+    if (diagnose) {
+      void diagnose(prompt, wire!).then((diagnosis) => {
+        this.log.attach(chat, first!.call, { diagnosis });
+        const causes = diagnosis ? causesKept(diagnosis) : [];
+        if (causes.length) void keepCauses(this.store, first!.call, causes);
+      });
+    }
     const written = this.written(held, ended, callOf(route), answer, Date.now(), forecast, ready.preread, ready.agents, { ...toolsAsked(answer.calls, lastRound.results), ...(remembered && { toolsRefused: true as const }) });
     const opened = calls(written.receipt)[0]!;
     // The view is null where the request was not this page's, which a receipt without points does not tell apart.

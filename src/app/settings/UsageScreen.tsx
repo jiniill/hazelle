@@ -6,13 +6,13 @@ import { GONE, usageReport, type Counted, type ModelUsage, type ReportWindow, ty
 import { money } from '../common/money';
 import { day, monthDay } from '../common/time';
 import { count } from '../common/typedNumber';
-import { spent, tally } from '../common/usage';
-import { MODULE_MODELS, NO_CHARACTER, PAGES, deletedOf, THINGS, SPANS, UNKNOWN_USE, USE_NAMES } from '../common/words';
+import { spent, tally, useCharacterName } from '../common/usage';
+import { CACHE_PAGE, MODULE_MODELS, PAGES, SPANS, UNKNOWN_USE, USE_NAMES } from '../common/words';
 import { LedgerWait, PurposesWait, useLedger, usePurposes } from '../common/useLedger';
 import { useConnections, useLibrary, usePresence } from '../session';
-import { backBar } from '../shell/router';
+import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
-import { Breakdown, Columns, DayMap, Facts, HourDial, HourMap, Intro, LinkScope, Moment, NavBar, Ranking, Screen, Section, Stack, Table, Tabs, Text, WeekBars, quartileLevels, type DayCell, type Ranked } from '../ui';
+import { Breakdown, Button, Columns, DayMap, Facts, HourDial, HourMap, Intro, LinkScope, Moment, NavBar, Ranking, Screen, Section, Stack, Table, Tabs, Text, WeekBars, quartileLevels, type DayCell, type Ranked } from '../ui';
 
 const WINDOWS: ReportWindow[] = ['month', 'year', 'all'];
 const WEEKDAYS = ['월요일', '화요일', '수요일', '목요일', '금요일', '토요일', '일요일'];
@@ -43,7 +43,7 @@ export function UsageScreen({ back }: { back: Back | null }) {
   const report = useMemo(() => (view.kind === 'read' ? usageReport(view.calls, window, now, (id) => library.byCharacter.has(id), saving) : null), [view, window, now, library, saving]);
   const presence = usePresence();
   const present = useMemo(() => (report ? presenceReport(presence.map(({ value }) => value), report.days[0]!.key) : null), [presence, report]);
-  const characterName = (id: string | null) => (id === null ? NO_CHARACTER : id === GONE ? deletedOf(THINGS.character.noun) : library.byCharacter.get(id)!.character.card.name);
+  const characterName = useCharacterName();
 
   return (
     <Screen width="form" top={<NavBar title={PAGES.usage} {...backBar(back)} />}>
@@ -197,7 +197,7 @@ function Spending({ report }: { report: UsageReport }) {
   const others = total.costs.filter((cost) => cost !== lead);
   const whole = lead && kept ? lead.amount + kept.amount : 0;
   return (
-    <Section title="비용">
+    <Section title="비용" action={<Button variant="secondary" size="sm" onClick={() => navigate({ kind: 'cache-report' })}>{CACHE_PAGE} 자세히</Button>}>
       {lead && (
         <Breakdown
           total={{ label: '쓴 돈', value: `${lead.estimated ? '약 ' : ''}${money(lead.unit, lead.amount)}` }}

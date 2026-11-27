@@ -75,6 +75,7 @@ const EXAMPLES = {
     { kind: 'account', section: 'notices' },
   ],
   usage: [{ kind: 'usage' }],
+  'cache-report': [{ kind: 'cache-report' }],
   notices: [{ kind: 'notices' }],
   board: [{ kind: 'board', operator: false }, { kind: 'board', operator: true }, { kind: 'board', operator: false, category: 'news' }, { kind: 'board', operator: true, category: 'bug' }, { kind: 'board', operator: false, q: '검색 100%' }, { kind: 'board', operator: true, category: 'idea', q: 'a&b' }],
   post: [{ kind: 'post', id: 1 }, { kind: 'post', id: 4821 }],

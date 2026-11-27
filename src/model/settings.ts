@@ -108,6 +108,9 @@ export type Settings = {
   ledger?: 'filled' | { after: string };
   // How far the one fill of the ledger's unknown purposes went (runtime/models/usage fillPurposes); absent, not begun.
   purposes?: 'filled' | { after: string };
+  // How far the fill of the cache rows of replies saved before rows kept one went (runtime/models/usage fillCaches),
+  // which only 지난 기록 읽기 starts; absent, not begun.
+  caches?: 'filled' | { after: string };
   // How many of runtime/import/reread's steps every import original kept here has had; absent, none.
   reread?: number;
   // 디스플레이 presets, in the order shown. Absent: STARTER_PRESETS.

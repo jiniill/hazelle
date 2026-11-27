@@ -8,7 +8,7 @@ import { MODEL_SETTINGS, CACHE_BROKEN } from '../common/words';
 import { useCaptured } from '../session';
 import { SendNote } from '../ui';
 import { breakCauses, SHORT } from './CacheDiagnosis';
-import { partName } from './ChatSent';
+import { partName } from '../common/prompt-words';
 import type { CacheNotes } from './useSendNotes';
 
 const TITLE = '캐시 남은 시간';

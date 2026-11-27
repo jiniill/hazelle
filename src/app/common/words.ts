@@ -127,6 +127,8 @@ export const TURN_FAILED = '응답 실패';
 export const MEMORY_GAP = '기억에 없음';
 export const MEMORY_WORKING = '기억 정리 중';
 export const CACHE_BROKEN = '캐시 깨짐';
+// 사용 기록's page on what the cache read and lost over every chat.
+export const CACHE_PAGE = '캐시';
 
 export const RESTORES = '복원 기록';
 export const REPORT_REASON = '신고 이유';

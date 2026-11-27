@@ -61,6 +61,8 @@ export type Route =
   // section opens the page at 운영자가 보낸 알림, which the toast saying one came links to.
   | { kind: 'account'; section: AccountSection | null }
   | { kind: 'usage' }
+  // 사용 기록's page on what the prompt cache read and lost over every chat.
+  | { kind: 'cache-report' }
   | { kind: 'notices' }
   // 내 구성: what runs on what, and what needs fixing.
   | { kind: 'setup' }
@@ -197,6 +199,7 @@ export function parseRoute(at: string): Route {
     if (top === 'account') return { kind: 'account', section: ACCOUNT_SECTIONS.find((section) => section === params.get('section')) ?? null };
   }
   if (top === 'account' && id === 'usage' && sub === undefined) return { kind: 'usage' };
+  if (top === 'account' && id === 'usage' && sub === 'cache') return { kind: 'cache-report' };
   if (top === 'account' && id === 'notices' && sub === undefined) return { kind: 'notices' };
   if (top === 'settings' && id === 'chat') {
     if (sub === undefined) return { kind: 'chat-settings' };
@@ -312,6 +315,8 @@ export function href(route: Route): string {
       return `/account${route.section ? `?section=${route.section}` : ''}`;
     case 'usage':
       return '/account/usage';
+    case 'cache-report':
+      return '/account/usage/cache';
     case 'notices':
       return '/account/notices';
     case 'setup':
@@ -422,6 +427,7 @@ export function settingsPage(route: Route): SettingsPage | 'list' | null {
     case 'admin-list':
       return 'admin';
     case 'usage':
+    case 'cache-report':
     case 'notices':
       return 'account';
     case 'chat-settings':
@@ -520,6 +526,8 @@ export function up(route: Below, chatShelf?: string | null): Route {
     case 'usage':
     case 'notices':
       return { kind: 'account', section: null };
+    case 'cache-report':
+      return { kind: 'usage' };
     case 'board':
       return HOME;
     case 'post':

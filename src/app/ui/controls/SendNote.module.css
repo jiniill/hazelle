@@ -27,18 +27,12 @@
 }
 
 .track {
+  composes: shareTrack from '../foundation/surface.module.css';
   width: var(--send-value);
-  height: var(--dot);
-  border-radius: var(--radius-xs);
-  background: var(--color-send-again);
-  overflow: hidden;
 }
 
 .fill {
-  display: block;
-  width: calc(var(--share) * 100%);
-  height: 100%;
-  background: var(--color-send-read);
+  composes: shareFill from '../foundation/surface.module.css';
 }
 
 .spare {

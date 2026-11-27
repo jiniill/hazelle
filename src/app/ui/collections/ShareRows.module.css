@@ -1,0 +1,103 @@
+.shareRows {
+  composes: box from '../foundation/surface.module.css';
+  container-type: inline-size;
+  padding: var(--space-4) var(--space-16);
+}
+
+.rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.head,
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, var(--share-name)) minmax(0, 1fr) var(--share-amount) var(--send-value);
+  align-items: center;
+  gap: var(--space-4) var(--space-12);
+}
+
+.head {
+  composes: detail from '../foundation/type.module.css';
+  padding: var(--space-8) 0;
+  border-bottom: var(--border-thin) solid var(--color-divider);
+  color: var(--color-text-faint);
+}
+
+.row {
+  padding: var(--space-12) 0;
+}
+
+.row + .row {
+  border-top: var(--border-thin) solid var(--color-divider);
+}
+
+.names {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.name {
+  composes: ellipsis from '../foundation/a11y.module.css';
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+}
+
+.note {
+  composes: detail from '../foundation/type.module.css';
+  composes: ellipsis from '../foundation/a11y.module.css';
+  color: var(--color-text-faint);
+}
+
+.track {
+  composes: shareTrack from '../foundation/surface.module.css';
+}
+
+/* Nobody's fault: what was not read is an empty stretch in a dashed line, as SendRuns draws a missed request. */
+.missed .track {
+  border: var(--border-thin) dashed var(--color-text-muted);
+  background: none;
+}
+
+.fill {
+  composes: shareFill from '../foundation/surface.module.css';
+}
+
+.amount,
+.rate,
+.end {
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+
+.amount {
+  composes: detail from '../foundation/type.module.css';
+}
+
+.rate {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+}
+
+.label {
+  composes: srOnly from '../foundation/a11y.module.css';
+}
+
+@container (max-width: 560px) {
+  .head {
+    display: none;
+  }
+
+  .row {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  .track {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}

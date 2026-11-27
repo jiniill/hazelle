@@ -31,7 +31,13 @@ export function replyCalls(messages: Message[]): { at: number; receipt: Receipt 
 
 export const cacheRecurrence = (replies: ReturnType<typeof replyCalls>) => recurrence(replies.map(({ receipt }) => receipt), (receipt) => cacheShortfall(receipt)?.short ?? null);
 
-export const cacheShortfall = (receipt: Receipt) => shortfall(receipt.forecast, receipt.usage?.cachedInputTokens ?? null, receipt.calibration ? tokenProjection(receipt.calibration, receipt.usage).ratio : null);
+// The tokens of a reply's forecast read that the provider clearly did not read, in the forecast's own count.
+export function cacheMissed(call: Pick<Receipt, 'forecast' | 'usage' | 'calibration'>): number {
+  const short = cacheShortfall(call);
+  return short?.short ? Math.min(call.forecast!.read, Math.round((short.expected - short.actual) / (short.ratio ?? 1))) : 0;
+}
+
+export const cacheShortfall = (receipt: Pick<Receipt, 'forecast' | 'usage' | 'calibration'>) => shortfall(receipt.forecast, receipt.usage?.cachedInputTokens ?? null, receipt.calibration ? tokenProjection(receipt.calibration, receipt.usage).ratio : null);
 
 // Where the provider stopped reading, from the call's wire text this page kept; null without it (a reload) or when the
 // read covers the whole send.
