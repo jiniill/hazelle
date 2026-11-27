@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { CacheDiagnosis, CachePrescription, CacheRecurrence, Forecast } from '../../model/cache';
+import type { CacheDiagnosis, CachePrescription, CacheRecurrence, Forecast, WireMessage } from '../../model/cache';
 import { cacheRecurrence, diagnoseCache, needsDiagnosis, replyCalls } from '../../runtime/diagnostics/cache-diagnosis';
 import { priceCachePrescriptions } from '../../runtime/diagnostics/cache-prescriptions';
 import type { Chat } from '../../model/chat';
@@ -22,8 +22,8 @@ export type SendNotes = { cache: CacheNotes; leaving: number | null; unseen: num
 
 // next undefined means pending; prescription null means evaluation failed, [] means no qualifying fix.
 // until is null without a cache's known end. Keep draft forecast/model/pricing paired; recurrence and replies use stored
-// prior receipts.
-export type CacheNotes = { until: number | null; recurrence: CacheRecurrence; replies: ReturnType<typeof replyCalls>; next: { forecast: Forecast; diagnosis: CacheDiagnosis | null | undefined; prescriptions: CachePrescription[] | null | undefined; cost: ReturnType<typeof breakCost>; route: Route } | null | undefined };
+// prior receipts. was: the last call's parts the forecast is made against.
+export type CacheNotes = { until: number | null; recurrence: CacheRecurrence; replies: ReturnType<typeof replyCalls>; next: { forecast: Forecast; was: WireMessage[] | null; diagnosis: CacheDiagnosis | null | undefined; prescriptions: CachePrescription[] | null | undefined; cost: ReturnType<typeof breakCost>; route: Route } | null | undefined };
 
 // The draft is read again after a store change it can follow settles, so an edit to the prompt, a lorebook or the model
 // shows in the forecast while it is open. unsaved: a new chat not saved yet, forecast as its first save will write it.
@@ -77,7 +77,7 @@ export function useSendNotes(id: string, unsaved: Unsaved | null, chat: Chat, me
         const made = send && forecast(before, send);
         if (!made || !sending || !send) return setNext(null);
         const pending = needsDiagnosis(made);
-        const next = { forecast: made, diagnosis: pending ? undefined : null, prescriptions: pending ? undefined : [], cost: breakCost(sending.turn.route.connection.value, sending.turn.route.model, made, sending.calibration.estimate.centre), route: sending.turn.route };
+        const next = { forecast: made, was: before?.print.messages ?? null, diagnosis: pending ? undefined : null, prescriptions: pending ? undefined : [], cost: breakCost(sending.turn.route.connection.value, sending.turn.route.model, made, sending.calibration.estimate.centre), route: sending.turn.route };
         setNext(next);
         if (pending) void diagnoseCache(session.store.evaluation, id, sending.turn.scope, made, before ? session.log.entry(id, before.print.call) : null, sending.prompt, send.wire, controller.signal).then(async (diagnosis) => {
           if (controller.signal.aborted) return;

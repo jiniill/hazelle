@@ -1,0 +1,154 @@
+.sendLine {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  min-width: 0;
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-8);
+  margin: 0;
+}
+
+.figure {
+  color: var(--color-text);
+  font-size: var(--send-figure);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--leading-none);
+}
+
+.figure.warn {
+  color: var(--color-warn);
+}
+
+.unit {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-medium);
+}
+
+.caption {
+  composes: note from '../foundation/type.module.css';
+}
+
+.picture {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.lane {
+  composes: detail from '../foundation/type.module.css';
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-8);
+  color: var(--color-text-faint);
+}
+
+.cutNote {
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.frame {
+  position: relative;
+  display: block;
+}
+
+.bar {
+  display: flex;
+  gap: var(--space-2);
+  height: var(--send-bar);
+  border-radius: var(--radius-tight-sm);
+  overflow: hidden;
+}
+
+.bar.thin {
+  height: var(--bar-height-thick);
+  opacity: 0.55;
+}
+
+.segment {
+  flex: var(--size) 0 0;
+  min-width: var(--space-2);
+}
+
+.read {
+  background: var(--color-send-read);
+}
+
+.again {
+  background: var(--color-send-again);
+}
+
+.fresh {
+  background: var(--color-chart-quiet);
+}
+
+.link {
+  display: block;
+  width: 100%;
+  height: var(--send-link-height);
+  fill: var(--color-send-again);
+  fill-opacity: var(--send-link);
+}
+
+.cut {
+  position: absolute;
+  top: calc(var(--space-4) * -1);
+  bottom: calc(var(--space-4) * -1);
+  left: calc(var(--at) * 100%);
+  width: var(--border-thick);
+  border-radius: var(--radius-xs);
+  background: var(--color-text);
+}
+
+.spans {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.span {
+  composes: detail from '../foundation/type.module.css';
+  composes: ellipsis from '../foundation/a11y.module.css';
+  flex: var(--size) 0 0;
+  min-width: 0;
+  color: var(--color-text-faint);
+}
+
+.span:last-child {
+  text-align: end;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4) var(--space-16);
+  margin: 0;
+}
+
+.key {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  font-size: var(--text-xs);
+}
+
+.key dt {
+  color: var(--color-text-muted);
+}
+
+.key dd {
+  margin: 0;
+  color: var(--color-text);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.swatch {
+  width: var(--space-8);
+  height: var(--space-8);
+  border-radius: var(--radius-xs);
+}

@@ -33,8 +33,9 @@ export type CacheForecast = { read: number; of: number; broken: CacheBreak | nul
 export const cachePrintId = secondInverted;
 
 // Wire order. tail is full-price text after the last caching point; short points cache nothing.
-// before is the paired old position, null for additions and unchanged parts.
-export type ForecastPart = { role: Role; from: From; tokens: number; state: 'read' | 'write' | 'tail'; change: 'changed' | 'added' | 'moved' | null; before: number | null; point: 'cache' | 'short' | null };
+// before is the paired old position, null for additions and unchanged parts. again: the last call cached this text and
+// this send pays for it in full.
+export type ForecastPart = { role: Role; from: From; tokens: number; state: 'read' | 'write' | 'tail'; again: boolean; change: 'changed' | 'added' | 'moved' | null; before: number | null; point: 'cache' | 'short' | null };
 // against is null without a prior call; written excludes the uncached tail. prefix: no point on either side, so the
 // provider caches on its own, and writes nothing a forecast counts.
 export type Forecast = {
@@ -66,15 +67,22 @@ export type CacheEdit =
   | ({ kind: 'lore'; id: string; name: string } & (
     | { field: 'constant'; before: boolean; after: boolean }
     | { field: 'content'; before: string; after: string }
-  ));
+  ))
+  // The value held for the character's chats, or with character null for 캐릭터 없이's; null holds none, and the
+  // toggle reads its default. says: the option the new value names, null for a check.
+  | { kind: 'toggle'; character: string | null; key: string; name: string; says: string | null; before: string | null; after: string | null };
 
-export type CacheCandidate = { cause: 'tag' | 'lore'; action: 'after-chat' | 'constant'; edit: CacheEdit; from: From; role: Role };
+export type CacheCandidate = { cause: 'tag' | 'lore' | 'moved'; action: 'after-chat' | 'before-chat' | 'constant' | 'toggle'; edit: CacheEdit; from: From; role: Role };
 export type CacheBreakCost = { paid: Cost; whole: Cost };
 // Each price applies this edit alone against the same prior; prices cannot be added across prescriptions.
+// turn: for an edit to where a part stands, which pays from the send after this one: what the send after reads of what
+// this one caches, as it stands and with the edit. The messages to come are stood in for, so it prices the shape alone.
+export type CacheTurn = Pick<CacheForecast, 'read' | 'of'> & { cost: CacheBreakCost | null };
 export type CachePrescription = CacheCandidate & {
   before: Pick<CacheForecast, 'read' | 'of'>;
   after: Pick<CacheForecast, 'read' | 'of'>;
   cost: CacheBreakCost | null;
+  turn: { before: CacheTurn; after: CacheTurn } | null;
 };
 
 // Latest ten distinct calls. Forecast breaks and reported shortfalls can count the same call.
