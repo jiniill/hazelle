@@ -81,7 +81,7 @@ export function partName(from: From, role: Role): string {
     case 'tool':
       return `${SLOT.tool.name} · ${from.name}`;
     case 'script':
-      return '봇의 스크립트';
+      return '봇 스크립트';
     case 'preread':
       return PRE_READ;
     case 'agents':

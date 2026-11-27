@@ -197,7 +197,7 @@ function Spending({ report }: { report: UsageReport }) {
   const others = total.costs.filter((cost) => cost !== lead);
   const whole = lead && kept ? lead.amount + kept.amount : 0;
   return (
-    <Section title="비용" action={<Button variant="secondary" size="sm" onClick={() => navigate({ kind: 'cache-report' })}>{CACHE_PAGE} 자세히</Button>}>
+    <Section title="비용" action={<Button variant="secondary" size="sm" onClick={() => navigate({ kind: 'cache-report' })}>{CACHE_PAGE} 자세히 보기</Button>}>
       {lead && (
         <Breakdown
           total={{ label: '쓴 돈', value: `${lead.estimated ? '약 ' : ''}${money(lead.unit, lead.amount)}` }}
