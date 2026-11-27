@@ -35,8 +35,7 @@ export function readPulseHeader(value: string | undefined | null): PulseLabel | 
   return model && model.length <= MODEL_MOST ? { kind: 'call', role: role as PulseRole, type, model } : null;
 }
 
-// A model row shows only with at least `row` distinct people in its period, the last 7 days or a past week (a 대화 row:
-// replied to in the last 24 hours); the whole board hides below `board` people sharing that period. Counts of calls round to `round`. The rows under
+// A model row shows only with at least `row` distinct people in its period, the last 7 days or a past week; the whole board hides below `board` people sharing that period. Counts of calls round to `round`. The rows under
 // the floor are named, never counted, only from `below` of them in a view.
 export const PULSE_FLOORS = { row: 5, board: 10, round: 10, below: 2 } as const;
 

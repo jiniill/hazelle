@@ -193,6 +193,18 @@ it('merges one model across lists by its name and ranks 대화 by the last 24 ho
   });
 });
 
+it('shows a 대화 row by its people in the last 7 days, however few replied in the last 24 hours', async () => {
+  await t.env.db.prepare("INSERT INTO models_dev (list, model, name) VALUES ('openrouter', 'week-row', 'Week Row')").run();
+  const cookies = await people(10);
+  await seen(cookies);
+  at(NOON - 2 * DAY);
+  for (const cookie of cookies.slice(0, 5)) await call(cookie, 'chat', 'openrouter', 'week-row');
+  at(NOON);
+  for (let reply = 0; reply < 6; reply++) await call(cookies[0]!, 'chat', 'openrouter', 'week-row');
+  at(NOON + HOUR);
+  expect((await board())!.ranking.chat.merged).toEqual([{ key: 'week row', model: 'Week Row', share: 1, people: 5, replies: 10 }]);
+});
+
 it('names no 대화 row below the floor while a view holds only one, whose count the pool would be', async () => {
   await t.env.db.prepare("INSERT INTO models_dev (list, model, name) VALUES ('openrouter', 'r', 'R')").run();
   const cookies = await people(10);

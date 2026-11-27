@@ -296,16 +296,16 @@ const rankPeriod = (period: Period): PulseRankings =>
     ...listed(period.below.filter((row) => row.role === role).map(({ key, type, name }) => ({ key, model: name, ...typed(type) }))),
   }));
 
-type Tally = { replies: number; people: Set<string>; names: Map<string | null, number> };
+type Tally = { replies: number; names: Map<string | null, number> };
 
-// The 24 whole hours before now's hour: each hour's calls, and 대화 ranked by its replies. A row needs 5 people in those
-// hours and shows the people of its row in `days`, the 7 days ending today.
+// The 24 whole hours before now's hour: each hour's calls, and 대화 ranked by its replies. A row shows when it passed
+// the floor in `days`, the 7 days ending today, with its people there.
 async function chatDay(db: Db, now: number, days: Period): Promise<{ hours: { at: number; calls: Record<PulseRole, number> }[]; ranking: PulseRanking }> {
   const until = hourOf(now);
   const since = until - DAY_MS;
   const [calls, replies] = await Promise.all([
     db.prepare('SELECT hour, role, calls FROM pulse_hours WHERE hour >= ? AND hour < ?').bind(since, until).all<{ hour: number; role: PulseRole; calls: number }>(),
-    db.prepare('SELECT key, type, account, name, replies FROM pulse_replies WHERE hour >= ? AND hour < ?').bind(since, until).all<{ key: string; type: string; account: string; name: string | null; replies: number }>(),
+    db.prepare('SELECT key, type, name, replies FROM pulse_replies WHERE hour >= ? AND hour < ?').bind(since, until).all<{ key: string; type: string; name: string | null; replies: number }>(),
   ]);
   const callsAt = new Map(calls.results.map((row) => [`${row.hour}\0${row.role}`, row.calls]));
   const hours = Array.from({ length: 24 }, (_, index) => {
@@ -316,9 +316,8 @@ async function chatDay(db: Db, now: number, days: Period): Promise<{ hours: { at
   const tallies = new Map<string, Tally>();
   for (const row of replies.results) {
     for (const id of [`${row.key}\0`, `${row.key}\0${row.type}`]) {
-      const tally = tallies.get(id) ?? tallies.set(id, { replies: 0, people: new Set(), names: new Map() }).get(id)!;
+      const tally = tallies.get(id) ?? tallies.set(id, { replies: 0, names: new Map() }).get(id)!;
       tally.replies += row.replies;
-      tally.people.add(row.account);
       add(tally.names, row.name, row.replies);
     }
   }
@@ -328,8 +327,8 @@ async function chatDay(db: Db, now: number, days: Period): Promise<{ hours: { at
   for (const [id, tally] of tallies) {
     const [key, type] = id.split('\0') as [string, string];
     const model = mostCounted(tally.names);
-    // Each reply also wrote its person into pulse_used of a day within `days`, so 5 people here are 5 there.
-    if (tally.people.size >= PULSE_FLOORS.row) shown.push({ count: tally.replies, row: { key, model, ...typed(type), share: tally.replies / chatCalls, people: peopleOf.get(id)!, replies: rounded(tally.replies) } });
+    const people = peopleOf.get(id);
+    if (people !== undefined) shown.push({ count: tally.replies, row: { key, model, ...typed(type), share: tally.replies / chatCalls, people, replies: rounded(tally.replies) } });
     else if (key) under.push({ count: tally.replies, row: { key, model, ...typed(type) } });
   }
   const rest = (split: boolean): PulseRest => {
