@@ -1,3 +1,4 @@
+import type { CacheCause, CacheForecast } from './cache';
 import type { Cost } from '../connectors/types';
 import type { Receipt } from './chat';
 import type { Feature } from './features';
@@ -43,7 +44,31 @@ export type Ledger =
   | { type: 'call'; at: number; call: UsageCall['call']; chat: string | null; character: string | null; purpose: CallPurpose | null }
   | { type: 'input-refusal'; at: number; call: UsageCall['call']; chat: string | null; character: string | null; purpose: CallPurpose | null }
   | { type: 'cost'; call: string; cost: Cost | null; at: number }
-  | { type: 'purpose'; call: string; purpose: CallPurpose; at: number };
+  | { type: 'purpose'; call: string; purpose: CallPurpose; at: number }
+  | ({ type: 'cache'; call: string; at: number } & CacheKept)
+  | { type: 'cause'; call: string; at: number; causes: CauseKept[] };
+
+// What a reply's request did to the cache the call before it left, beside its call's row so a report reads every chat's
+// at once. prompt: the conversation prompt the request was built from, null for a row filled from a chat's log, which
+// keeps none.
+export type CacheKept = { forecast: CacheForecast; prompt: string | null };
+// What a request's diagnosis named: the kind, and the name of the thing where it has one (a lore entry's, a tag's).
+export type CauseKept = { kind: CacheCause['kind']; name: string | null };
+// causes null: not diagnosed, or diagnosed before rows kept it.
+export type CacheNoted = Counted & CacheKept & { causes: CauseKept[] | null };
+
+export function cacheNoted(rows: Iterable<Ledger>, calls: Counted[]): CacheNoted[] {
+  const kept = new Map<string, CacheKept>();
+  const causes = new Map<string, CauseKept[]>();
+  for (const row of rows) {
+    if (row.type === 'cache') kept.set(row.call, { forecast: row.forecast, prompt: row.prompt });
+    else if (row.type === 'cause') causes.set(row.call, row.causes);
+  }
+  return calls.flatMap((one) => {
+    const cache = kept.get(one.call.id);
+    return cache ? [{ ...one, ...cache, causes: causes.get(one.call.id) ?? null }] : [];
+  });
+}
 
 export type Counted = UsageCall & Pick<Extract<Ledger, { type: 'call' }>, 'chat' | 'character' | 'purpose'>;
 // A call a chat's log or another saved value keeps, with what it was for where that can be told.

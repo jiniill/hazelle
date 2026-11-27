@@ -87,6 +87,13 @@
   background: var(--color-chart-quiet);
 }
 
+/* Nobody's fault: an empty stretch in a dashed line, as SendRuns draws a missed request. */
+.missed {
+  box-sizing: border-box;
+  border: var(--border-thin) dashed var(--color-text-muted);
+  border-radius: var(--radius-xs);
+}
+
 .link {
   display: block;
   width: 100%;

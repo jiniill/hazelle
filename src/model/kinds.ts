@@ -256,7 +256,9 @@ const SHAPES = {
   ledger: (value) => isRecord(value) && ((value.type === 'call' || value.type === 'input-refusal')
     ? shape({ at: num, call: shape({ ...all(str, 'id', 'connection', 'model', 'modelName', 'source'), calibration }), chat: orNull(str), character: orNull(str), purpose: orNull(isPurpose) })(value)
     : value.type === 'cost' ? shape({ call: str, cost: orNull(isRecord), at: num })(value)
-    : value.type === 'purpose' && shape({ call: str, purpose: isPurpose, at: num })(value)),
+    : value.type === 'purpose' ? shape({ call: str, purpose: isPurpose, at: num })(value)
+    : value.type === 'cache' ? shape({ call: str, at: num, forecast: shape({ read: num, of: num, broken: orNull(isRecord) }), prompt: orNull(str) })(value)
+    : value.type === 'cause' && shape({ call: str, at: num, causes: listOf(shape({ kind: str, name: orNull(str) })) })(value)),
   presence: shape({ start: Number.isInteger, runs: (value) => listOf(Number.isInteger)(value) && (value as number[]).length % 2 === 0 }),
   prompt: (value) => prompt(value) && (conversation(value) || task(value)),
   persona: shape({ name: str, description: str, picture: orNull(str), folder: optStr }),

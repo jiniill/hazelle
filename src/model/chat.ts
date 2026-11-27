@@ -674,6 +674,16 @@ export const translationPurpose = ({ sentIn }: Translation): CallPurpose => (sen
 
 export const usageCall = ({ id, connection, model, modelName, source, usage, cost, calibration }: Receipt, at: number): UsageCall => ({ at, call: { id, connection, model, modelName, source, usage, cost, ...(calibration && { calibration }) } });
 
+// Every reply call of a log that kept a cache forecast, once each, at its first entry.
+export function loggedForecasts(entries: Iterable<Entry>): { call: string; at: number; forecast: CacheForecast }[] {
+  const kept = new Map<string, { call: string; at: number; forecast: CacheForecast }>();
+  for (const entry of entries) {
+    if (entry.type !== 'message' && entry.type !== 'version') continue;
+    for (const call of entry.receipt ? calls(entry.receipt) : []) if (call.forecast && !kept.has(call.id)) kept.set(call.id, { call: call.id, at: entry.at, forecast: call.forecast });
+  }
+  return [...kept.values()];
+}
+
 // Include hidden/deleted versions and replaced translations; shared receipts count once, at their first entry.
 // A call entry keeps a bot's model call or an embedding: only a generated receipt carries a calibration, and only since
 // receipts kept one, so one without is not known.

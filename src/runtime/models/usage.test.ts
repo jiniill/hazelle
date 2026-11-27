@@ -10,7 +10,7 @@ import type { Write } from '../store/object-writes';
 import { testServer } from '../testing';
 import { SETTINGS_ID } from '../../model/settings';
 import { unavailableCalibration } from '../../model/token-calibration';
-import { ledgerId, receiptRow, Usage } from './usage';
+import { cacheRow, ledgerId, receiptRow, Usage } from './usage';
 
 const server = testServer();
 const receipt = (id = crypto.randomUUID(), over: Partial<Receipt> = {}): Receipt => ({
@@ -158,5 +158,47 @@ it('goes on from the chat a fill of purposes cut short reached', async () => {
   const read = await usage.read(new AbortController().signal);
   if (!read.ok) throw new Error(read.error);
   expect(purposes(read.data)).toEqual({ [skipped.id]: null, [made.id]: 'reply' });
+  usage.close();
+});
+
+it('fills, on asking, the cache rows of the replies saved before rows kept one, reading only those replies’ chats', async () => {
+  const store = await account();
+  const [old, fresh] = [crypto.randomUUID(), crypto.randomUUID()];
+  const forecast = { read: 10, of: 100, broken: { kind: 'expired' as const } };
+  const [past, plain, live] = [receipt(undefined, { forecast }), receipt(), receipt(undefined, { forecast })];
+  expect((await store.batch([
+    chat(old), chat(fresh),
+    write(old, message(past)), write(old, message(plain)), write(fresh, message(live)),
+    receiptRow('reply', past, 1, { chat: old, character: null }), receiptRow('reply', plain, 2, { chat: old, character: null }),
+    receiptRow('reply', live, 5, { chat: fresh, character: null }), cacheRow(live.id, 5, { forecast, prompt: 'p' }),
+  ], undefined, { unheld: true })).ok).toBe(true);
+  expect((await changeSettings(store, (current) => ({ ...current, ledger: 'filled' }))).ok).toBe(true);
+  const usage = new Usage(store);
+  const signal = new AbortController().signal;
+  expect((await usage.read(signal)).ok).toBe(true);
+  expect(usage.unfilledCaches()).toEqual([old]);
+  const scan = vi.spyOn(store, 'scan');
+
+  await usage.fillCaches();
+  expect([usage.caching(), accountSettings(store).caches]).toEqual([null, 'filled']);
+  expect(scan.mock.calls.map(([options]) => options.parent)).toEqual([old]);
+  expect((await usage.read(signal)).ok).toBe(true);
+  expect(Object.fromEntries(usage.cacheRows().map(({ call, prompt }) => [call.id, prompt]))).toEqual({ [past.id]: null, [live.id]: 'p' });
+  expect(usage.unfilledCaches()).toEqual([]);
+  usage.close();
+});
+
+it('keeps a reply’s cache forecast beside its call’s row as the reply is saved', async () => {
+  const store = await account();
+  const id = crypto.randomUUID();
+  expect((await store.batch([chat(id)], undefined, { unheld: true })).ok).toBe(true);
+  const forecast = { read: 10, of: 100, broken: { kind: 'expired' as const } };
+  const call = receipt(undefined, { forecast });
+  expect((await appendReply(store, id, { id: crypto.randomUUID(), message: null, replaces: null, at: 3, text: 'reply', receipt: call })).ok).toBe(true);
+  expect((await changeSettings(store, (current) => ({ ...current, ledger: 'filled' }))).ok).toBe(true);
+  const usage = new Usage(store);
+  expect((await usage.read(new AbortController().signal)).ok).toBe(true);
+  expect(usage.cacheRows()).toMatchObject([{ call: { id: call.id }, chat: id, forecast, prompt: null, causes: null }]);
+  expect(usage.unfilledCaches()).toEqual([]);
   usage.close();
 });

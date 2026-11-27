@@ -53,6 +53,7 @@ const ThemeScreen = lazy(() => import('../settings/ThemeScreen').then(({ ThemeSc
 const DisplayScreen = lazy(() => import('../settings/DisplayScreen').then(({ DisplayScreen }) => ({ default: DisplayScreen })));
 const ControlsScreen = lazy(() => import('../settings/ControlsScreen').then(({ ControlsScreen }) => ({ default: ControlsScreen })));
 const SoundsScreen = lazy(() => import('../settings/SoundsScreen').then(({ SoundsScreen }) => ({ default: SoundsScreen })));
+const CacheScreen = lazy(() => import('../settings/CacheScreen').then(({ CacheScreen }) => ({ default: CacheScreen })));
 const UsageScreen = lazy(() => import('../settings/UsageScreen').then(({ UsageScreen }) => ({ default: UsageScreen })));
 const NoticesScreen = lazy(() => import('../settings/NoticesSection').then(({ NoticesScreen }) => ({ default: NoticesScreen })));
 const BoardScreen = lazy(() => import('../board/BoardScreen').then(({ BoardScreen }) => ({ default: BoardScreen })));
@@ -146,6 +147,8 @@ export function Page({ route, onPaired }: { route: Route; onPaired: (paired: boo
         return <AccountScreen section={at.section} back={sideBack(at)} />;
       case 'usage':
         return <UsageScreen back={back(at)} />;
+      case 'cache-report':
+        return <CacheScreen back={back(at)} />;
       case 'notices':
         if (guest) return <Replace to={{ kind: 'account', section: null }} />;
         return <NoticesScreen back={back(at)} />;

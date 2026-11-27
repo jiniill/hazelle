@@ -4,50 +4,22 @@ import type { Assembled, From, Problem } from '../../engine/pipeline';
 import type { Receipt } from '../../model/chat';
 import { isChapter } from '../../engine/memory';
 import type { Chapter, Memory, MemoryRecord } from '../../model/memory';
-import type { Role } from '../../model/prompt';
 import type { HttpRequest } from '../../contracts/http';
 import type { LogEntry } from '../../runtime/models/request-log';
-import { MESSAGE_ROLES, SLOT, textName } from '../common/prompt-words';
+import { MESSAGE_ROLES, partName, SLOT } from '../common/prompt-words';
 import { Button, Callout, ChoiceGroup, CodeBlock, Empty, Facts, List, ListItem, Row, Section, Stack, Text } from '../ui';
 import { loreBudgetEditor, type Side } from './panels';
 import { budgetCut } from './infoReply';
 import { navigate } from '../shell/router';
 import { recordScene, recordTitle } from './memory';
 import { tokens } from '../common/receipt';
-import { ANSWER_INSTRUCTION_LABEL, CHAPTER, COMMAND, inSettings, LORE_BUDGET_LABEL, loreName, opens, PRE_READ, SECONDARY_KEYS } from '../common/words';
+import { CHAPTER, COMMAND, inSettings, LORE_BUDGET_LABEL, loreName, opens, SECONDARY_KEYS } from '../common/words';
 
 type Lore = NonNullable<Assembled['lore']>[number];
 
 // Unavailable is not none: requests are device-local, bounded and dropped by a new build, so other devices and old calls lack them.
 const UNKEPT = '요청을 보낸 기기에서 최근 요청만 볼 수 있어요.';
 const PICKED = '새로고침 전에 보낸 요청이라 원문을 알 수 없어요.';
-
-export function partName(from: From, role: Role): string {
-  switch (from.kind) {
-    case 'block':
-      return from.name ?? (from.slot ? SLOT[from.slot].name : textName(role));
-    case 'lore':
-      return `${SLOT[from.slot].name} · ${loreName(from.name)}`;
-    case 'depth':
-      return `${SLOT.lorebook.name} · ${loreName(from.name)} · @@depth ${from.depth}`;
-    case 'continue':
-      return '이어 쓰기 지시';
-    case 'answer':
-      return ANSWER_INSTRUCTION_LABEL;
-    case 'retrieval':
-      return `${SLOT.memory.name} · 찾은 기록`;
-    case 'tool':
-      return `${SLOT.tool.name} · ${from.name}`;
-    case 'script':
-      return '봇의 스크립트';
-    case 'preread':
-      return PRE_READ;
-    case 'agents':
-      return SLOT.agentNotes.name;
-    case 'status':
-      return SLOT.status.name;
-  }
-}
 
 // Redacted where it was recorded (runtime/models/request-log redacted), so nothing is redacted here.
 export function SentRequest({ entry, receipt }: { entry: LogEntry | null; receipt: Receipt }) {

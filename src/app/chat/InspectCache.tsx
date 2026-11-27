@@ -12,13 +12,14 @@ import { CacheNoteRow } from '../common/CacheNoteRow';
 import { ago } from '../common/time';
 import { useShown } from '../common/useLoaded';
 import { CACHE_GUARD, COUNTING, MODEL_SETTINGS, opens, UNKNOWN, CACHE_BROKEN, CACHE_READ } from '../common/words';
+import { FATES, PROVIDER_MISSED } from '../common/cache';
 import { useLab } from '../common/labs';
 import { useCaptured, useSession } from '../session';
 import { navigate } from '../shell/router';
 import { Button, Callout, Disclosure, Empty, Facts, Hint, List, ListItem, Row, RunMarks, Section, SendLine, SendRuns, SettingGroup, Stack, Tag, Text, type SendFate, type SendRun } from '../ui';
 import { BrokenPartView, breakCauses, breakKind, causeFacts, leakWords, PartDiff, PrescriptionView, RecurrenceNote, ShortfallNote } from './CacheDiagnosis';
 import { nextWarning, profileName, readShare, why } from './ChatCache';
-import { partName } from './ChatSent';
+import { partName } from '../common/prompt-words';
 import { useSendTimeNote } from './InspectRequest';
 import type { Side } from './panels';
 import type { CacheNotes } from './useSendNotes';
@@ -127,7 +128,6 @@ function cacheRows(parts: ForecastPart[]): CacheRow[] {
 const NEXT_SEND = '다음 전송';
 const LEAKS = '새는 곳';
 const DROPPED = '지난 전송에서 빠진 내용';
-const FATES: Record<SendFate, string> = { read: CACHE_READ, again: '다시 보냄', fresh: '새로 보냄' };
 const fateOf = ({ state, again }: ForecastPart): SendFate => (state === 'read' ? 'read' : again ? 'again' : 'fresh');
 const sum = (parts: { tokens: number }[]) => parts.reduce((total, { tokens }) => total + tokens, 0);
 const isChat = ({ from }: { from: From }) => from.kind === 'block' && from.slot === 'chat';
@@ -163,7 +163,7 @@ function sendRuns(replies: CacheNotes['replies']) {
     return { share: (share ?? 0) / 100, state: receipt.forecast?.broken ? 'broken' : cacheShortfall(receipt)?.short ? 'missed' : share === null ? 'unread' : 'kept' };
   });
   const count = (state: SendRun['state']) => `${runs.filter((run) => run.state === state).length}번`;
-  return { recent, runs, legend: [{ state: 'broken' as const, label: CACHE_BROKEN, value: count('broken') }, { state: 'missed' as const, label: '제공자가 놓침', value: count('missed') }] };
+  return { recent, runs, legend: [{ state: 'broken' as const, label: CACHE_BROKEN, value: count('broken') }, { state: 'missed' as const, label: PROVIDER_MISSED, value: count('missed') }] };
 }
 
 const LEAK_ICONS = { changed: PenLine, added: ListPlus, removed: Scissors, moved: ArrowRightLeft } as const;

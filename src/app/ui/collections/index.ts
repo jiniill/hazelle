@@ -7,6 +7,7 @@ export { CardGrid, FaceCard, FolderCard, IconCard, Portrait, SelectionBar } from
 export { PathBar } from './PathBar';
 export { PostCard, PostFeed, PostStat } from './PostCard';
 export { Ranking, type Ranked } from './Ranking';
+export { ShareRows, type ShareRow } from './ShareRows';
 export { Facts, type FactItem } from './Facts';
 export { FlowMap, type FlowColumn, type FlowNode } from './FlowMap';
 export type { FlowEdge, FlowKind } from './flow';

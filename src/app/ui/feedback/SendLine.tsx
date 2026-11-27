@@ -3,7 +3,8 @@ import { classNames } from '../foundation/classNames';
 import styles from './SendLine.module.css';
 
 // read: answered from the cache. again: text the last request cached, paid for in full. fresh: new to this request.
-export type SendFate = 'read' | 'again' | 'fresh';
+// missed: text the request could read from the cache and the provider did not.
+export type SendFate = 'read' | 'again' | 'fresh' | 'missed';
 type Segment = { size: number; fate: SendFate };
 
 type Props = {

@@ -1,7 +1,8 @@
 import { ArrowDownToLine, BookOpen, Bot, Brain, Gauge, History, IdCard, Languages, MessageSquare, MessagesSquare, NotebookPen, PenLine, ScrollText, Smile, UserRound, type LucideIcon } from 'lucide-react';
+import type { From } from '../../engine/pipeline';
 import type { PromptSort, Role, SlotKind } from '../../model/prompt';
 import type { OutlineKind } from '../ui';
-import { FEATURE_NAMES, ILLUSTRATE_NOTE, inFeature, TOOL, TRANSLATOR_NOTE } from './words';
+import { ANSWER_INSTRUCTION_LABEL, FEATURE_NAMES, ILLUSTRATE_NOTE, inFeature, loreName, PRE_READ, TOOL, TRANSLATOR_NOTE } from './words';
 
 export const SLOT = {
   tool: { name: TOOL, hint: `${TOOL}이 보탠 내용`, line: `켜 둔 ${TOOL}이 이번 대화에 덧붙인 내용이 들어가요.`, kind: 'note', icon: NotebookPen },
@@ -61,3 +62,31 @@ const named = (sort: Exclude<PromptSort, 'conversation' | 'agent'>) => `${TASK_N
 export const SORT_PROMPT: Record<PromptSort, string> = { conversation: '프롬프트', translate: named('translate'), memory: named('memory'), illustrate: named('illustrate'), mascot: named('mascot'), preread: named('preread'), agent: TASK_NAMES.agent, status: named('status') };
 
 export const defaultPrompt = (sort: PromptSort) => `기본 ${SORT_PROMPT[sort]}`;
+
+// What a part of a request is called, by where it came from.
+export function partName(from: From, role: Role): string {
+  switch (from.kind) {
+    case 'block':
+      return from.name ?? (from.slot ? SLOT[from.slot].name : textName(role));
+    case 'lore':
+      return `${SLOT[from.slot].name} · ${loreName(from.name)}`;
+    case 'depth':
+      return `${SLOT.lorebook.name} · ${loreName(from.name)} · @@depth ${from.depth}`;
+    case 'continue':
+      return '이어 쓰기 지시';
+    case 'answer':
+      return ANSWER_INSTRUCTION_LABEL;
+    case 'retrieval':
+      return `${SLOT.memory.name} · 찾은 기록`;
+    case 'tool':
+      return `${SLOT.tool.name} · ${from.name}`;
+    case 'script':
+      return '봇의 스크립트';
+    case 'preread':
+      return PRE_READ;
+    case 'agents':
+      return SLOT.agentNotes.name;
+    case 'status':
+      return SLOT.status.name;
+  }
+}

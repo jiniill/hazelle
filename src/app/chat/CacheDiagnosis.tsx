@@ -7,11 +7,12 @@ import { applyCacheEdit } from '../../runtime/diagnostics/cache-prescriptions';
 import type { LogEntry } from '../../runtime/models/request-log';
 import { cost, tokens } from '../common/receipt';
 import { loreName, onOff, APPLY_FAILED } from '../common/words';
+import { CAUSES } from '../common/cache';
 import { useStore } from '../session';
 import { useToast } from '../toast';
 import type { ReactNode } from 'react';
 import { Button, Compare, Disclosure, Hint, Row, Stack, Tag, Text, TextDiff, type FactItem } from '../ui';
-import { partName } from './ChatSent';
+import { partName } from '../common/prompt-words';
 import { silentReason } from './InspectModules';
 
 type BrokenPart = CacheDiagnosis['parts'][number];
@@ -72,7 +73,6 @@ export function breakCauses(diagnosis: CacheDiagnosis | null | undefined, broken
 export const diagnosed = (diagnosis: CacheDiagnosis | null | undefined, kind: BrokenPart['kind'], at: number) =>
   diagnosis?.parts.find((part) => part.kind === kind && (kind === 'removed' ? part.before : part.after) === at) ?? null;
 
-const CAUSES: Record<CacheCause['kind'], string> = { tag: '값 바뀜', lore: '켜짐·꺼짐', moved: '위치 밀림', edited: '메시지 수정', memory: '기억 정리', request: '스크립트 수정', unknown: '원인 모름' };
 // What kind of leak a part is, in a word each: its causes', else how the part itself differs.
 export const leakWords = (part: BrokenPart) => (part.causes.length ? [...new Set(part.causes.map(({ kind }) => CAUSES[kind]))] : [KINDS[part.kind]]);
 

@@ -1,11 +1,13 @@
 import { unavailableCalibration } from '../../model/token-calibration';
 import { ChangeSignal } from '../../change-signal';
-import { loggedCalls, usageCall, type Entry, type Receipt } from '../../model/chat';
+import { loggedCalls, loggedForecasts, usageCall, type Entry, type Receipt } from '../../model/chat';
+import type { CacheDiagnosis } from '../../model/cache';
+import { secondInverted } from '../../model/memory';
 import type { Cost } from '../../connectors/types';
 import { isValue, type Stored } from '../../model/kinds';
 import { grouped } from '../../model/fields';
 import { SETTINGS_ID, type Settings } from '../../model/settings';
-import { counted, type CallPurpose, type Counted, type Ledger, type LoggedCall } from '../../model/usage';
+import { cacheNoted, counted, type CacheKept, type CacheNoted, type CallPurpose, type CauseKept, type Counted, type Ledger, type LoggedCall } from '../../model/usage';
 import type { ApiFailure, ApiResult } from '../api';
 import type { Write } from '../store/object-writes';
 import { isHalted, type ObjectStore, type Pin } from '../store/store';
@@ -32,6 +34,22 @@ export const costRow = (call: string, cost: Cost | null): Write =>
 const purposeRow = (call: string, purpose: CallPurpose): Write =>
   ({ type: 'create', kind: 'ledger', id: crypto.randomUUID(), parent: SETTINGS_ID, value: { type: 'purpose', call, purpose, at: Date.now() } });
 
+// An id of its own beside the call's row, so the reply's write and the fill of the same call land once.
+export const cacheRow = (call: string, at: number, kept: CacheKept): Write =>
+  ({ type: 'create', kind: 'ledger', id: secondInverted(ledgerId(call)), parent: SETTINGS_ID, value: { type: 'cache', call, at, ...kept } });
+
+export function causesKept({ parts }: CacheDiagnosis): CauseKept[] {
+  const kept = new Map<string, CauseKept>();
+  for (const cause of parts.flatMap(({ causes }) => causes)) {
+    const name = cause.kind === 'lore' ? cause.name : cause.kind === 'tag' ? cause.tag : null;
+    kept.set(`${cause.kind}:${name}`, { kind: cause.kind, name });
+  }
+  return [...kept.values()];
+}
+
+export const keepCauses = (store: ObjectStore, call: string, causes: CauseKept[]) =>
+  store.batch([{ type: 'create', kind: 'ledger', id: crypto.randomUUID(), parent: SETTINGS_ID, value: { type: 'cause', call, causes, at: Date.now() } }]);
+
 // Only for a call no other write saves: one that saves its receipt puts receiptRow in that write's batch.
 export const keepRow = (store: ObjectStore, purpose: CallPurpose, receipt: Receipt, at: number, place: CallPlace) => store.batch([receiptRow(purpose, receipt, at, place)]);
 
@@ -48,10 +66,12 @@ export class Usage {
   private cursor = 0;
   private countedRows: Counted[] | null = null;
   private measuredRows: Counted[] | null = null;
+  private notedRows: CacheNoted[] | null = null;
   private readonly closing = new AbortController();
   private running: Promise<unknown> | null = null;
   private filled: Filling = null;
   private purposed: Filling = null;
+  private cached: Filling = null;
   private readonly changes = new ChangeSignal();
 
   constructor(private readonly store: ObjectStore) {}
@@ -62,9 +82,30 @@ export class Usage {
 
   readonly purposing = () => this.purposed;
 
+  readonly caching = () => this.cached;
+
+  // The replies whose cache rows the ledger keeps, as of the last read.
+  cacheRows(): readonly CacheNoted[] {
+    return this.notedRows ??= cacheNoted(this.rows.values(), this.countedRows ??= counted(this.rows.values()));
+  }
+
+  // The chats 지난 기록 읽기 would read: those of the replies saved before rows kept their cache, or the rest of
+  // a fill that began. As of the last read.
+  unfilledCaches(): string[] {
+    const { caches } = accountSettings(this.store);
+    if (caches === 'filled') return [];
+    let first = Infinity;
+    for (const row of this.rows.values()) if (row.type === 'cache') first = Math.min(first, row.at);
+    const chats = new Set<string>();
+    for (const { at, chat, purpose } of this.countedRows ??= counted(this.rows.values())) {
+      if (purpose === 'reply' && chat !== null && (caches ? chat > caches.after : at < first) && this.store.get('chat', chat)) chats.add(chat);
+    }
+    return [...chats].sort();
+  }
+
   // Tokens uses this stable identity to skip derivation until the ledger changes.
   calibrationRows(): readonly Counted[] {
-    return this.measuredRows ??= [...this.rows.values()].flatMap((row) => row.type === 'cost' || row.type === 'purpose' ? [] : [{ at: row.at, call: row.call, chat: row.chat, character: row.character, purpose: row.purpose }]);
+    return this.measuredRows ??= [...this.rows.values()].flatMap((row) => row.type !== 'call' && row.type !== 'input-refusal' ? [] : [{ at: row.at, call: row.call, chat: row.chat, character: row.character, purpose: row.purpose }]);
   }
 
   close() {
@@ -72,6 +113,7 @@ export class Usage {
     this.rows.clear();
     this.countedRows = null;
     this.measuredRows = null;
+    this.notedRows = null;
     this.changes.clear();
   }
 
@@ -100,6 +142,7 @@ export class Usage {
         this.rows.set(row.id, value);
         this.countedRows = null;
         this.measuredRows = null;
+        this.notedRows = null;
       } else unreadable = true;
     }, this.cursor, pin, signal);
     if (!walked.ok) return walked;
@@ -122,6 +165,13 @@ export class Usage {
   async fillPurposes(signal: AbortSignal = this.closing.signal): Promise<void> {
     if (this.purposed && this.purposed !== 'failed') return;
     await this.oneFill(signal, (state) => (this.purposed = state), (pin, stop) => this.purposedAll(pin, stop));
+  }
+
+  // Only on the user's word (캐시 › 지난 기록 읽기): the cache rows of the replies saved before rows kept one, each
+  // from the forecast its chat's log holds. Only those replies' chats are read, once each.
+  async fillCaches(signal: AbortSignal = this.closing.signal): Promise<void> {
+    if (this.cached && this.cached !== 'failed') return;
+    await this.oneFill(signal, (state) => (this.cached = state), (pin, stop) => this.cachedAll(pin, stop));
   }
 
   private async oneFill(signal: AbortSignal, set: (state: Filling) => void, run: (pin: Pin, signal: AbortSignal) => Promise<ApiFailure | null>) {
@@ -188,7 +238,34 @@ export class Usage {
     return (await this.written(booked(profiles, unknown.get(null)), signal)) ?? this.marked({ purposes: 'filled' });
   }
 
-  private async marked(change: Pick<Settings, 'ledger'> | Pick<Settings, 'purposes'>) {
+  private async cachedAll(pin: Pin, signal: AbortSignal): Promise<ApiFailure | null> {
+    const read = await this.read(signal);
+    if (!read.ok) return read;
+    const chats = this.unfilledCaches();
+    // Marked before the first row, so the rows it writes are not taken for the first a reply wrote.
+    const begun = accountSettings(this.store).caches ? null : await this.marked({ caches: { after: '' } });
+    if (begun) return begun;
+    const noted = new Set(this.cacheRows().map(({ call }) => call.id));
+    for (const [index, chat] of chats.entries()) {
+      this.cached = { read: index, of: chats.length };
+      this.changes.notify();
+      const entries: Entry[] = [];
+      let unreadable = false;
+      const failure = await this.store.scan({ parent: chat }, (row, held) => {
+        if (row.kind !== 'entry') return;
+        if (isValue('entry', held)) entries.push(held);
+        else unreadable = true;
+      }, pin, signal);
+      if (failure) return failure;
+      if (unreadable) return { ok: false, error: 'unreadable' };
+      const rows = loggedForecasts(entries).filter(({ call }) => !noted.has(call)).map(({ call, at, forecast }) => cacheRow(call, at, { forecast, prompt: null }));
+      const stopped = (await this.written(rows, signal)) ?? ((index + 1) % FILL_STEP === 0 ? await this.marked({ caches: { after: chat } }) : null);
+      if (stopped) return stopped;
+    }
+    return this.marked({ caches: 'filled' });
+  }
+
+  private async marked(change: Pick<Settings, 'ledger'> | Pick<Settings, 'purposes'> | Pick<Settings, 'caches'>) {
     const marked = await changeSettings(this.store, (current) => ({ ...current, ...change }));
     return marked.ok ? null : marked;
   }
