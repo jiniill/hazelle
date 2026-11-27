@@ -3,6 +3,7 @@ import type { Cost } from '../connectors/types';
 import type { Fired, Silent } from '../engine/lorebook/activate';
 import type { Assembled, From } from '../engine/pipeline';
 import { secondInverted } from './memory';
+import type { PackOwner } from './library';
 import type { Block, Role } from './prompt';
 
 // Wire-order cache identity; tokens use o200k_base, an estimate for other tokenizers.
@@ -50,7 +51,8 @@ export type Forecast = {
 // coarse keeps the complete differing middle, without claiming its internal alignment.
 export type CacheDiff = { runs: { kind: 'same' | 'before' | 'after'; text: string }[]; coarse: boolean };
 export type CacheCause =
-  | { kind: 'tag'; tag: string; before: string; after: string }
+  // script: the tag read a variable the bot's scripts write.
+  | { kind: 'tag'; tag: string; before: string; after: string; script?: true }
   | { kind: 'lore'; id: string; name: string; before: CacheLore | null; after: CacheLore | null }
   | { kind: 'moved'; before: number; after: number; depth: number | null }
   | { kind: 'edited' | 'memory' | 'unknown' };
@@ -70,9 +72,11 @@ export type CacheEdit =
   ))
   // The value held for the character's chats, or with character null for 캐릭터 없이's; null holds none, and the
   // toggle reads its default. says: the option the new value names, null for a check.
-  | { kind: 'toggle'; character: string | null; key: string; name: string; says: string | null; before: string | null; after: string | null };
+  | { kind: 'toggle'; character: string | null; key: string; name: string; says: string | null; before: string | null; after: string | null }
+  // A regex script stopped where it stands. pack: its pack's place among the chat's (ChatScope packs).
+  | { kind: 'script'; owner: PackOwner; pack: number; id: string; name: string; before: boolean; after: boolean };
 
-export type CacheCandidate = { cause: 'tag' | 'lore' | 'moved'; action: 'after-chat' | 'before-chat' | 'constant' | 'toggle'; edit: CacheEdit; from: From; role: Role };
+export type CacheCandidate = { cause: 'tag' | 'lore' | 'moved' | 'script'; action: 'after-chat' | 'before-chat' | 'constant' | 'toggle' | 'off'; edit: CacheEdit; from: From; role: Role };
 export type CacheBreakCost = { paid: Cost; whole: Cost };
 // Each price applies this edit alone against the same prior; prices cannot be added across prescriptions.
 // turn: for an edit to where a part stands, which pays from the send after this one: what the send after reads of what

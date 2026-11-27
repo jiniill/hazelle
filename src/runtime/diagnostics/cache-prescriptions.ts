@@ -5,6 +5,7 @@ import { breakCost, forecast, type Prior } from './cache';
 import { SETTINGS_ID } from '../../model/settings';
 import { accountSettings } from '../account-settings';
 import { packsOf, togglesOf } from '../chat/chat-context';
+import { setScriptOff } from '../library/pack';
 import { chatPrompt } from '../library/prompts';
 import type { ObjectStore } from '../store/store';
 import { cacheSend, type Sending } from '../chat/turn-context';
@@ -22,7 +23,8 @@ export async function priceCachePrescriptions(store: ObjectStore, chat: string, 
   const prompt = choice.kind === 'prompt' && !sending.input.scope.promptOut && choice.prompt.value === sending.input.scope.prompt ? choice.prompt.id : null;
   const { character } = sending.turn.chat;
   const holder = character === null ? accountSettings(store) : store.get('character', character)?.value;
-  const candidates = cacheCandidates(diagnosis, current, sending.input.scope, { prompt, character, toggles: togglesOf(store, sending.turn.chat, choice, packsOf(store, sending.turn.chat)).declared, held: holder?.toggles ?? {} });
+  const packs = packsOf(store, sending.turn.chat);
+  const all = cacheCandidates(diagnosis, current, sending.input.scope, { prompt, character, toggles: togglesOf(store, sending.turn.chat, choice, packs).declared, held: holder?.toggles ?? {}, packs: packs.map(({ id, module }) => ({ kind: module ? 'module' : 'character', id })) });
   const prescriptions: CachePrescription[] = [];
   const { connection, model } = sending.turn.route;
   const priced = (made: Forecast) => breakCost(connection.value, model, made, sending.calibration.estimate.centre);
@@ -34,7 +36,21 @@ export async function priceCachePrescriptions(store: ObjectStore, chat: string, 
     return made?.against ? { read: made.against.read, of: made.against.of, cost: priced(made) } : null;
   };
   let standing: CacheTurn | null | undefined;
+  const lost = ({ read, of }: CacheTurn) => of - read;
   try {
+    // A bot may hold dozens of scripts: all are stopped at once first, and each is tried only when that helped.
+    const scripts = all.filter(({ cause }) => cause === 'script');
+    const without = scripts.reduce<Sending['input']['scope'] | null>((scope, { edit }) => scope && cacheOverlay(scope, edit), sending.input.scope);
+    let guilty = false;
+    if (scripts.length && without) {
+      const input = { ...sending.input, scope: without };
+      const sent = await store.evaluation.prompt({ asker: 'forecast', chat }, input, signal);
+      standing = await turnOf(sending.input, sending.prompt);
+      const edited = standing && !('kind' in sent) ? await turnOf(input, sent) : null;
+      if (signal.aborted) return null;
+      guilty = !!standing && !!edited && lost(edited) < lost(standing);
+    }
+    const candidates = guilty ? all : all.filter(({ cause }) => cause !== 'script');
     // One job per distinct edit, sequential on the composer's lane, with its original clock, seed and calibration.
     for (const candidate of candidates) {
       if (signal.aborted) return null;
@@ -49,14 +65,14 @@ export async function priceCachePrescriptions(store: ObjectStore, chat: string, 
       if (!after?.against) continue;
       const { read, of } = current.against;
       const price = { ...candidate, before: { read, of }, after: { read: after.against.read, of: after.against.of }, cost: priced(after) };
-      if (candidate.cause !== 'moved') {
+      if (candidate.cause !== 'moved' && candidate.cause !== 'script') {
         if (after.against.read > read) prescriptions.push({ ...price, turn: null });
         continue;
       }
       standing ??= await turnOf(sending.input, sending.prompt);
       const edited = standing && await turnOf(input, prompt);
       if (signal.aborted) return null;
-      if (standing && edited && edited.of - edited.read < standing.of - standing.read) prescriptions.push({ ...price, turn: { before: standing, after: edited } });
+      if (standing && edited && lost(edited) < lost(standing)) prescriptions.push({ ...price, turn: { before: standing, after: edited } });
     }
     return prescriptions;
   } catch {
@@ -70,8 +86,10 @@ export async function applyCacheEdit(store: ObjectStore, edit: CacheEdit): Promi
     ? await store.update('prompt', edit.id, (current) => cacheEditedPrompt(current, edit))
     : edit.kind === 'lore'
       ? await store.update('lore', edit.id, (current) => cacheEditedLore(current, edit))
-      : edit.character === null
-        ? await store.update('settings', SETTINGS_ID, (current) => cacheToggled(current, edit))
-        : await store.update('character', edit.character, (current) => cacheToggled(current, edit));
+      : edit.kind === 'script'
+        ? await setScriptOff(store, edit.owner, 'regex', edit.id, edit.after)
+        : edit.character === null
+          ? await store.update('settings', SETTINGS_ID, (current) => cacheToggled(current, edit))
+          : await store.update('character', edit.character, (current) => cacheToggled(current, edit));
   return saved.ok ? { ok: true, data: { ...edit, before: edit.after, after: edit.before } as CacheEdit } : saved;
 }

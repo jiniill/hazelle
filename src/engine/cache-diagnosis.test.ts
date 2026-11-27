@@ -83,3 +83,9 @@ it('names a newly firing entry merged into the changed lore part', () => {
   input.forecast.parts[0]!.from = { kind: 'lore', id: 'base', name: 'Base', slot: 'lorebook' };
   expect(cacheDiagnosis(input, scope).parts[0]!.causes).toMatchObject([{ kind: 'lore', id: 'merged', before: { fired: false }, after: { fired: true } }]);
 });
+
+it('marks a changed tag that read a variable the bot\'s scripts write', () => {
+  const trace: CbsTrace = { steps: [{ at: 5, end: 21, depth: 0, result: 'glad', variable: 'mood' }], omitted: 0 };
+  expect(cacheTags('Mood sad.', 'Mood glad.', 'Mood {{getvar::mood}}.', trace, new Set(['mood']))).toEqual([{ kind: 'tag', tag: '{{getvar::mood}}', before: 'sad', after: 'glad', script: true }]);
+  expect(cacheTags('Mood sad.', 'Mood glad.', 'Mood {{getvar::mood}}.', trace, new Set(['other']))).toEqual([{ kind: 'tag', tag: '{{getvar::mood}}', before: 'sad', after: 'glad' }]);
+});
