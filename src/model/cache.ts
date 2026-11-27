@@ -56,8 +56,9 @@ export type CacheCause =
   | { kind: 'lore'; id: string; name: string; before: CacheLore | null; after: CacheLore | null }
   | { kind: 'moved'; before: number; after: number; depth: number | null }
   // request: the bot's scripts rewrote the message as it was sent (editRequest). deleted, budget: a chat message left,
-  // gone from the chat or dropped to fit the model. source: the part's own text was edited.
-  | { kind: 'edited' | 'deleted' | 'budget' | 'source' | 'memory' | 'request' | 'unknown' };
+  // gone from the chat or dropped to fit the model. source: the part's own text was edited. written: the part is one
+  // written anew for each send (a 상태, the agents' notes, a tool's text, 토큰 절약's brief, retrieval).
+  | { kind: 'edited' | 'deleted' | 'budget' | 'source' | 'written' | 'memory' | 'request' | 'unknown' };
 export type CacheLore = { fired: true; why: Fired['why'] } | { fired: false; why: Silent['why'] };
 // Positions address wire order. A null diff lacks text; an empty causes list lacks even a provable cause.
 // unknown is reserved for text we compared but cannot attribute. missing counts the null diffs.

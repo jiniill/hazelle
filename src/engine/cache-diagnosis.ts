@@ -43,6 +43,9 @@ export function cacheTags(before: string, after: string, source: string, trace: 
   return steps.flatMap((step, index) => values[index] === step.result ? [] : [{ kind: 'tag', tag: source.slice(step.at, step.headEnd ?? step.end), before: values[index]!, after: step.result, ...(step.variable !== undefined && scripted?.has(step.variable) && { script: true as const }) }]);
 }
 
+// The parts something writes anew for each send: by their slot, or by what they are from where they stand in none.
+const WRITTEN = new Set(['status', 'agentNotes', 'agents', 'tool', 'preread', 'retrieval']);
+
 // Why a chat message the last call sent is not sent now; null when it still is. The greeting is the chat part with no
 // origin.
 function left(scope: ChatScope, { memory, dropped, parts }: Assembled, origin: string | undefined): 'memory' | 'budget' | 'deleted' | null {
@@ -90,7 +93,10 @@ export function cacheDiagnosis({ forecast, before, after }: CacheComparison, sco
     const oldText = row.before === null ? '' : oldWire?.content;
     const nextText = row.after === null ? '' : nextWire?.content;
     const known = before?.wire !== undefined && oldText !== undefined && nextText !== undefined;
-    const causes: CacheCause[] = known ? tags(scope, readVariables, oldPart?.cbs, nextPart?.cbs, oldText, nextText) : [];
+    // A part that came or went pairs with its render that came out empty on the other side.
+    const old = before?.prompt && [...(oldPart?.cbs ?? []), ...(before.prompt.blank ?? [])];
+    const next = [...(nextPart?.cbs ?? []), ...(after.prompt.blank ?? [])];
+    const causes: CacheCause[] = known ? tags(scope, readVariables, old, next, oldText, nextText) : [];
     const { from } = row;
     if ((from.kind === 'lore' || from.kind === 'depth') && from.id && before?.prompt) {
       const entries = new Map([[from.id, from.name]]);
@@ -106,7 +112,12 @@ export function cacheDiagnosis({ forecast, before, after }: CacheComparison, sco
       if (from.slot === 'chat' && oldPart.origin === nextPart.origin) causes.push({ kind: 'edited' });
       if (from.slot === 'memory') causes.push({ kind: 'memory' });
     }
-    if (row.kind === 'changed' && nextPart?.cbs?.some((piece) => oldPart?.cbs?.some((was) => was.place === piece.place && was.text !== piece.text))) causes.push({ kind: 'source' });
+    const written = WRITTEN.has(from.kind === 'block' ? from.slot ?? '' : from.kind);
+    // The part's own text differs, or for a block that came or went with text of its own, the other side rendered none.
+    const alone = from.kind === 'block' && row.kind !== 'changed' && !written && from.slot !== 'memory';
+    const edited = (pieces: CacheRender[] | undefined, others: CacheRender[]) => !!pieces?.some((piece) => { const other = others.find(({ place }) => place === piece.place); return other ? other.text !== piece.text : alone; });
+    if (old && (row.kind === 'removed' ? edited(oldPart?.cbs, next) : row.kind !== 'moved' && edited(nextPart?.cbs, old))) causes.push({ kind: 'source' });
+    if (written) causes.push({ kind: 'written' });
     if (row.kind === 'added' && from.kind === 'block' && from.slot === 'memory') causes.push({ kind: 'memory' });
     const why = row.kind === 'removed' && from.kind === 'block' && from.slot === 'chat' && oldPart ? left(scope, after.prompt, oldPart.origin) : null;
     if (why) causes.push({ kind: why });

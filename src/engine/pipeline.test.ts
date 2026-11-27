@@ -136,12 +136,13 @@ describe('assemble', () => {
     expect(build().some(({ content }) => typeof content === 'string' && content.includes('The status as it stands'))).toBe(false);
   });
 
-  it('keeps lazy CBS evidence for the renders a part sends verbatim and preserves it only through an unchanged rewrite', () => {
+  it('keeps lazy CBS evidence for the renders a part sends verbatim and those that came out empty, and preserves a part\'s only through an unchanged rewrite', () => {
     const built = assembledOf(assemble(input()));
     const part = built.parts[0]!;
     expect(part.cbs).toMatchObject([{ place: 'setting', text: starter.blocks[0]!.kind === 'text' ? starter.blocks[0]!.text : '', rendered: built.messages[0]!.content, seed: 'reply-1:setting' }]);
     const described = built.parts.find(({ from }) => from.kind === 'block' && from.slot === 'description')!;
     expect(described.cbs).toMatchObject([{ place: 'description:own', text: '{{char}} keeps the lighthouse.' }]);
+    expect(built.blank).toEqual([{ place: 'description:after', text: '', rendered: '', seed: 'reply-1:description:after' }]);
     const chat = built.parts.find(({ origin }) => origin === 'u1')!;
     expect(chat.source).toBe('Is it safe?');
     const kept = assembledOf(rewritten(built, built.messages, (text) => text.length, null));

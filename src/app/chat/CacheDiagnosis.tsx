@@ -58,6 +58,8 @@ function cause(cause: CacheCause): { line: string; shown?: ReactNode; help: stri
       return { line: '컨텍스트 한도에 맞추느라 오래된 메시지가 빠졌어요.', help: '메시지가 빠질 때마다 그 뒤에 오는 대화의 캐시가 깨져요. 장기 기억을 켜면 한꺼번에 정리해서 덜 자주 깨져요.' };
     case 'source':
       return { line: '이 항목의 내용이 수정됐어요.', help: null };
+    case 'written':
+      return { line: '보낼 때마다 새로 쓰이는 내용이에요.', help: VARYING };
     case 'memory':
       return { line: '장기 기억이 새로 정리됐어요.', help: '장기 기억이 새로 정리될 때마다 그 뒤에 오는 내용의 캐시가 한 번 깨져요.' };
     case 'request':

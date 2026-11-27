@@ -103,6 +103,8 @@ export type Assembled = {
     source?: string;
     cbs?: CacheRender[];
   }[];
+  // The renders that came out empty and so sent no part: a diagnosis reads them to say why a part came or went.
+  blank?: CacheRender[];
   // Names captured at activation; null when the chat has neither card nor lore.
   lore: (Fired & { name: string })[] | null;
   silent: (Silent & { name: string })[] | null;
@@ -460,6 +462,7 @@ function conversation({ scope, seed, countTokens, budget, fit, continuing, answe
   const sources = new Map(scope.messages.map(({ message, text }) => [message, text]));
   const assembled = (parts: (Sent | CachePart)[], dropped: number): Assembled => {
     const sent = cachePoints(parts);
+    const blank = [...laid.rendered.values()].filter(({ rendered }) => !rendered);
     return {
       messages: sent.map(({ message }) => message),
       parts: sent.map(({ message, from, origin }) => {
@@ -468,6 +471,7 @@ function conversation({ scope, seed, countTokens, budget, fit, continuing, answe
         const source = from.kind === 'block' && from.slot === 'chat' ? origin === undefined ? undefined : sources.get(origin) : from.kind === 'block' && from.slot === 'memory' ? told?.text ?? recalled?.text : undefined;
         return { from, tokens: messageTokens(tokens, message), ...(origin !== undefined && { origin }), ...(source !== undefined && { source }), ...(cbs.length > 0 && { cbs }) };
       }),
+      ...(blank.length > 0 && { blank }),
       lore: activation && activation.fired.map((fired) => ({ ...fired, name: named(fired.id) })),
       silent: activation && activation.silent.map((silent) => ({ ...silent, name: named(silent.id) })),
       invalidKeys: activation ? activation.invalidKeys.map((invalid) => ({ ...invalid, name: named(invalid.entry) })) : [],

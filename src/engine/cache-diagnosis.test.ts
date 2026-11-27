@@ -78,7 +78,7 @@ it('names memory where it is first sent, and why a chat message left: memory too
   const chat = { kind: 'block', id: 'chat', name: null, slot: 'chat' } as const;
   const memory = { ...chat, id: 'memory', slot: 'memory' } as const;
   const old = prompt('first', [{ from: chat, tokens: 10, origin: 'first' }]);
-  const next = prompt('summary', [{ from: memory, tokens: 10, source: 'summary' }]);
+  const next = prompt('summary', [{ from: memory, tokens: 10, source: 'summary', cbs: [{ place: 'memory', text: '{{slot}}', rendered: '{{slot}}', seed: 'seed' }] }]);
   next.memory = { by: 'tool', text: 'summary', covered: 1, missing: 0, slot: true };
   const input = comparison(old, next);
   input.forecast.parts[0] = { ...part, from: memory, change: 'added', before: null };
@@ -96,6 +96,29 @@ it('names memory where it is first sent, and why a chat message left: memory too
 it('names a part whose own text was edited', () => {
   const render = (text: string) => prompt(text, [{ from, tokens: 10, cbs: [{ place: 'clock', text, rendered: text, seed: 'seed' }] }]);
   expect(cacheDiagnosis(comparison(render('Old rule.'), render('New rule.')), scope).parts[0]!.causes).toEqual([{ kind: 'source' }]);
+});
+
+it('says why a block came or went: a tag emptied its text, or the text itself is new or gone', () => {
+  const text = '{{#if {{getglobalvar::toggle_rule}}}}Rule.{{/if}}';
+  const render = (rendered: string) => ({ place: 'clock', text, rendered, seed: 'seed' });
+  const off: Assembled = { ...prompt(''), messages: [], parts: [], blank: [render('')] };
+  const on = prompt('Rule.', [{ from, tokens: 10, cbs: [render('Rule.')] }]);
+  const came = comparison(off, on);
+  came.forecast.parts[0] = { ...part, change: 'added', before: null };
+  expect(cacheDiagnosis(came, { ...scope, toggles: new Map([['rule', '1']]) }).parts[0]!.causes).toEqual([{ kind: 'tag', tag: '{{#if {{getglobalvar::toggle_rule}}}}', before: '', after: 'Rule.' }]);
+  const went = comparison(on, off);
+  went.forecast.parts = [];
+  went.forecast.removed = [{ from, role: 'system', tokens: 10, before: 0 }];
+  expect(cacheDiagnosis(went, scope).parts[0]!.causes).toEqual([{ kind: 'tag', tag: '{{#if {{getglobalvar::toggle_rule}}}}', before: 'Rule.', after: '' }]);
+  delete off.blank;
+  expect(cacheDiagnosis(came, scope).parts[0]!.causes).toEqual([{ kind: 'source' }]);
+  expect(cacheDiagnosis(went, scope).parts[0]!.causes).toEqual([{ kind: 'source' }]);
+});
+
+it('names a part written anew for each send by what it is', () => {
+  const input = comparison(prompt('hp 3'), prompt('hp 2'));
+  input.forecast.parts[0] = { ...part, from: { kind: 'status' } };
+  expect(cacheDiagnosis(input, scope).parts[0]!.causes).toEqual([{ kind: 'written' }]);
 });
 
 it('names a newly firing entry merged into the changed lore part', () => {
