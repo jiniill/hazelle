@@ -6,11 +6,11 @@ import { cacheShortfall, shortfallPlace } from '../../runtime/diagnostics/cache-
 import { applyCacheEdit } from '../../runtime/diagnostics/cache-prescriptions';
 import type { LogEntry } from '../../runtime/models/request-log';
 import { cost, tokens } from '../common/receipt';
-import { loreName, onOff, APPLY_FAILED, CACHE_READ } from '../common/words';
+import { loreName, onOff, APPLY_FAILED } from '../common/words';
 import { useStore } from '../session';
 import { useToast } from '../toast';
-import { useState, type ReactNode } from 'react';
-import { Button, Hint, List, ListItem, Row, Section, Stack, Tag, Text, TextDiff } from '../ui';
+import type { ReactNode } from 'react';
+import { Button, Compare, Disclosure, Hint, Row, Stack, Tag, Text, TextDiff, type FactItem } from '../ui';
 import { partName } from './ChatSent';
 import { silentReason } from './InspectModules';
 
@@ -70,20 +70,31 @@ export function breakCauses(diagnosis: CacheDiagnosis | null | undefined, broken
 export const diagnosed = (diagnosis: CacheDiagnosis | null | undefined, kind: BrokenPart['kind'], at: number) =>
   diagnosis?.parts.find((part) => part.kind === kind && (kind === 'removed' ? part.before : part.after) === at) ?? null;
 
-export function BrokenPartView({ part }: { part: BrokenPart }) {
+const CAUSES: Record<CacheCause['kind'], string> = { tag: '값 바뀜', lore: '켜졌다 꺼짐', moved: '자리 밀림', edited: '메시지 수정', memory: '기억 정리', unknown: '원인 모름' };
+// What kind of leak a part is, in a word each: its causes', else how the part itself differs.
+export const leakWords = (part: BrokenPart) => (part.causes.length ? [...new Set(part.causes.map(({ kind }) => CAUSES[kind]))] : [KINDS[part.kind]]);
+
+// A cause as labels and values.
+export function causeFacts(each: CacheCause): FactItem[] {
+  switch (each.kind) {
+    case 'tag':
+      return [{ label: '태그', value: each.tag }, { label: '값', value: `${quoted(each.before)} → ${quoted(each.after)}` }];
+    case 'lore': {
+      const fired = each.after?.fired ?? false;
+      return [{ label: '로어북 항목', value: loreName(each.name) }, { label: '지금', value: fired ? '켜짐' : each.after && !each.after.fired ? `꺼짐 · ${silentReason(each.after.why)}` : '꺼짐' }];
+    }
+    case 'moved':
+      return each.depth === null ? [{ label: '자리', value: `${each.before + 1}번째 → ${each.after + 1}번째` }] : [{ label: '깊이', value: `@@depth ${each.depth}` }, { label: '자리', value: `${each.before + 1}번째 → ${each.after + 1}번째` }];
+    default:
+      return [];
+  }
+}
+
+export function PartDiff({ part }: { part: BrokenPart }) {
   const { diff } = part;
   const differs = diff?.runs.some(({ kind }) => kind !== 'same');
   return (
-    <Stack gap="related">
-      {part.causes.map((each, index) => {
-        const { line, shown, help } = cause(each);
-        return (
-          <Text key={index}>
-            {shown ?? line}
-            {help && <Hint label="깨지지 않게 하려면">{help}</Hint>}
-          </Text>
-        );
-      })}
+    <>
       {diff === null ? (
         <Text variant="note">이전 요청 원문이 남지 않아서 어떻게 바뀌었는지는 알 수 없어요.</Text>
       ) : (
@@ -95,6 +106,23 @@ export function BrokenPartView({ part }: { part: BrokenPart }) {
           </>
         )
       )}
+    </>
+  );
+}
+
+export function BrokenPartView({ part }: { part: BrokenPart }) {
+  return (
+    <Stack gap="related">
+      {part.causes.map((each, index) => {
+        const { line, shown, help } = cause(each);
+        return (
+          <Text key={index}>
+            {shown ?? line}
+            {help && <Hint label="깨지지 않게 하려면">{help}</Hint>}
+          </Text>
+        );
+      })}
+      <PartDiff part={part} />
     </Stack>
   );
 }
@@ -160,59 +188,50 @@ function saved(now: CacheBreakCost | null, after: CacheBreakCost | null): Cost |
   return amount > 0 ? { ...now.paid, amount } : null;
 }
 
-function preview({ edit, action }: CachePrescription): ReactNode {
-  if (edit.kind === 'toggle') return <Text>{`이 토글을 읽는 다른 블록도 함께 바뀌어요. ${PLACED}`}</Text>;
-  if (action === 'before-chat') return <Text>{`프롬프트에서 이 블록의 순서가 대화 앞으로 바뀌어요. ${PLACED}`}</Text>;
-  if (edit.kind === 'lore') {
-    if (edit.field === 'constant') return <Text>키워드와 상관없이 매번 보내서 그만큼 토큰이 들어요.</Text>;
-    return <TextDiff runs={cacheDiff(edit.before, edit.after).runs} label="항목 내용: 변경 전후" />;
-  }
-  return <Text>프롬프트에서 이 블록의 순서가 대화 뒤로 바뀌어요.</Text>;
+function changes({ edit, action }: CachePrescription): string {
+  if (edit.kind === 'toggle') return `이 토글을 읽는 다른 블록도 함께 바뀌어요. ${PLACED}`;
+  if (action === 'before-chat') return `프롬프트에서 이 블록의 순서가 대화 앞으로 바뀌어요. ${PLACED}`;
+  if (edit.kind === 'prompt') return '프롬프트에서 이 블록의 순서가 대화 뒤로 바뀌어요.';
+  return edit.field === 'constant' ? '키워드와 상관없이 매번 보내서 그만큼 토큰이 들어요.' : '항목이 대화 맨 뒤(깊이 0)에 들어가요.';
 }
 
+const share = ({ read, of }: { read: number; of: number }) => (of > 0 ? read / of : 1);
+const percent = (value: number) => `${Math.round(value * 100)}%`;
+
 // Applying one changes the bot (design §4.4, 캐시 보호 ruling 1): only on the user's press, with 되돌리기.
-export function Prescriptions({ prescriptions, cost: now }: { prescriptions: CachePrescription[] | null | undefined; cost: CacheBreakCost | null }) {
+export function PrescriptionView({ prescription, cost: now }: { prescription: CachePrescription; cost: CacheBreakCost | null }) {
   const store = useStore();
   const toast = useToast();
-  const [open, setOpen] = useState<number | null>(null);
-  if (prescriptions === null) return <Text variant="note">해결 방법을 계산하지 못했어요.</Text>;
-  if (!prescriptions?.length) return null;
-  async function apply(prescription: CachePrescription) {
+  async function apply() {
     const done = await applyCacheEdit(store, prescription.edit);
     if (!done.ok) return toast.failed(done, APPLY_FAILED);
     toast.undoable('적용했어요.', () => applyCacheEdit(store, done.data), titleOf(prescription));
   }
-  const ranked = prescriptions
-    .map((prescription) => ({ prescription, less: prescription.turn ? saved(prescription.turn.before.cost, prescription.turn.after.cost) : saved(now, prescription.cost) }))
-    .sort((a, b) => (b.less?.amount ?? -1) - (a.less?.amount ?? -1));
+  const { turn } = prescription;
+  const [before, after] = turn ? [turn.before, turn.after] : [prescription.before, prescription.after];
+  const less = turn ? saved(turn.before.cost, turn.after.cost) : saved(now, prescription.cost);
   return (
-    <Section level={3} title="해결 방법" help="여러 항목을 함께 적용하면 절약되는 금액이 각각의 합과 다를 수 있어요.">
-      <List label="해결 방법">
-        {ranked.map(({ prescription, less }, index) => (
-          <ListItem
-            key={index}
-            title={titleOf(prescription)}
-            note={prescription.turn
-              ? `${EVERY_TURN} 다시 보냄 ${tokens(prescription.turn.before.of - prescription.turn.before.read)} → ${tokens(prescription.turn.after.of - prescription.turn.after.read)}`
-              : `${CACHE_READ} ${tokens(prescription.before.read)} → ${tokens(prescription.after.read)}`}
-            tags={less ? [`${prescription.turn ? `${EVERY_TURN} ` : ''}${cost(less)} 절약`] : []}
-            expanded={open === index}
-            onClick={() => setOpen(open === index ? null : index)}
-            detail={
-              open === index && (
-                <Stack gap="related">
-                  {preview(prescription)}
-                  <Row kind="actions">
-                    <Button variant="secondary" size="sm" onClick={() => void apply(prescription)}>
-                      {ACTIONS[prescription.action].button}
-                    </Button>
-                  </Row>
-                </Stack>
-              )
-            }
-          />
-        ))}
-      </List>
-    </Section>
+    <Stack gap="related">
+      <Text>{titleOf(prescription)}</Text>
+      <Compare
+        rows={[
+          { label: '지금', share: share(before), value: percent(share(before)) },
+          { label: '바꾸면', share: share(after), value: percent(share(after)), better: true },
+        ]}
+      >
+        <Row kind="actions">
+          <Button variant="secondary" size="sm" onClick={() => void apply()}>
+            {ACTIONS[prescription.action].button}
+          </Button>
+          {less && <Tag tone="success">{`${turn ? `${EVERY_TURN} ` : ''}${cost(less)} 절약`}</Tag>}
+          <Hint label="바꾸면 달라지는 것">{changes(prescription)}</Hint>
+        </Row>
+      </Compare>
+      {prescription.edit.kind === 'lore' && prescription.edit.field === 'content' && (
+        <Disclosure label="항목 내용: 변경 전후">
+          <TextDiff runs={cacheDiff(prescription.edit.before, prescription.edit.after).runs} label="항목 내용: 변경 전후" />
+        </Disclosure>
+      )}
+    </Stack>
   );
 }

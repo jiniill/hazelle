@@ -1,0 +1,116 @@
+.sendRuns {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+.runs {
+  display: flex;
+  gap: var(--space-4);
+  height: var(--send-runs);
+}
+
+.run {
+  flex: 1 0 0;
+  display: flex;
+  align-items: flex-end;
+  border-radius: var(--radius-xs);
+  background: var(--color-surface-raised);
+  overflow: hidden;
+}
+
+.read {
+  width: 100%;
+  height: max(var(--space-2), calc(var(--share) * 100%));
+  background: var(--color-send-read);
+}
+
+.broken .read {
+  background: var(--color-send-again);
+}
+
+.unread .read {
+  background: none;
+}
+
+/* The request was whole and the provider did not read it: an empty slot in a dashed line, no fault's colour. */
+.run.missed {
+  border: var(--border-thin) dashed var(--color-text-muted);
+  background: none;
+}
+
+.missed .read {
+  background: var(--color-chart-quiet);
+}
+
+.ends {
+  composes: detail from '../foundation/type.module.css';
+  display: flex;
+  justify-content: space-between;
+  color: var(--color-text-faint);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4) var(--space-16);
+  margin: 0;
+}
+
+.key {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  font-size: var(--text-xs);
+}
+
+.key dt {
+  color: var(--color-text-muted);
+}
+
+.key dd {
+  margin: 0;
+  color: var(--color-text);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.swatch {
+  width: var(--space-8);
+  height: var(--space-8);
+  border-radius: var(--radius-xs);
+}
+
+.swatch.broken {
+  background: var(--color-send-again);
+}
+
+.swatch.missed {
+  border: var(--border-thin) dashed var(--color-text-muted);
+}
+
+.marks {
+  composes: detail from '../foundation/type.module.css';
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.cells {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.cell {
+  width: var(--space-8);
+  height: var(--space-8);
+  border-radius: var(--radius-xs);
+  background: var(--color-surface-raised);
+}
+
+.cell.hit {
+  background: var(--color-send-again);
+}

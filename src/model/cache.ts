@@ -33,8 +33,9 @@ export type CacheForecast = { read: number; of: number; broken: CacheBreak | nul
 export const cachePrintId = secondInverted;
 
 // Wire order. tail is full-price text after the last caching point; short points cache nothing.
-// before is the paired old position, null for additions and unchanged parts.
-export type ForecastPart = { role: Role; from: From; tokens: number; state: 'read' | 'write' | 'tail'; change: 'changed' | 'added' | 'moved' | null; before: number | null; point: 'cache' | 'short' | null };
+// before is the paired old position, null for additions and unchanged parts. again: the last call cached this text and
+// this send pays for it in full.
+export type ForecastPart = { role: Role; from: From; tokens: number; state: 'read' | 'write' | 'tail'; again: boolean; change: 'changed' | 'added' | 'moved' | null; before: number | null; point: 'cache' | 'short' | null };
 // against is null without a prior call; written excludes the uncached tail. prefix: no point on either side, so the
 // provider caches on its own, and writes nothing a forecast counts.
 export type Forecast = {

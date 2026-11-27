@@ -288,6 +288,10 @@
   --shadow-glow: 0 0 6px color-mix(in srgb, var(--color-accent) 55%, transparent);
   /* A chart's bar that does not stand out, such as the other days of a week (WeekBars). */
   --color-chart-quiet: color-mix(in srgb, var(--color-text-faint) 55%, transparent);
+  /* A request drawn part by part (SendLine, SendRuns): what the cache answers, and what is paid for again. */
+  --color-send-read: color-mix(in srgb, var(--color-success) 62%, var(--color-bg));
+  --color-send-again: var(--color-warn);
+  --send-link: 0.28;
   --color-selection: color-mix(in srgb, var(--color-accent) 35%, transparent);
   --color-found-term: color-mix(in srgb, var(--color-accent) 30%, transparent);
   /* The same mark on an accent fill, where the accent's own would not show. */
@@ -506,6 +510,12 @@
   --dial-numeral: 9px;
   --week-bar: 10px;
   --week-height: 66px;
+  --send-bar: 28px;
+  --send-link-height: 14px;
+  --send-runs: 32px;
+  --send-figure: 44px;
+  --send-label: 40px;
+  --send-value: 44px;
   --link-dim: 0.2;
   --link-dim-words: 0.38;
   --tip-arrow: 8px;

@@ -137,6 +137,8 @@ it('prices a block the chat pushes along: the toggle its wrapper reads, and its 
   const next = await send('fourth');
   const { prior, current, diagnosis } = await compare(session, chat, old, next);
   expect(diagnosis.parts.find(({ from }) => from.kind === 'block' && from.id === 'late')?.causes).toMatchObject([{ kind: 'moved', depth: null }]);
+  expect(current.parts.find(({ from }) => from.kind === 'block' && from.id === 'late')).toMatchObject({ again: true, change: 'moved' });
+  expect(current.parts.find(({ from }) => from.kind === 'block' && from.id === 'stable')).toMatchObject({ again: false, state: 'read' });
   const prescriptions = await priceCachePrescriptions(store, chat, next, diagnosis, current, prior, null, new AbortController().signal);
   expect(prescriptions!.map(({ cause, action }) => [cause, action])).toEqual([['moved', 'before-chat'], ['moved', 'toggle']]);
   const toggle = prescriptions![1]!;

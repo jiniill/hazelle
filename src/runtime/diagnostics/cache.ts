@@ -208,15 +208,27 @@ export function forecast(last: Prior | null, next: CacheSend): Forecast | null {
   }
 
   const changed = new Map(found.flatMap((change) => (change.kind === 'removed' ? [] : [[change.at, { kind: change.kind, before: change.before }] as const])));
-  const parts = after.map(({ role, from, tokens, point }, index): ForecastPart => ({
+  const held = new Map<string, number>();
+  if (against) for (const { role, hash } of before.slice(0, points.at(-1)! + 1)) held.set(`${role}:${hash}`, (held.get(`${role}:${hash}`) ?? 0) + 1);
+  const cachedLast = ({ role, hash }: WireMessage) => {
+    const left = held.get(`${role}:${hash}`) ?? 0;
+    held.set(`${role}:${hash}`, left - 1);
+    return left > 0;
+  };
+  const parts = after.map((message, index): ForecastPart => {
+    const { role, from, tokens, point } = message;
+    const was = cachedLast(message);
+    return {
     role,
     from,
     tokens,
     state: index <= readEnd ? 'read' : index <= writeEnd ? 'write' : 'tail',
+    again: was && index > readEnd,
     change: changed.get(index)?.kind ?? null,
     before: changed.get(index)?.before ?? null,
     point: point ? (caches(upTo[index]!) ? 'cache' : 'short') : null,
-  }));
+    };
+  });
   const removed = found.flatMap((change) => (change.kind === 'removed' ? [{ role: change.role, from: change.from, tokens: before[change.at]!.tokens, before: change.at }] : []));
   const read = readEnd === -1 ? 0 : upTo[readEnd]!;
   const cached = writeEnd === -1 ? read : upTo[writeEnd]!;
