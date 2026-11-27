@@ -17,7 +17,7 @@ import { useCaptured, useSession } from '../session';
 import { navigate } from '../shell/router';
 import { Button, Callout, Disclosure, Empty, Facts, Hint, List, ListItem, Row, RunMarks, Section, SendLine, SendRuns, SettingGroup, Stack, Tag, Text, type SendFate, type SendRun } from '../ui';
 import { BrokenPartView, breakCauses, breakKind, causeFacts, leakWords, PartDiff, PrescriptionView, RecurrenceNote, ShortfallNote } from './CacheDiagnosis';
-import { nextWarning, profileName, why } from './ChatCache';
+import { nextWarning, profileName, readShare, why } from './ChatCache';
 import { partName } from './ChatSent';
 import { useSendTimeNote } from './InspectRequest';
 import type { Side } from './panels';
@@ -133,12 +133,11 @@ const isChat = ({ from }: { from: From }) => from.kind === 'block' && from.slot 
 // part that moved, and what stands before, in and after the chat.
 function sendLine({ forecast, was }: NonNullable<CacheNotes['next']>) {
   const { parts, against } = forecast;
-  const total = sum(parts);
   const first = parts.findIndex(isChat);
   const last = parts.findLastIndex(isChat);
   const moved = parts.findIndex((part) => part.change === 'moved' && part.before !== null);
   return {
-    share: against && total ? Math.round((against.read / total) * 100) : null,
+    share: readShare(forecast),
     segments: parts.map((part) => ({ size: part.tokens, fate: fateOf(part) })),
     cut: against ? { at: against.read, note: against.read ? `${tokens(against.read)} 토큰까지 읽음` : '처음부터 다시 보냄' } : undefined,
     was: was && against ? {
@@ -188,7 +187,7 @@ function NextCache({ next, recurrence, replies, editor, onEdit }: NextCacheProps
       {whole && <Callout tone="warn" action={off}>{`${warning.words}: ${warning.why}`}</Callout>}
       <SendLine
         label={`다음 전송 ${tokens(sum(forecast.parts))} 토큰 중 ${against ? tokens(against.read) : UNKNOWN} 토큰을 캐시에서 읽음`}
-        figure={line.share === null ? '–' : String(line.share)}
+        figure={line.share === null ? '–' : String(Math.round(line.share * 100))}
         unit="%"
         caption={CACHE_READ}
         tone={against?.broken ? 'warn' : 'plain'}

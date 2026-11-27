@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { shortStreak } from '../../engine/cache-history';
-import type { CacheBreak, CacheForecast, CacheRecurrence } from '../../model/cache';
+import type { CacheBreak, CacheForecast, CacheRecurrence, Forecast } from '../../model/cache';
 import type { Route } from '../../runtime/models/assignment';
 import { modelProfile } from '../../runtime/models/profiles';
 import { tokens } from '../common/receipt';
@@ -47,6 +47,13 @@ export function profileName(store: Parameters<typeof modelProfile>[0], route: Ro
 
 const reads = ({ read, of }: CacheForecast) => (read > 0 ? `캐시된 ${tokens(of)} 토큰 중 약 ${tokens(read)} 토큰만 읽어요.` : '캐시를 쓰지 못하고 처음부터 다시 읽어요.');
 
+// How much of the next request the cache answers, 0 to 1; null without a last call to read from.
+export function readShare({ parts, against }: Forecast): number | null {
+  const total = parts.reduce((sum, { tokens }) => sum + tokens, 0);
+  return against && total ? against.read / total : null;
+}
+export const percent = (share: number) => `${Math.round(share * 100)}%`;
+
 const clock = (ms: number) => {
   const seconds = Math.ceil(ms / 1000);
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
@@ -83,8 +90,10 @@ export function ChatCache({ cache, onOpen }: { cache: CacheNotes; onOpen: () => 
   const { next } = cache;
   const profile = useCaptured((store) => (next ? profileName(store, next.route) : null), [next]);
   const warning = next ? nextWarning(next, cache.recurrence, profile) : undefined;
-  // A provider caching on its own tells no time to count down, so only a warning shows.
-  if (next?.forecast.prefix) return warning ? <SendNote label={PREFIX_TITLE} title={PREFIX_TITLE} warning={warning} spareLabel onClick={onOpen} /> : null;
+  const share = next ? readShare(next.forecast) : null;
+  const bar = share === null ? {} : { share };
+  // A provider caching on its own tells no time to count down: the share it is expected to read, or only a warning.
+  if (next?.forecast.prefix) return share !== null ? <SendNote label={`예상 ${percent(share)}`} title={PREFIX_TITLE} {...bar} warning={warning} onClick={onOpen} /> : warning ? <SendNote label={PREFIX_TITLE} title={PREFIX_TITLE} warning={warning} spareLabel onClick={onOpen} /> : null;
   if (cache.until === null || now >= cache.until) return null;
-  return <SendNote label={clock(cache.until - now)} title={TITLE} warning={warning} onClick={onOpen} />;
+  return <SendNote label={share === null ? clock(cache.until - now) : `${percent(share)} · ${clock(cache.until - now)}`} title={TITLE} {...bar} warning={warning} onClick={onOpen} />;
 }
