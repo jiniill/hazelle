@@ -284,11 +284,12 @@ describe('assemble', () => {
     ]);
   });
 
-  it('ends a new reply after the model\'s message with the 응답 받기 지시, and none after the user\'s', () => {
+  it('ends a new reply after the model\'s message or in an empty chat with the 응답 받기 지시, and none after the user\'s', () => {
     const messages = [message('u1', 'user', 'Hello.'), message('a1', 'assistant', 'Hi.')];
     const after = assembledOf(assemble(input({ messages, greeting: null })));
     expect(after.messages.at(-1)).toEqual({ role: 'user', content: 'Go on.' });
     expect(after.parts.at(-1)!.from).toEqual({ kind: 'answer' });
+    expect(assembledOf(assemble(input({ messages: [], greeting: null }))).messages.at(-1)).toEqual({ role: 'user', content: 'Go on.' });
     expect(assembledOf(assemble(input())).parts.some(({ from }) => from.kind === 'answer')).toBe(false);
   });
 

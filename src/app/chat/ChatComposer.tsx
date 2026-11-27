@@ -61,7 +61,7 @@ const attachedItem = (each: DraftAttachment): Attached =>
 
 // fold: ChatScreen's, which the frame's footer measures by, so the two never disagree.
 export function ChatComposer({ chat, fold }: { chat: OpenChat; fold: ComposerFold }) {
-  const { draft, attachments, messages, last, answerable, busy, problem, skippable, stuck, translate, sendLanguage, modelMenu, shelf, route, actions } = chat;
+  const { draft, attachments, messages, last, busy, problem, skippable, stuck, translate, sendLanguage, modelMenu, shelf, route, actions } = chat;
   // A model whose own 모델 설정 is gone picks another on its page; a missing default is set in 설정 › 모델.
   const profilePage = problem?.kind === 'profile-missing' && problem.own && !('kind' in route) ? { kind: 'model' as const, ...refOf(route.connection.id, route.model) } : { kind: 'models' as const };
   const chips: Record<Chip, { onClick: () => void }> = {
@@ -199,7 +199,7 @@ export function ChatComposer({ chat, fold }: { chat: OpenChat; fold: ComposerFol
             {!busy && !cacheNoteHidden && <ChatCache cache={chat.sendNotes.cache} onOpen={() => chat.actions.openInspect('cache')} />}
             <SendButton
               streaming={busy}
-              disabled={!busy && ((!typed && !answerable) || chat.toolInput !== null)}
+              disabled={!busy && chat.toolInput !== null}
               title={busy ? titled(SHORTCUTS.stop.label, SHORTCUTS.stop.keys) : titled(typed ? SHORTCUTS.send.label : ANSWER, sendKeys)}
               onClick={() => (busy ? actions.stop() : void actions.send())}
             />

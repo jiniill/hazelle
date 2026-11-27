@@ -25,6 +25,7 @@ export function ShareRows({ label, columns, lost, rows }: { label: string; colum
             </span>
             <span className={styles.track} aria-hidden>
               <span className={styles.fill} style={{ '--share': row.kept } as CSSProperties} />
+              <span className={styles.rest} />
             </span>
             <span className={styles.amount}>
               <span className={styles.label}>{columns[2]} </span>

@@ -149,7 +149,6 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   const busy = replying !== null;
   const { actions: stateActions, states, stateShown } = useChatState(chatId, id, chat, messages, busy);
   const last = messages.at(-1);
-  const answerable = id !== null && last !== undefined;
   // A cost still 확인 중 after a reload is looked up again wherever the usage line shows it, as ChatInfo does for its own.
   useEffect(() => {
     if (!id || !usageShown) return;
@@ -230,11 +229,11 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
     timePin.clear();
   }
 
-  // The one way a message goes out, typed or one of 오토파일럿's. onSaid: the message is saved (Talk.run).
-  async function say(text: string, skip: Skip = {}, onSaid?: () => void) {
+  // The one way the composer's turn goes out: a typed message, one of 오토파일럿's, or 응답 받기 on an empty composer, a new
+  // chat's included. onSaid: the message is saved (Talk.run).
+  async function turn(target: Target, skip: Skip = {}, onSaid?: () => void) {
     setStopped(false);
     asking();
-    const target = { kind: 'send' as const, text };
     const failure = await takeTurn(session, chatId, target, id === null ? starting() : null, skip, onSaid);
     report(failure, target, skip);
     return failure;
@@ -243,11 +242,11 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   // Empty sends request a reply. Composer waits for pending pictures; save attachment rows before the turn reads them.
   async function send(skip: Skip = {}) {
     if (busy || sending.current || toolInput.running) return;
+    if (blocked(session, chat)) return setStopped(true);
     if (!draft.text.trim() && !attaching.attachments.draft.length) {
-      if (answerable) ask({ kind: 'answer' }, skip);
+      await turn({ kind: 'answer' }, skip);
       return;
     }
-    if (blocked(session, chat)) return setStopped(true);
     sending.current = true;
     try {
       const settled = await Promise.all(drafts.attachments(draft.key).flatMap((each) => (each.kind === 'picture' ? [each.saved] : [])));
@@ -273,7 +272,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
             return;
           }
         }
-        const failure = await say(withAttachments({ pictures: pictures.map(({ name }) => name), files: files.map(({ name }) => name) }, text), skip, () => {
+        const failure = await turn({ kind: 'send', text: withAttachments({ pictures: pictures.map(({ name }) => name), files: files.map(({ name }) => name) }, text) }, skip, () => {
           saved = true;
           drafts.sent(taken);
         });
@@ -318,7 +317,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   // Read the live turn, not this render's busy value; '' requests 응답 받기 as a typed send does.
   async function sendForTool(chat: string, text: string) {
     if (talk.snapshot(chat)) return 'busy';
-    const failure = text ? await say(text) : await asked(chat, { kind: 'answer' });
+    const failure = text ? await turn({ kind: 'send', text }) : await asked(chat, { kind: 'answer' });
     return failure?.kind === 'busy' ? 'busy' : failure ? 'failed' : null;
   }
   const toolRows = useMemo(() => displayedRows(view, bot), [view, bot]);
@@ -431,7 +430,6 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
     placed,
     opening,
     last,
-    answerable,
     busy,
     sendNotes,
     found,
@@ -457,7 +455,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
     actions: joinParts(story.actions, searchActions, statusActions, editActions, translationActions, illustrationActions, speechActions, remarkActions, stateActions, bookmarkActions, settingActions, attachActions, panelActions, toggleActions, {
       send: () => void send(),
       sendSkipping: () => skippable && sendSkipping(skippable),
-      say,
+      say: (text: string) => turn({ kind: 'send', text }),
       retryRegex,
       stop: () => talk.stop(chatId),
       // A choice of the state's goes into the composer, after what is already written there.

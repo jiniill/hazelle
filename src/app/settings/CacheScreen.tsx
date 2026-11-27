@@ -31,6 +31,7 @@ export function CacheScreen({ back }: { back: Back | null }) {
   const [window, setWindow] = useState<ReportWindow>('month');
   const { view, retry, noted, unfilled, caching, fill } = useCacheLedger();
   const [now] = useState(Date.now);
+  const names = useNames();
   const report = useMemo(() => noted && cacheReport(noted, window === 'all' ? 0 : windowStart(window, now), ({ call, forecast }) => cacheMissed({ ...call, forecast })), [noted, window, now]);
   return (
     <Screen width="form" top={<NavBar title={CACHE_PAGE} {...backBar(back)} />}>
@@ -40,14 +41,17 @@ export function CacheScreen({ back }: { back: Back | null }) {
       ) : (
         <>
           {caching ? <CacheWait /> : unfilled > 0 && <NoticeBar icon={History} title="지난 기록" note={`채팅 ${count(unfilled)}개를 아직 읽지 않았어요`} hint={{ label: '지난 기록', text: '이 화면이 생기기 전의 응답은 채팅마다 읽어 와야 해요. 채팅이 많으면 시간이 걸려요.' }} actions={<Button variant="secondary" size="sm" onClick={fill}>지난 기록 읽기</Button>} />}
-          {report!.total.calls === 0 ? <Empty>이 기간에는 캐시 기록이 없어요.</Empty> : <Report report={report!} />}
+          {report!.total.calls === 0 ? <Empty>이 기간에는 캐시 기록이 없어요.</Empty> : <CacheReportView report={report!} names={names} />}
         </>
       )}
     </Screen>
   );
 }
 
-function Report({ report }: { report: CacheReport }) {
+// names: what a prompt, a character and a chat are called by their ledger keys; live: whether the chat can be opened.
+type Names = Record<Place, (key: string | null) => string> & { live: (chat: string) => boolean };
+
+export function CacheReportView({ report, names }: { report: CacheReport; names: Names }) {
   const { total, leaks, providers, causes } = report;
   const read = cacheRead(total);
   const frequent = leaks.reduce((most, leak) => (leak.times > most.times ? leak : most), leaks[0]!);
@@ -73,7 +77,7 @@ function Report({ report }: { report: CacheReport }) {
           <Moment label="가장 자주 새는 곳" value={times(frequent.times)} note={`${leakName(frequent.cause)} · ${breakWord(frequent.cause)}`} />
         </Columns>
       )}
-      {leaks.length > 0 && <Leaks leaks={leaks} lost={total.broken} />}
+      {leaks.length > 0 && <Leaks leaks={leaks} lost={total.broken} names={names} />}
       {missing.length > 0 && (
         <Section title={PROVIDER_MISSED} note={amount(total.missed)} help="요청은 캐시를 읽을 수 있었는데 제공자가 읽지 않은 양이에요. 프롬프트나 설정으로 고칠 수 있는 곳은 아니에요.">
           <ShareRows
@@ -87,7 +91,7 @@ function Report({ report }: { report: CacheReport }) {
           />
         </Section>
       )}
-      <Places report={report} />
+      <Places report={report} names={names} />
       {causes.length > 0 && (
         <Section title="세부 원인" help="응답마다 진단이 짚은 원인이에요. 이 화면이 생긴 뒤의 응답부터 쌓여요.">
           <List label="세부 원인" box>
@@ -101,9 +105,8 @@ function Report({ report }: { report: CacheReport }) {
   );
 }
 
-function Leaks({ leaks, lost }: { leaks: CacheReport['leaks']; lost: number }) {
+function Leaks({ leaks, lost, names }: { leaks: CacheReport['leaks']; lost: number; names: Names }) {
   const [open, setOpen] = useState<number | null>(null);
-  const chatName = useChatName();
   return (
     <Section title={CACHE_BROKEN} note={amount(lost)} help="내 프롬프트, 로어북, 메시지 수정처럼 요청이 달라져서 캐시를 읽지 못한 곳이에요. 토큰 수는 그 때문에 다시 보낸 양이에요.">
       <List label={CACHE_BROKEN} box>
@@ -118,7 +121,7 @@ function Leaks({ leaks, lost }: { leaks: CacheReport['leaks']; lost: number }) {
             onClick={() => setOpen(open === at ? null : at)}
             detail={
               open === at && (
-                <LeakChats chats={chats} chatName={chatName} />
+                <LeakChats chats={chats} names={names} />
               )
             }
           />
@@ -130,13 +133,13 @@ function Leaks({ leaks, lost }: { leaks: CacheReport['leaks']; lost: number }) {
 
 const CHATS = 5;
 
-function LeakChats({ chats, chatName }: { chats: CacheReport['leaks'][number]['chats']; chatName: ReturnType<typeof useChatName> }) {
+function LeakChats({ chats, names }: { chats: CacheReport['leaks'][number]['chats']; names: Names }) {
   const shown = useShown(chats, CHATS);
   return (
     <>
       <List label="일어난 채팅">
         {shown.rows.map(({ key, lost, times: happened }) => (
-          <ListItem key={key} title={chatName(key)} tags={[times(happened)]} note={amount(lost)} {...(key !== null && chatName.live(key) && { onClick: () => navigate({ kind: 'chat', id: key }) })} />
+          <ListItem key={key} title={names.chats(key)} tags={[times(happened)]} note={amount(lost)} {...(key !== null && names.live(key) && { onClick: () => navigate({ kind: 'chat', id: key }) })} />
         ))}
       </List>
       {shown.more}
@@ -144,12 +147,9 @@ function LeakChats({ chats, chatName }: { chats: CacheReport['leaks'][number]['c
   );
 }
 
-function Places({ report }: { report: CacheReport }) {
+function Places({ report, names }: { report: CacheReport; names: Names }) {
   const [place, setPlace] = useState<Place>('prompts');
-  const characterName = useCharacterName();
-  const chatName = useChatName();
-  const promptName = useCaptured((store) => (id: string | null) => (id === null ? UNKNOWN : (store.get('prompt', id)?.value.name ?? deletedOf(THINGS.prompt.noun))), []);
-  const name = { prompts: promptName, characters: characterName, chats: chatName }[place];
+  const name = names[place];
   const rows = report[place].filter(({ share }) => share.of > 0).map(({ key, share }): ShareRow => ({ key: String(key), name: name(key), note: `응답 ${times(share.calls)}`, kept: 1 - share.broken / share.of, amount: count(share.broken), rate: percent(share.broken, share.of) }));
   return (
     <Section title="어디에서" action={<Tabs label="나누는 기준" items={PLACES.map((value) => ({ value, label: PLACE_NAMES[value] }))} value={place} onChange={setPlace} />}>
@@ -158,10 +158,12 @@ function Places({ report }: { report: CacheReport }) {
   );
 }
 
-function useChatName() {
+function useNames(): Names {
   const library = useLibrary();
+  const characters = useCharacterName();
+  const prompts = useCaptured((store) => (id: string | null) => (id === null ? UNKNOWN : (store.get('prompt', id)?.value.name ?? deletedOf(THINGS.prompt.noun))), []);
   return useMemo(() => {
     const titles = new Map([...library.characters, library.none].flatMap(({ chats }) => chats.map(({ id, title }) => [id, title] as const)));
-    return Object.assign((id: string | null) => (id === null ? UNKNOWN : (titles.get(id) ?? deletedOf(THINGS.chat.noun))), { live: (id: string) => titles.has(id) });
-  }, [library]);
+    return { prompts, characters, chats: (id) => (id === null ? UNKNOWN : (titles.get(id) ?? deletedOf(THINGS.chat.noun))), live: (id) => titles.has(id) };
+  }, [library, characters, prompts]);
 }

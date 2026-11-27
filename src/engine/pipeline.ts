@@ -429,7 +429,8 @@ function conversation({ scope, seed, countTokens, budget, fit, continuing, answe
   if (!blocks.some((block) => block.kind === 'slot' && block.slot === 'agentNotes') && notes.trim()) out({ message: { role: 'system', content: notes.trim() }, from: { kind: 'agents' } });
   if (!blocks.some((block) => block.kind === 'slot' && block.slot === 'status') && status) out({ message: { role: 'system', content: status }, from: { kind: 'status' } });
   if (continuing) out({ message: { role: 'user', content: CONTINUE }, from: { kind: 'continue' } });
-  else if (scope.messages.at(-1)?.role === 'assistant') out({ message: { role: 'user', content: answerInstruction }, from: { kind: 'answer' } });
+  // An empty chat is asked as after the model's message: a request with no user message has nothing to answer.
+  else if (scope.messages.at(-1)?.role !== 'user') out({ message: { role: 'user', content: answerInstruction }, from: { kind: 'answer' } });
 
   // Read from each message's text as stored, since the prompt's rendering drops the tags (cbs/tags.ts).
   const sendable = new Map(scope.inlays.filter((inlay) => inlay.type !== SIGNATURE && (inlay.attached || pictures.moved)).map(({ name, id }) => [name, id]));

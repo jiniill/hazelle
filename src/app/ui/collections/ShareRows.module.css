@@ -54,16 +54,27 @@
 
 .track {
   composes: shareTrack from '../foundation/surface.module.css';
-}
-
-/* Nobody's fault: what was not read is an empty stretch in a dashed line, as SendRuns draws a missed request. */
-.missed .track {
-  border: var(--border-thin) dashed var(--color-text-muted);
-  background: none;
+  display: flex;
 }
 
 .fill {
   composes: shareFill from '../foundation/surface.module.css';
+  flex: none;
+}
+
+.rest {
+  flex: 1 1 0;
+}
+
+/* Nobody's fault: what was not read is an empty stretch in a dashed line, as SendRuns draws a missed request. */
+.missed .track {
+  background: none;
+}
+
+.missed .rest {
+  box-sizing: border-box;
+  border: var(--border-thin) dashed var(--color-text-muted);
+  border-radius: var(--radius-xs);
 }
 
 .amount,
